@@ -9,13 +9,16 @@ const profiles = JSON.parse(readFileSync(resolve(root, 'devtools/profiles.json')
 const cargoManifest = 'native/execution-core/Cargo.toml'
 
 function run(command, args = [], options = {}) {
-  const result = spawnSync(command, args, {
+  return spawnSync(command, args, {
     cwd: root,
     encoding: 'utf8',
     stdio: options.capture ? 'pipe' : 'inherit',
     env: { ...process.env, ...options.env },
   })
-  return result
+}
+
+function must(result, label) {
+  if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`)
 }
 
 function output(command, args = []) {
@@ -94,11 +97,10 @@ function toolState(name) {
     }
     case 'uv': {
       const text = output('uv', ['--version'])
-      return { ok: text !== '', actual: text || 'missing' }
+      return { ok: text.includes(manifest.tools.uv.version), actual: text || 'missing' }
     }
     case 'powershell': {
-      const cmd = process.platform === 'win32' ? 'pwsh' : 'pwsh'
-      const text = output(cmd, ['--version'])
+      const text = output('pwsh', ['--version'])
       return { ok: text !== '', actual: text || 'optional/missing' }
     }
     case 'native-build-chain': {
@@ -115,18 +117,21 @@ function toolState(name) {
   }
 }
 
+function lockFiles(profile) {
+  return profile.dependencyScopes.map(scope => manifest.dependencyLocks[scope]).filter(Boolean)
+}
+
 function doctor(profileName = 'test') {
   const profile = expandProfile(profileName)
-  const rows = []
   let failed = false
+  console.log(`Harness 2.0 development environment: ${profileName}`)
   for (const name of profile.tools) {
     const state = toolState(name)
-    failed ||= !state.ok && name !== 'powershell'
-    rows.push({ name, ...state })
+    const optional = name === 'powershell'
+    failed ||= !state.ok && !optional
+    console.log(`${state.ok ? '✓' : optional ? '!' : '×'} ${name.padEnd(20)} ${state.actual}`)
   }
-  console.log(`Harness 2.0 development environment: ${profileName}`)
-  for (const row of rows) console.log(`${row.ok ? '✓' : '×'} ${row.name.padEnd(20)} ${row.actual}`)
-  for (const lock of manifest.dependencyLocks) {
+  for (const lock of lockFiles(profile)) {
     const ok = existsSync(resolve(root, lock))
     failed ||= !ok
     console.log(`${ok ? '✓' : '×'} ${lock}`)
@@ -144,13 +149,13 @@ function installTool(name) {
     return
   }
   if (name === 'pnpm') {
-    if (!commandExists('corepack', ['--version'])) throw new Error('corepack is required to install the pinned pnpm; use bootstrap to install the pinned Node toolchain first')
+    if (!commandExists('corepack', ['--version'])) throw new Error('corepack is required; bootstrap the pinned Node toolchain first')
     must(run('corepack', ['enable']), 'corepack enable')
     must(run('corepack', ['prepare', `pnpm@${manifest.tools.pnpm.version}`, '--activate']), 'install pnpm')
     return
   }
   if (name === 'rust') {
-    if (!commandExists('rustup', ['--version'])) throw new Error('rustup is missing; run the platform bootstrap script or install rustup from the official Rust distribution first')
+    if (!commandExists('rustup', ['--version'])) throw new Error('rustup is missing; run the platform bootstrap first')
     must(run('rustup', ['toolchain', 'install', manifest.tools.rust.version, '--profile', 'minimal', '--component', 'rustfmt', '--component', 'clippy']), 'install Rust toolchain')
     must(run('rustup', ['override', 'set', manifest.tools.rust.version]), 'select project Rust toolchain')
     return
@@ -158,18 +163,14 @@ function installTool(name) {
   if (name === 'uv') {
     const py = process.platform === 'win32' ? 'python' : (commandExists('python3') ? 'python3' : 'python')
     if (!commandExists(py, ['--version'])) throw new Error('Python is required before installing uv')
-    must(run(py, ['-m', 'pip', 'install', '--user', 'uv==0.12.0']), 'install uv 0.12.0')
+    must(run(py, ['-m', 'pip', 'install', '--user', `uv==${manifest.tools.uv.version}`]), `install uv ${manifest.tools.uv.version}`)
     return
   }
-  if (name === 'node') throw new Error('Node must be installed by bootstrap because this command itself runs on Node')
+  if (name === 'node') throw new Error('Node must be installed by bootstrap because this command runs on Node')
   if (name === 'git' || name === 'python' || name === 'native-build-chain' || name === 'powershell') {
-    throw new Error(`${name} is a system/platform tool; install it through the platform bootstrap instructions or system package manager`)
+    throw new Error(`${name} is a platform tool; use the bootstrap instructions or system package manager`)
   }
   throw new Error(`unsupported tool: ${name}`)
-}
-
-function must(result, label) {
-  if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`)
 }
 
 function installDependencies(scopes) {
@@ -181,20 +182,7 @@ function installDependencies(scopes) {
 }
 
 function verifyDependencies() {
-  let failed = false
-  for (const lock of manifest.dependencyLocks) {
-    const ok = existsSync(resolve(root, lock))
-    console.log(`${ok ? '✓' : '×'} ${lock}`)
-    failed ||= !ok
-  }
-  if (commandExists('pnpm')) failed ||= run('pnpm', ['install', '--frozen-lockfile', '--lockfile-only'], { capture: true }).status !== 0
-  if (commandExists('cargo') && existsSync(resolve(root, 'native/execution-core/Cargo.lock'))) {
-    failed ||= run('cargo', ['metadata', '--locked', '--no-deps', '--format-version', '1', '--manifest-path', cargoManifest], { capture: true }).status !== 0
-  }
-  if (commandExists('uv') && existsSync(resolve(root, 'python/sdk/uv.lock'))) {
-    failed ||= run('uv', ['lock', '--check', '--project', 'python/sdk'], { capture: true }).status !== 0
-  }
-  if (failed) process.exitCode = 1
+  must(run('node', ['scripts/devtools/verify-locks.mjs']), 'dependency lock verification')
 }
 
 function setup(profileName) {
@@ -211,20 +199,24 @@ function setup(profileName) {
   doctor(profileName)
 }
 
+function runMinimalChecks() {
+  must(run('pnpm', ['run', 'typecheck']), 'typecheck')
+  must(run('pnpm', ['run', 'lint']), 'lint')
+  must(run('pnpm', ['run', 'test']), 'test')
+}
+
 function check(profileName = 'test') {
+  const profile = expandProfile(profileName)
   doctor(profileName)
   if (process.exitCode) return
-  if (profileName === 'minimal') {
-    must(run('pnpm', ['run', 'typecheck']), 'typecheck')
-    must(run('pnpm', ['run', 'lint']), 'lint')
-    must(run('pnpm', ['run', 'test']), 'test')
-    return
-  }
-  must(run('pnpm', ['run', 'check:all']), 'full project checks')
+  if (profileName === 'minimal' || profileName === 'python') runMinimalChecks()
+  else must(run('pnpm', ['run', 'check:all']), 'full TypeScript/project checks')
+  if (profile.dependencyScopes.includes('cargo')) must(run('node', ['scripts/devtools/native-gates.mjs']), 'Rust native gates')
+  if (profile.dependencyScopes.includes('python')) must(run('node', ['scripts/devtools/python-gates.mjs']), 'Python SDK gates')
 }
 
 function usage() {
-  console.log(`Usage:\n  ./dev setup <minimal|test|native|python|full>\n  ./dev doctor [--profile <profile>]\n  ./dev tool install <tool>\n  ./dev deps install <profile>\n  ./dev deps verify\n  ./dev check [profile]\n  ./dev download <profile>\n\nThe download command is handled by the platform bootstrap layer so it can work before Node is installed.`)
+  console.log(`Usage:\n  ./dev setup <minimal|test|native|python|full>\n  ./dev doctor [--profile <profile>]\n  ./dev tool install <tool>\n  ./dev deps install <profile>\n  ./dev deps verify\n  ./dev check [profile]\n  ./dev download <profile>`)
 }
 
 const args = process.argv.slice(2)
