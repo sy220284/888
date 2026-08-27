@@ -15,7 +15,7 @@ describe('runtime-policy tool requirements', () => {
     expect(defaultToolRequirements({ name: 'third_party_mutator', arguments: { value: 1 } })).toEqual([
       {
         capability: 'tool.execute',
-        resource: { kind: 'tool', value: 'third_party_mutator' },
+        resource: { kind: 'tool', value: '*' },
         access: 'control',
         risk: 2,
         effect: true,

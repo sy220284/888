@@ -3,7 +3,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { BUDGET_DIMENSIONS, assertBudgetVector, remainingBudget } from './budget.ts'
-import type { BudgetVector, CapabilityDecision, CapabilityPermission } from './types.ts'
+import type { BudgetVector, CapabilityAccess, CapabilityDecision, CapabilityPermission } from './types.ts'
 import type {} from './types.ts'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-runtime-policy'
@@ -36,6 +36,7 @@ interface Trace {
 const decisions = new Set<CapabilityDecision>(['allow', 'ask', 'deny'])
 const sources = new Set<CapabilityPermission['source']>(['sandbox', 'config', 'delegation', 'runtime'])
 const resourceKinds = new Set(['file', 'process', 'network', 'browser', 'computer', 'tool', 'agent', 'custom'])
+const accesses = new Set<CapabilityAccess>(['read', 'write', 'execute', 'control'])
 const worldCapabilities = new Set(['fs', 'process', 'network', 'browser', 'computer'])
 const agentKinds = new Set(['primary', 'subagent', 'fork-agent', 'team-member', 'background-session-agent'])
 
@@ -142,6 +143,9 @@ function validateRequirement(value: unknown, label: string, fail: InvariantFailu
   const resource = record(requirement.resource, `${label} resource`, fail)
   if (!resourceKinds.has(String(resource.kind))) fail(`${label} resource kind is invalid`)
   nonEmptyString(resource.value, `${label} resource value`, fail)
+  if (requirement.access !== undefined && !accesses.has(requirement.access as CapabilityAccess)) {
+    fail(`${label} access is invalid`)
+  }
   if (requirement.risk !== undefined) nonNegativeSafeInteger(requirement.risk, `${label} risk`, fail)
   if (requirement.effect !== true) fail(`${label} must describe an effect=true requirement`)
 }
