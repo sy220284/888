@@ -1,6 +1,10 @@
 name: Dependency lock refresh
 
 on:
+  push:
+    branches: [harness-2.0/dev-environment-toolchain]
+    paths:
+      - '.github/workflows/dependency-lock-refresh.yml'
   workflow_dispatch:
     inputs:
       write_back:
@@ -17,6 +21,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: harness-2.0/dev-environment-toolchain
       - uses: actions/setup-node@v4
         with:
           node-version: '22.19.0'
@@ -30,6 +36,8 @@ jobs:
           rustup override set 1.98.0
       - name: Refresh Cargo lock
         run: cargo generate-lockfile --manifest-path native/execution-core/Cargo.toml
+      - name: Refresh Rust notices
+        run: node scripts/devtools/rust-notices.mjs
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -44,17 +52,18 @@ jobs:
             pnpm-lock.yaml
             native/execution-core/Cargo.lock
             python/sdk/uv.lock
+            THIRD_PARTY_NOTICES_RUST.md
           if-no-files-found: error
-      - name: Commit generated locks
-        if: ${{ inputs.write_back }}
+      - name: Commit generated files on branch refresh
+        if: ${{ github.event_name == 'push' || inputs.write_back }}
         shell: bash
         run: |
-          git add pnpm-lock.yaml native/execution-core/Cargo.lock python/sdk/uv.lock
+          git add pnpm-lock.yaml native/execution-core/Cargo.lock python/sdk/uv.lock THIRD_PARTY_NOTICES_RUST.md
           if git diff --cached --quiet; then
-            echo 'Lock files already current.'
+            echo 'Generated dependency files already current.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'chore(deps): refresh generated lock files'
+          git commit -m 'chore(deps): refresh generated dependency files'
           git push
