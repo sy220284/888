@@ -13,6 +13,7 @@ import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {
   AgentKind,
   BudgetVector,
+  CapabilityAccess,
   CapabilityDecision,
   CapabilityPermission,
   CapabilityPermissionSnapshot,
@@ -37,6 +38,16 @@ export interface Config {
   readonly permissions?: readonly CapabilityPermission[]
   /** Default decision for capabilities not named by any rule. */
   readonly defaultDecision?: CapabilityDecision
+}
+
+/** Optional declaration hook for tools/plugins that can classify their own concrete execution resources. */
+export type ToolRequirementClassifier = (exec: Readonly<ToolExecution>) => readonly CapabilityRequirement[] | undefined
+export interface ToolRequirementClassifierOptions { readonly priority?: number }
+interface RegisteredRequirementClassifier {
+  readonly id: string
+  readonly priority: number
+  readonly order: number
+  readonly classify: ToolRequirementClassifier
 }
 
 const budgetSchema = z.object({
@@ -69,6 +80,9 @@ export const Config: z<Config> = z.object({
 declare module '@deepseek-ai/cordis' {
   interface Context { runtimePolicy: RuntimePolicyService }
 }
+
+const resourceKinds = new Set(['file', 'process', 'network', 'browser', 'computer', 'tool', 'agent', 'custom'])
+const accesses = new Set<CapabilityAccess>(['read', 'write', 'execute', 'control'])
 
 function sameJson(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
@@ -126,7 +140,8 @@ function requirementRisk(requirements: readonly CapabilityRequirement[]): number
   return requirements.reduce((sum, requirement) => sum + (requirement.risk ?? 0), 0)
 }
 
-function toolRequirements(exec: ToolExecution): CapabilityRequirement[] {
+/** Transitional first-party classifier. P3 registrations may override this without changing RuntimePolicy. */
+export function defaultToolRequirements(exec: Pick<ToolExecution, 'name' | 'arguments'>): CapabilityRequirement[] {
   const args = exec.arguments as Record<string, unknown> | undefined
   const stringArg = (...keys: string[]): string | undefined => {
     if (args === undefined || typeof args !== 'object') return undefined
@@ -135,30 +150,56 @@ function toolRequirements(exec: ToolExecution): CapabilityRequirement[] {
   }
 
   if (exec.name === 'read' || exec.name === 'read_image') {
-    return [{ capability: 'file.read', resource: { kind: 'file', value: stringArg('file_path', 'path') ?? '*' } }]
+    return [{ capability: 'file.read', resource: { kind: 'file', value: stringArg('file_path', 'path') ?? '*' }, access: 'read' }]
   }
   if (exec.name === 'glob' || exec.name === 'grep') {
-    return [{ capability: 'file.search', resource: { kind: 'file', value: stringArg('path') ?? '*' } }]
+    return [{ capability: 'file.search', resource: { kind: 'file', value: stringArg('path') ?? '*' }, access: 'read' }]
   }
   if (exec.name === 'write' || exec.name === 'edit' || exec.name === 'str_replace_editor') {
-    return [{ capability: 'file.write', resource: { kind: 'file', value: stringArg('file_path', 'path') ?? '*' }, risk: 1, effect: true }]
+    return [{ capability: 'file.write', resource: { kind: 'file', value: stringArg('file_path', 'path') ?? '*' }, access: 'write', risk: 1, effect: true }]
   }
   if (exec.name === 'bash' || exec.name === 'pwsh') {
-    return [{ capability: 'process.spawn', resource: { kind: 'process', value: stringArg('command') ?? exec.name }, risk: 2, effect: true }]
+    return [{ capability: 'process.spawn', resource: { kind: 'process', value: stringArg('command') ?? exec.name }, access: 'execute', risk: 2, effect: true }]
   }
   if (exec.name === 'web_fetch') {
-    return [{ capability: 'network.fetch', resource: { kind: 'network', value: stringArg('url') ?? '*' } }]
+    return [{ capability: 'network.fetch', resource: { kind: 'network', value: stringArg('url') ?? '*' }, access: 'read' }]
   }
   if (exec.name === 'web_search') {
-    return [{ capability: 'network.search', resource: { kind: 'network', value: '*' } }]
+    return [{ capability: 'network.search', resource: { kind: 'network', value: '*' }, access: 'read' }]
   }
   if (exec.name === 'subagent' || exec.name.startsWith('subagent_')) {
-    return [{ capability: 'agent.spawn', resource: { kind: 'agent', value: exec.name }, risk: 2, effect: true }]
+    return [{ capability: 'agent.spawn', resource: { kind: 'agent', value: exec.name }, access: 'control', risk: 2, effect: true }]
   }
   if (exec.name === 'send_message' || exec.name === 'interrupt_agent' || exec.name === 'job_kill') {
-    return [{ capability: 'agent.control', resource: { kind: 'agent', value: stringArg('agent_id', 'job_id') ?? '*' }, risk: 1, effect: true }]
+    return [{ capability: 'agent.control', resource: { kind: 'agent', value: stringArg('agent_id', 'job_id') ?? '*' }, access: 'control', risk: 1, effect: true }]
   }
-  return []
+
+  // Unclassified tools must never become an implicit permission/effect hole.
+  // They require explicit approval and receive a conservative effect receipt
+  // until a plugin registers a more precise classifier (which may return []).
+  return [{
+    capability: 'tool.execute',
+    resource: { kind: 'tool', value: exec.name },
+    access: 'control',
+    risk: 2,
+    effect: true,
+  }]
+}
+
+function normalizeRequirement(requirement: CapabilityRequirement, label: string): CapabilityRequirement {
+  if (typeof requirement.capability !== 'string' || requirement.capability.trim().length === 0) {
+    throw new TypeError(`${label}.capability must be a non-empty string`)
+  }
+  if (!resourceKinds.has(requirement.resource.kind)) throw new TypeError(`${label}.resource.kind is invalid`)
+  if (typeof requirement.resource.value !== 'string' || requirement.resource.value.length === 0) {
+    throw new TypeError(`${label}.resource.value must be a non-empty string`)
+  }
+  if (requirement.access !== undefined && !accesses.has(requirement.access)) throw new TypeError(`${label}.access is invalid`)
+  if (requirement.risk !== undefined && (!Number.isSafeInteger(requirement.risk) || requirement.risk < 0)) {
+    throw new TypeError(`${label}.risk must be a non-negative safe integer`)
+  }
+  if (requirement.effect !== undefined && typeof requirement.effect !== 'boolean') throw new TypeError(`${label}.effect must be boolean`)
+  return Object.freeze({ ...requirement, resource: Object.freeze({ ...requirement.resource }) })
 }
 
 function canonicalRequirement(agent: Agent, requirement: CapabilityRequirement, workspaceRoot: string): CapabilityRequirement {
@@ -182,6 +223,8 @@ export class RuntimePolicyService extends Service {
   readonly limits: BudgetVector
   private readonly configuredPermissions: readonly CapabilityPermission[]
   private readonly defaultDecision: CapabilityDecision
+  private readonly requirementClassifiers: RegisteredRequirementClassifier[] = []
+  private nextRequirementClassifierOrder = 0
 
   constructor(ctx: Context, config: Config = {}) {
     super(ctx, 'runtimePolicy')
@@ -220,13 +263,49 @@ export class RuntimePolicyService extends Service {
     ctx.on('tools/execute', async (exec, next) => this.executeWithPolicy(exec, next))
   }
 
+  /** Register a tool-owned requirement classifier. First non-undefined result wins. */
+  registerToolRequirements(
+    id: string,
+    classify: ToolRequirementClassifier,
+    options: ToolRequirementClassifierOptions = {},
+  ): () => void {
+    if (id.trim().length === 0) throw new TypeError('tool requirement classifier id must be non-empty')
+    if (this.requirementClassifiers.some(entry => entry.id === id)) {
+      throw new Error(`tool requirement classifier "${id}" is already registered`)
+    }
+    const priority = options.priority ?? 0
+    if (!Number.isFinite(priority)) throw new TypeError('tool requirement classifier priority must be finite')
+    const entry: RegisteredRequirementClassifier = {
+      id,
+      priority,
+      order: this.nextRequirementClassifierOrder++,
+      classify,
+    }
+    this.requirementClassifiers.push(entry)
+    this.requirementClassifiers.sort((left, right) => right.priority - left.priority || left.order - right.order)
+    const dispose = this.ctx.effect(() => () => {
+      const index = this.requirementClassifiers.indexOf(entry)
+      if (index >= 0) this.requirementClassifiers.splice(index, 1)
+    }, `runtimePolicy.registerToolRequirements(${id})`)
+    return () => void dispose()
+  }
+
   requirements(exec: ToolExecution): CapabilityRequirement[] {
     const workspaceRoot = exec.agent === undefined
       ? this.ctx.sandboxPolicy.workspaceRoot
       : this.ctx.sandboxPolicy.resolve({ session: exec.agent.session }).workspaceRoot
-    return toolRequirements(exec).map(requirement => exec.agent === undefined
-      ? requirement
-      : canonicalRequirement(exec.agent, requirement, workspaceRoot))
+    let selected: readonly CapabilityRequirement[] | undefined
+    for (const classifier of [...this.requirementClassifiers]) {
+      const candidate = classifier.classify(exec)
+      if (candidate === undefined) continue
+      selected = candidate
+      break
+    }
+    const requirements = selected ?? defaultToolRequirements(exec)
+    return [...requirements].map((requirement, index) => {
+      const normalized = normalizeRequirement(requirement, `tool requirement ${index}`)
+      return exec.agent === undefined ? normalized : canonicalRequirement(exec.agent, normalized, workspaceRoot)
+    })
   }
 
   permissionSnapshot(agent: Agent): CapabilityPermissionSnapshot {
@@ -234,6 +313,10 @@ export class RuntimePolicyService extends Service {
     const rules: CapabilityPermission[] = [
       { capability: 'file.read', resource: { kind: 'file', value: '*' }, decision: 'allow', source: 'sandbox' },
       { capability: 'file.search', resource: { kind: 'file', value: '*' }, decision: 'allow', source: 'sandbox' },
+      // A tool that has not declared concrete requirements is never treated as
+      // requirement-free. The conservative fallback classifier emits this
+      // capability, which always asks unless a precise classifier replaces it.
+      { capability: 'tool.execute', resource: { kind: 'tool', value: '*' }, decision: 'ask', source: 'runtime' },
     ]
     if (policy.mode === 'read-only') {
       rules.push({ capability: 'file.write', resource: { kind: 'file', value: '*' }, decision: 'deny', source: 'sandbox' })
