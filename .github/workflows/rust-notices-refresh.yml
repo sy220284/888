@@ -1,0 +1,34 @@
+name: Rust notices refresh
+
+on:
+  push:
+    branches: [harness-2.0/dev-environment-toolchain]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: harness-2.0/dev-environment-toolchain
+      - name: Pin Rust
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+      - run: cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
+      - run: node scripts/devtools/rust-notices.mjs
+      - name: Commit generated notices
+        run: |
+          if git diff --quiet -- THIRD_PARTY_NOTICES_RUST.md; then
+            echo 'Rust notices already current.'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add THIRD_PARTY_NOTICES_RUST.md
+          git commit -m 'docs(licenses): refresh Rust third-party notices'
+          git push
