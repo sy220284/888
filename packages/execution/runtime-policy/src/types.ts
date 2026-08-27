@@ -9,10 +9,15 @@ export interface CapabilityResource {
   readonly value: string
 }
 
+/** Access intent used by resource scheduling and diagnostics. */
+export type CapabilityAccess = 'read' | 'write' | 'execute' | 'control'
+
 /** One concrete operation the runtime is about to perform. */
 export interface CapabilityRequirement {
   readonly capability: string
   readonly resource: CapabilityResource
+  /** Resource access intent; P3 schedulers use this to derive shared/exclusive conflicts. */
+  readonly access?: CapabilityAccess
   /** Non-negative risk points charged when the operation actually dispatches. */
   readonly risk?: number
   /** True when the operation may change state outside the Harness event log. */
