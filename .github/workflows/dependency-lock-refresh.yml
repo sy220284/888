@@ -1,6 +1,7 @@
 name: Dependency lock refresh
 
 on:
+  # Temporary branch trigger: regenerate once after synchronizing the latest main.
   push:
     branches: [harness-2.0/dev-environment-toolchain]
     paths:
