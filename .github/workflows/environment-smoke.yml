@@ -28,15 +28,16 @@ jobs:
       - name: Bootstrap test profile on Unix
         if: runner.os != 'Windows'
         shell: bash
-        run: sh scripts/devtools/bootstrap.sh setup test
+        run: sh ./dev setup test
       - name: Bootstrap test profile on Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: .\scripts\devtools\bootstrap.ps1 setup test
-      - name: Doctor
-        shell: pwsh
-        if: runner.os == 'Windows'
-        run: node scripts/devtools/dev.mjs doctor --profile test
-      - name: Doctor
+        run: .\dev.ps1 setup test
+      - name: Doctor on Unix
         if: runner.os != 'Windows'
-        run: node scripts/devtools/dev.mjs doctor --profile test
+        shell: bash
+        run: sh ./dev doctor --profile test
+      - name: Doctor on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\dev.ps1 doctor --profile test
