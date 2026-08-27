@@ -24,7 +24,9 @@ jobs:
           mkdir -p .harness-unpack
           unzip -q -o deepseek-harness-master.zip -d .harness-unpack
           test -d .harness-unpack/deepseek-harness-master
-          rsync -a --exclude='.git/' .harness-unpack/deepseek-harness-master/ ./
+          # 压缩包中个别工具目录包含嵌套 Git 仓库。源码需要保留，嵌套 .git 元数据不能提交到宿主仓库。
+          find .harness-unpack/deepseek-harness-master -type d -name .git -prune -exec rm -rf {} +
+          rsync -a --exclude='.git/' --exclude='*/.git/' .harness-unpack/deepseek-harness-master/ ./
           rm -rf .harness-unpack
 
       - name: 提交解压后的源码
