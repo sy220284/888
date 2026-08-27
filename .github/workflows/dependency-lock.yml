@@ -1,0 +1,45 @@
+name: Dependency lock verification
+
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'packages/**/package.json'
+      - 'native/execution-core/Cargo.toml'
+      - 'native/execution-core/Cargo.lock'
+      - 'python/sdk/pyproject.toml'
+      - 'python/sdk/uv.lock'
+      - 'devtools/**'
+      - 'scripts/devtools/verify-locks.mjs'
+      - '.github/workflows/dependency-lock.yml'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  locks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.7.0 --activate
+      - run: pnpm install --lockfile-only --frozen-lockfile
+      - name: Pin Rust
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+      - run: cargo metadata --locked --no-deps --format-version 1 --manifest-path native/execution-core/Cargo.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install 'uv==0.12.0'
+      - run: uv lock --check --project python/sdk
+      - run: node scripts/devtools/verify-locks.mjs
