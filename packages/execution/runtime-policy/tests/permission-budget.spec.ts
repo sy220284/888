@@ -38,6 +38,14 @@ function usageMessage(seq: number, tokens: number, turn = 1, step = 0): SessionE
   } as unknown as SessionEvent
 }
 
+function stepSnapshot(seq: number, attempt: number, turn = 1, step = 0): SessionEvent {
+  return {
+    seq,
+    type: 'step/snapshot',
+    data: { turn, step, attempt, agentId: 'agent', surfaceSeqs: [], refs: {} },
+  } as unknown as SessionEvent
+}
+
 describe('runtime capability permission', () => {
   it('lets a specific rule refine a broader rule inside the same source layer', () => {
     const snapshot: CapabilityPermissionSnapshot = {
@@ -127,6 +135,26 @@ describe('global budget arithmetic', () => {
     expect(usageTokenDelta([first, second], second)).toBe(40)
     expect(usageTokenDelta([first, second, final], final)).toBe(0)
     expect(usageTokenDelta([first, second, final, correctedLower], correctedLower)).toBe(0)
+  })
+
+  it('accounts retry attempts independently inside the same turn and step', () => {
+    const attempt1 = stepSnapshot(0, 1)
+    const failedUsage = usageChunk(1, 80)
+    const attempt2 = stepSnapshot(2, 2)
+    const recoveredUsage = usageChunk(3, 60)
+    const final = usageMessage(4, 60)
+    const events = [attempt1, failedUsage, attempt2, recoveredUsage, final]
+
+    expect(usageTokenDelta(events, failedUsage)).toBe(80)
+    expect(usageTokenDelta(events, recoveredUsage)).toBe(60)
+    expect(usageTokenDelta(events, final)).toBe(0)
+
+    const service = {
+      limits: { tokens: 1000 },
+      budgetLimits: RuntimePolicyService.prototype.budgetLimits,
+    } as unknown as RuntimePolicyService
+    const session = { header: {}, events } as unknown as Session
+    expect(RuntimePolicyService.prototype.budgetSnapshot.call(service, session).consumed.tokens).toBe(140)
   })
 
   it('ignores inherited delegation snapshots that belong to a different parent lineage', () => {
