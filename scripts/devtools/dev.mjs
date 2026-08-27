@@ -177,7 +177,7 @@ function installDependencies(scopes) {
   for (const scope of scopes) {
     if (scope === 'npm') must(run('pnpm', ['install', '--frozen-lockfile']), 'pnpm frozen install')
     else if (scope === 'cargo') must(run('cargo', ['fetch', '--locked', '--manifest-path', cargoManifest]), 'cargo locked fetch')
-    else if (scope === 'python') must(run('uv', ['sync', '--frozen', '--project', 'python/sdk']), 'uv frozen sync')
+    else if (scope === 'python') must(run('uv', ['sync', '--frozen', '--project', 'python/sdk', '--group', 'test']), 'uv frozen test sync')
   }
 }
 
