@@ -1,0 +1,7 @@
+version: 1
+pair:
+  source: README.md
+  target: README.zh.md
+rules:
+  - path: /
+    type: structural

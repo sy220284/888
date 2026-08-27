@@ -69,8 +69,20 @@
     - id: jobs
       name: '@deepseek-ai/dsh-jobs-local'
 
+    - id: recovery
+      name: '@deepseek-ai/dsh-recovery'
+
+    - id: model-router
+      name: '@deepseek-ai/dsh-model-router'
+      config:
+        fallbacks:
+          - from: { provider: deepseek-official, model: deepseek-v4-flash }
+            to:
+              - { provider: deepseek-official, model: deepseek-v4-pro }
+
     - id: llm-retry
       name: '@deepseek-ai/dsh-llm-retry'
+
 
     # User-settings document (`$DSH_HOME/settings.yaml`, hot-reloaded): a
     # `llm-deepseek:` or `llm-pi-ai:` section there overrides the adapter entries
@@ -283,6 +295,9 @@
 
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: recovery-compaction
+      name: '@deepseek-ai/dsh-recovery-compaction'
 
     # Human `/compact`: one useful reduction below the automatic threshold. Backend
     # independent, so it follows whichever compaction service this leaf mounts.
