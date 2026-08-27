@@ -1,0 +1,42 @@
+name: 解压 DeepSeek Harness 源码
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/unpack-harness.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 解压源码到仓库根目录
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .harness-unpack
+          mkdir -p .harness-unpack
+          unzip -q -o deepseek-harness-master.zip -d .harness-unpack
+          test -d .harness-unpack/deepseek-harness-master
+          rsync -a --exclude='.git/' .harness-unpack/deepseek-harness-master/ ./
+          rm -rf .harness-unpack
+
+      - name: 提交解压后的源码
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "源码已存在，无需提交。"
+            exit 0
+          fi
+          git commit -m "chore: 在仓库内解压 DeepSeek Harness 源码"
+          git push origin HEAD:main
