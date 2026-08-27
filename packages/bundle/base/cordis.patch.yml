@@ -438,6 +438,11 @@
       config:
         agents: []
 
+    # Harness 2.0 execution-domain freeze: capability permissions, one global
+    # budget ledger, execution-world snapshots, and world-effect receipts.
+    - id: runtime-policy
+      name: '@deepseek-ai/dsh-runtime-policy'
+
     # The sandboxed filesystem provider. `cwd` defaults to `process.cwd()`; an
     # overlay can pin another workspace.
     - id: fs-sandbox
