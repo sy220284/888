@@ -26,12 +26,17 @@ interface SessionTrace {
   openStep: number | null
   nextTurn: number
   nextStep: number
+  lastRequestHeaderSeq: number | null
+  lastRequestContextSeq: number | null
   pendingCalls: Set<CallId>
 }
 
 /** One accepted event's deferred mutation of a committed session trace. */
 interface SessionTraceTransition {
-  scalars: Pick<SessionTrace, 'lastSeq' | 'openTurn' | 'openStep' | 'nextTurn' | 'nextStep'>
+  scalars: Pick<
+    SessionTrace,
+    'lastSeq' | 'openTurn' | 'openStep' | 'nextTurn' | 'nextStep' | 'lastRequestHeaderSeq' | 'lastRequestContextSeq'
+  >
   pendingCalls:
     | { kind: 'none' }
     | { kind: 'add' | 'delete'; callId: CallId }
@@ -64,6 +69,8 @@ function validateEvent(
   let openStep = trace.openStep
   let nextTurn = trace.nextTurn
   let nextStep = trace.nextStep
+  let lastRequestHeaderSeq = trace.lastRequestHeaderSeq
+  let lastRequestContextSeq = trace.lastRequestContextSeq
   let pendingCalls: SessionTraceTransition['pendingCalls'] = { kind: 'none' }
 
   // Context and plugin-owned log-only events may be appended between model
@@ -147,11 +154,47 @@ function validateEvent(
     case 'session/end-seed':
       // Unconstrained: an unbalanced seed legally puts it inside an open turn.
       break
-    case 'todo/write':
-    case 'request/header':
+    case 'todo/write': {
+      if (trace.openTurn === null) {
+        fail(`${event.type} appended outside any open turn (core execution events must be turn-enclosed)`)
+      }
+      break
+    }
+    case 'request/header': {
+      if (trace.openTurn === null) {
+        fail(`${event.type} appended outside any open turn (core execution events must be turn-enclosed)`)
+      }
+      lastRequestHeaderSeq = event.seq
+      break
+    }
     case 'request/context': {
       if (trace.openTurn === null) {
         fail(`${event.type} appended outside any open turn (core execution events must be turn-enclosed)`)
+      }
+      lastRequestContextSeq = event.seq
+      break
+    }
+    case 'step/snapshot': {
+      requireOpenStep(trace, 'step/snapshot', event.data.turn, event.data.step, fail)
+      if (!Number.isSafeInteger(event.data.attempt) || event.data.attempt < 1) {
+        fail(`step/snapshot attempt must be a positive safe integer, got ${event.data.attempt}`)
+      }
+      if (event.data.agentId.length === 0) fail('step/snapshot agentId must not be empty')
+      if (trace.lastRequestHeaderSeq === null || event.data.refs.requestHeader !== trace.lastRequestHeaderSeq) {
+        fail(`step/snapshot requestHeader ref ${event.data.refs.requestHeader} does not match latest ${trace.lastRequestHeaderSeq}`)
+      }
+      if (trace.lastRequestContextSeq === null || event.data.refs.requestContext !== trace.lastRequestContextSeq) {
+        fail(`step/snapshot requestContext ref ${event.data.refs.requestContext} does not match latest ${trace.lastRequestContextSeq}`)
+      }
+      let previousSurfaceSeq = -1
+      for (const seq of event.data.surfaceSeqs) {
+        if (!Number.isSafeInteger(seq) || seq < 0 || seq >= event.seq) {
+          fail(`step/snapshot surface seq must point backward to a non-negative safe integer, got ${seq}`)
+        }
+        if (seq <= previousSurfaceSeq) {
+          fail('step/snapshot surfaceSeqs must be strictly increasing')
+        }
+        previousSurfaceSeq = seq
       }
       break
     }
@@ -160,7 +203,15 @@ function validateEvent(
       break
   }
   return {
-    scalars: { lastSeq: event.seq, openTurn, openStep, nextTurn, nextStep },
+    scalars: {
+      lastSeq: event.seq,
+      openTurn,
+      openStep,
+      nextTurn,
+      nextStep,
+      lastRequestHeaderSeq,
+      lastRequestContextSeq,
+    },
     pendingCalls,
   }
 }
@@ -201,6 +252,8 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     openStep: null,
     nextTurn: 1,
     nextStep: 1,
+    lastRequestHeaderSeq: null,
+    lastRequestContextSeq: null,
     pendingCalls: new Set(),
   })
 

@@ -96,6 +96,9 @@ describe('agent/request-error', () => {
       expect.objectContaining({ mode: 'normal' }),
     ])
     expect(statuses).toEqual(['running', 'idle'])
+    expect(agent.session.events
+      .filter(event => event.type === 'step/snapshot')
+      .map(event => event.data.attempt)).toEqual([1, 2, 3])
   })
 
   it('lets cancellation win over a retry action', async () => {

@@ -563,6 +563,33 @@ describe('request stability across the loop', () => {
     expect(adapter.requests[1]!.temperature).toBeUndefined()
   })
 
+  it('logs a durable step/snapshot that binds each dispatch to its exact request state', async () => {
+    const adapter = new MockAdapter([textResponse('ok')])
+    const ctx = await harness(adapter)
+    const agent = ctx.agentLoop.create(SessionId('step-snapshot'), { provider: 'mock', model: 'mock' })
+
+    send(agent, 'go')
+    await waitForIdle(ctx, agent)
+
+    const events = agent.session.events
+    const snapshot = events.find(event => event.type === 'step/snapshot')
+    expect(snapshot?.type).toBe('step/snapshot')
+    if (snapshot?.type !== 'step/snapshot') throw new Error('missing step/snapshot')
+
+    const header = events.find(event => event.seq === snapshot.data.refs.requestHeader)
+    const context = events.find(event => event.seq === snapshot.data.refs.requestContext)
+    expect(header?.type).toBe('request/header')
+    expect(context?.type).toBe('request/context')
+    expect(snapshot.data).toMatchObject({
+      turn: 1,
+      step: 1,
+      attempt: 1,
+      agentId: agent.id,
+    })
+    expect(snapshot.data.surfaceSeqs).toEqual(agent.session.surface.nodes.filter(seq => seq < snapshot.seq))
+    expect(snapshot.seq).toBeLessThan(events.find(event => event.type === 'assistant/chunk')!.seq)
+  })
+
   it('THEOREM: every request rebuilds byte-equal from the session log alone', async () => {
     const adapter = new MockAdapter([
       toolCallResponse('c1', 'echo', { text: 'one' }, 'calling'),
