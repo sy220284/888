@@ -1,0 +1,8 @@
+{
+  "node": "https://nodejs.org/dist/",
+  "rustup": "https://static.rust-lang.org/rustup/dist/",
+  "uv": "https://pypi.org/project/uv/",
+  "python": "https://www.python.org/downloads/",
+  "git": "https://git-scm.com/downloads",
+  "powershell": "https://github.com/PowerShell/PowerShell/releases"
+}
