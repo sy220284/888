@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "algorithm": "sha256",
+    "allowUnverifiedDownloads": false,
+    "node": "verify against Node official SHASUMS256.txt",
+    "rustup": "verify against static.rust-lang.org rustup-init sha256 when downloaded directly",
+    "releaseBundles": "workflow-generated SHA256SUMS.txt"
+  },
+  "bundles": {}
+}
