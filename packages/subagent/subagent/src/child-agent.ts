@@ -13,12 +13,18 @@ import type { Agent, AgentOptions, CreateAgentOptions } from '@deepseek-ai/dsh-a
 import type { SandboxMode } from '@deepseek-ai/dsh-sandbox'
 import type { Session, SessionId } from '@deepseek-ai/dsh-session'
 import type { ToolRestriction } from '@deepseek-ai/dsh-tools'
+import type { RuntimeDelegationSnapshot } from '@deepseek-ai/dsh-runtime-policy'
 // Type-only: make `ctx.get('sandboxPolicy')` / `ctx.get('approval')` resolve
 // to the policy services when composed — delegation consumes both
 // opportunistically (the documented `ctx.get` pattern), never as a hard dep —
 // and merge the `sandbox/mode` / `approval/policy` session-event payloads.
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-user-approval'
+// Type-only: make `ctx.get('runtimePolicy')` resolve when the Harness 2.0
+// execution policy is composed. Delegation captures its immutable parent
+// permission/budget ceiling opportunistically; deployments without it keep the
+// historical sandbox/approval-only inheritance path.
+import type {} from '@deepseek-ai/dsh-runtime-policy'
 // Type-only: make `ctx.get('agentPresets')` resolve to the preset roster when
 // composed — a child inherits its parent's composition opportunistically (the
 // documented `ctx.get` pattern), never as a hard dep. A rosterless deployment
@@ -184,6 +190,8 @@ export interface DelegatedPolicyOverrides {
    * delegation, so its asks are rejected deterministically.
    */
   readonly approvalPolicy: 'never' | undefined
+  /** Harness 2.0 parent permission and remaining-budget ceiling, when composed. */
+  readonly runtimePolicy: RuntimeDelegationSnapshot | undefined
 }
 
 /**
@@ -192,23 +200,25 @@ export interface DelegatedPolicyOverrides {
  * parent's future, not to this child. Only the parent session's explicit
  * sandbox override is captured — never deployment defaults or one-shot
  * grants — and the approval policy is pinned to `'never'` regardless of the
- * parent's own policy.
+ * parent's own policy. Harness 2.0 additionally snapshots the parent's exact
+ * effective permission ceiling and remaining budget at this same boundary.
  * @param parent - the delegating parent agent.
- * @returns the sandbox override (or `undefined` without one) and the approval pin.
+ * @returns the sandbox override, approval pin, and optional runtime-policy ceiling.
  */
 export function captureDelegatedPolicyOverrides(parent: Agent): DelegatedPolicyOverrides {
   return {
     sandboxMode: parent.ctx.get('sandboxPolicy')?.overrideOf(parent.session),
     approvalPolicy: parent.ctx.get('approval') === undefined ? undefined : 'never',
+    runtimePolicy: parent.ctx.get('runtimePolicy')?.captureDelegation(parent),
   }
 }
 
 /**
- * Append the captured delegation policy onto the child's own log as
- * `source: 'delegation'` events inside the unpublished creation window, so the
- * child's effective policy is reconstructable from its log alone. Appends land
- * after any fork seed, so fresh policy wins stale seed state; later child
- * switches still win over these events.
+ * Append the captured delegation policy onto the child's own log as durable
+ * delegation events inside the unpublished creation window, so the child's
+ * effective policy is reconstructable from its log alone. Appends land after
+ * any fork seed, so fresh policy wins stale seed state; later child-local
+ * switches may only narrow the runtime-policy ceiling.
  * @param childSession - the unpublished child's session.
  * @param overrides - the policy captured at delegation.
  */
@@ -221,6 +231,9 @@ export function appendDelegatedPolicyOverrides(
   }
   if (overrides.approvalPolicy !== undefined) {
     childSession.append('approval/policy', { policy: overrides.approvalPolicy, source: 'delegation' })
+  }
+  if (overrides.runtimePolicy !== undefined) {
+    childSession.append('runtime/delegation', overrides.runtimePolicy)
   }
 }
 

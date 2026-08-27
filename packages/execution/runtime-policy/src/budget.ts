@@ -26,6 +26,29 @@ export function addBudget(left: BudgetVector, right: BudgetVector): BudgetVector
   return out
 }
 
+/**
+ * Monotonically narrow deployment limits with a delegated ceiling. An
+ * unbounded side adopts the bounded side; when both are bounded the smaller
+ * value wins. The result can never widen either input.
+ */
+export function narrowBudgetLimits(base: BudgetVector, ceiling?: BudgetVector): BudgetVector {
+  assertVector(base, 'runtime budget limits')
+  if (ceiling === undefined) return { ...base }
+  assertVector(ceiling, 'delegated budget ceiling')
+  const limits: BudgetVector = {}
+  for (const dimension of BUDGET_DIMENSIONS) {
+    const local = base[dimension]
+    const delegated = ceiling[dimension]
+    const value = local === undefined
+      ? delegated
+      : delegated === undefined
+        ? local
+        : Math.min(local, delegated)
+    if (value !== undefined) limits[dimension] = value
+  }
+  return limits
+}
+
 /** Build remaining values only for dimensions that have configured limits. */
 export function remainingBudget(limits: BudgetVector, consumed: BudgetVector): BudgetVector {
   assertVector(limits, 'limits')

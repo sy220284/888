@@ -45,6 +45,7 @@ export const KNOWN_SESSION_EVENT_TYPES: ReadonlySet<string> = new Set([
   'runtime/budget',
   'runtime/budget-charge',
   'runtime/config',
+  'runtime/delegation',
   'runtime/permission',
   'runtime/world',
   'sandbox/mode',
