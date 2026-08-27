@@ -1,0 +1,58 @@
+name: Dependency lock refresh
+
+on:
+  push:
+    branches:
+      - harness-2.0/dev-environment-toolchain
+    paths:
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'packages/**/package.json'
+      - 'native/execution-core/Cargo.toml'
+      - 'python/sdk/pyproject.toml'
+      - '.github/workflows/dependency-lock-refresh.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.7.0 --activate
+      - name: Refresh pnpm lock
+        run: pnpm install --lockfile-only
+      - name: Pin Rust toolchain
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal
+          rustup override set 1.98.0
+      - name: Refresh Cargo lock
+        run: cargo generate-lockfile --manifest-path native/execution-core/Cargo.toml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Refresh Python lock
+        run: |
+          python -m pip install 'uv==0.12.0'
+          uv lock --project python/sdk
+      - name: Commit generated locks
+        shell: bash
+        run: |
+          git add pnpm-lock.yaml native/execution-core/Cargo.lock python/sdk/uv.lock
+          if git diff --cached --quiet; then
+            echo 'Lock files already current.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(deps): refresh generated lock files [skip lock-refresh]'
+          git push
