@@ -6,7 +6,7 @@ import z from '@deepseek-ai/schemastery'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-loop'
 import type { TokenUsage } from '@deepseek-ai/dsh-llm'
-import type { EpochHeader, Session, SessionEvent, StepSnapshotRefs } from '@deepseek-ai/dsh-session'
+import { snapshotJsonValue, type EpochHeader, type Session, type SessionEvent, type StepSnapshotRefs } from '@deepseek-ai/dsh-session'
 import type { ToolDispatchExecution, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-permission-presets'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
@@ -21,10 +21,11 @@ import type {
   ExecutionWorldSnapshot,
   GlobalBudgetCharge,
   ResolvedRuntimeConfigSnapshot,
+  RuntimeDelegationSnapshot,
   RuntimeSnapshotRefs,
   WorldEffectReceipt,
 } from './types.ts'
-import { addBudget, assertBudgetVector, budgetExceeded, budgetSnapshot } from './budget.ts'
+import { BUDGET_DIMENSIONS, addBudget, assertBudgetVector, budgetExceeded, budgetSnapshot } from './budget.ts'
 import { evaluateCapabilityPermission } from './permission.ts'
 import { ResourceScheduler } from './resource-scheduler.ts'
 
@@ -100,6 +101,28 @@ function appendOrReuse<T extends 'runtime/permission' | 'runtime/budget' | 'runt
   return session.append(type, data as never).seq
 }
 
+function delegationEvent(session: Session): SessionEvent<'runtime/delegation'> | undefined {
+  return session.events.findLast((event): event is SessionEvent<'runtime/delegation'> => event.type === 'runtime/delegation')
+}
+
+function narrowBudgetLimits(base: BudgetVector, ceiling: BudgetVector | undefined): BudgetVector {
+  if (ceiling === undefined) return { ...base }
+  assertBudgetVector(base, 'runtime budget limits')
+  assertBudgetVector(ceiling, 'delegated budget ceiling')
+  const limits: BudgetVector = {}
+  for (const dimension of BUDGET_DIMENSIONS) {
+    const local = base[dimension]
+    const delegated = ceiling[dimension]
+    const value = local === undefined
+      ? delegated
+      : delegated === undefined
+        ? local
+        : Math.min(local, delegated)
+    if (value !== undefined) limits[dimension] = value
+  }
+  return limits
+}
+
 function usageTokens(usage: TokenUsage): number {
   return usage.inputTokens
     + usage.outputTokens
@@ -136,6 +159,12 @@ function foldCharges(events: readonly SessionEvent[]): BudgetVector {
   }
   if (tokens > 0) consumed = addBudget(consumed, { tokens })
   return consumed
+}
+
+/** Child budget accounting starts after its latest delegation snapshot, never inside an inherited fork seed. */
+function foldSessionCharges(session: Session): BudgetVector {
+  const delegation = delegationEvent(session)
+  return foldCharges(delegation === undefined ? session.events : session.events.slice(delegation.seq + 1))
 }
 
 function requirementRisk(requirements: readonly CapabilityRequirement[]): number {
@@ -221,7 +250,7 @@ function agentKind(agent: Agent): AgentKind {
 
 export class RuntimePolicyService extends Service {
   static Config = Config
-  static inject = ['tools', 'sandboxPolicy', 'permissionPresets', 'agentLoop']
+  static inject = ['tools', 'sandboxPolicy', 'permissionPresets', 'agentLoop', 'sessions']
 
   readonly limits: BudgetVector
   readonly resourceScheduler = new ResourceScheduler()
@@ -271,6 +300,18 @@ export class RuntimePolicyService extends Service {
     // compose beneath ordered pre-execute/approval and preserve model-order
     // result finalization in the existing AgentLoop scheduler.
     ctx.on('tools/execute', async (exec, next) => this.executeWithPolicy(exec, next))
+
+    // A child's own token usage is already folded from assistant/message. Mirror
+    // the final per-step usage only to currently-live ancestors so sibling and
+    // parent admissions observe one shared lineage budget without double-counting
+    // the child session itself.
+    ctx.on('session/event', (session, event) => {
+      if (event.type !== 'assistant/message' || event.data.usage === undefined) return
+      if (session.header.parentSession === undefined) return
+      const tokens = usageTokens(event.data.usage)
+      if (tokens <= 0) return
+      this.mirrorChargeToAncestors(session, { charge: { tokens }, reason: 'delegated', sourceSession: session.id })
+    }, { global: true })
   }
 
   /** Register a tool-owned requirement classifier. First non-undefined result wins. */
@@ -349,11 +390,39 @@ export class RuntimePolicyService extends Service {
       rules.push({ capability: 'file.write', resource: { kind: 'file', value: '*' }, decision: 'allow', source: 'sandbox' })
     }
     rules.push(...this.configuredPermissions)
-    return { defaultDecision: this.defaultDecision, rules }
+    const delegation = delegationEvent(agent.session)?.data
+    return {
+      defaultDecision: this.defaultDecision,
+      rules,
+      ...(delegation === undefined ? {} : { ceiling: delegation.permissionCeiling }),
+    }
+  }
+
+  /** Effective session-local limits after the immutable delegation ceiling narrows deployment limits. */
+  budgetLimits(session: Session): BudgetVector {
+    return narrowBudgetLimits(this.limits, delegationEvent(session)?.data.budgetCeiling)
   }
 
   budgetSnapshot(session: Session) {
-    return budgetSnapshot(this.limits, foldCharges(session.events))
+    return budgetSnapshot(this.budgetLimits(session), foldSessionCharges(session))
+  }
+
+  /**
+   * Capture the parent's exact permission ceiling and remaining budget before
+   * the child publication boundary. A later parent policy switch belongs to
+   * the parent's future and cannot widen an already delegated child.
+   */
+  captureDelegation(parent: Agent): RuntimeDelegationSnapshot {
+    const permissionCeiling = snapshotJsonValue(this.permissionSnapshot(parent))
+    const budgetCeiling = snapshotJsonValue(this.budgetSnapshot(parent.session).remaining)
+    if (permissionCeiling === undefined || budgetCeiling === undefined) {
+      throw new Error('runtime delegation snapshot is not losslessly JSON-serializable')
+    }
+    return Object.freeze({
+      parentSession: parent.session.id,
+      permissionCeiling: permissionCeiling as CapabilityPermissionSnapshot,
+      budgetCeiling: budgetCeiling as BudgetVector,
+    })
   }
 
   worldSnapshot(agent: Agent): ExecutionWorldSnapshot {
@@ -381,17 +450,74 @@ export class RuntimePolicyService extends Service {
 
   /** Persist/reuse all execution-domain freeze facts and return their exact seqs. */
   freeze(agent: Agent, header: EpochHeader): RuntimeSnapshotRefs {
+    const delegation = delegationEvent(agent.session)?.seq
     const permission = appendOrReuse(agent.session, 'runtime/permission', this.permissionSnapshot(agent) as never)
     const budget = appendOrReuse(agent.session, 'runtime/budget', this.budgetSnapshot(agent.session) as never)
     const world = appendOrReuse(agent.session, 'runtime/world', this.worldSnapshot(agent) as never)
     const config = appendOrReuse(agent.session, 'runtime/config', this.resolvedConfig(agent, header) as never)
-    return { permission, budget, world, config }
+    return {
+      permission,
+      budget,
+      world,
+      config,
+      ...(delegation === undefined ? {} : { delegation }),
+    }
+  }
+
+  /** Walk the currently-live parent chain. Missing ancestors end live mirroring but never widen the child's captured ceiling. */
+  private liveAncestors(session: Session): Session[] {
+    const ancestors: Session[] = []
+    const seen = new Set<string>([session.id])
+    let parentId = session.header.parentSession
+    let depth = 0
+    while (parentId !== undefined) {
+      if (seen.has(parentId)) throw new Error(`runtime budget lineage cycle at session ${parentId}`)
+      seen.add(parentId)
+      const parent = this.ctx.sessions.get(parentId)
+      if (parent === undefined) break
+      ancestors.push(parent)
+      parentId = parent.header.parentSession
+      depth++
+      if (depth > 1024) throw new Error('runtime budget lineage depth exceeds 1024')
+    }
+    return ancestors
+  }
+
+  private mirrorChargeToAncestors(session: Session, data: GlobalBudgetCharge): void {
+    assertBudgetVector(data.charge, 'delegated runtime budget charge')
+    for (const ancestor of this.liveAncestors(session)) {
+      ancestor.append('runtime/budget-charge', {
+        charge: data.charge,
+        reason: 'delegated',
+        ...(data.callId === undefined ? {} : { callId: data.callId }),
+        sourceSession: session.id,
+      })
+    }
   }
 
   private admitCharge(session: Session, data: GlobalBudgetCharge): string | undefined {
-    const exceeded = budgetExceeded(this.limits, foldCharges(session.events), data.charge)
-    if (exceeded !== undefined) return `global ${exceeded} budget exceeded`
+    assertBudgetVector(data.charge, 'runtime budget charge')
+    const lineage = [session, ...this.liveAncestors(session)]
+    for (const target of lineage) {
+      const exceeded = budgetExceeded(this.budgetLimits(target), foldSessionCharges(target), data.charge)
+      if (exceeded !== undefined) {
+        return target === session
+          ? `global ${exceeded} budget exceeded`
+          : `ancestor ${target.id} ${exceeded} budget exceeded`
+      }
+    }
+
+    // Check + all durable debits are synchronous: parallel siblings cannot both
+    // observe the same parent remainder before either reservation is recorded.
     session.append('runtime/budget-charge', data)
+    for (const ancestor of lineage.slice(1)) {
+      ancestor.append('runtime/budget-charge', {
+        charge: data.charge,
+        reason: 'delegated',
+        ...(data.callId === undefined ? {} : { callId: data.callId }),
+        sourceSession: session.id,
+      })
+    }
     return undefined
   }
 
@@ -399,6 +525,7 @@ export class RuntimePolicyService extends Service {
   private recordCharge(session: Session, data: GlobalBudgetCharge): void {
     assertBudgetVector(data.charge, 'runtime budget charge')
     session.append('runtime/budget-charge', data)
+    this.mirrorChargeToAncestors(session, data)
   }
 
   private async executeWithPolicy(exec: ToolDispatchExecution, next: () => Promise<ToolExecutionResult>): Promise<ToolExecutionResult> {

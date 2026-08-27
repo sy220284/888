@@ -54,12 +54,8 @@ function evaluateLayer(
   return decision
 }
 
-/**
- * Resolve one capability request. Specific rules may refine a rule inside the
- * same source layer, while independent layers only narrow one another. This
- * prevents config/delegation/runtime rules from widening a sandbox boundary.
- */
-export function evaluateCapabilityPermission(
+/** Resolve one local permission snapshot without consulting its delegation ceiling. */
+function evaluateLocal(
   snapshot: CapabilityPermissionSnapshot,
   requirement: CapabilityRequirement,
 ): CapabilityDecision {
@@ -67,6 +63,29 @@ export function evaluateCapabilityPermission(
   for (const source of sources) {
     const layer = evaluateLayer(snapshot.rules, source, requirement)
     if (layer !== undefined) decision = narrow(decision, layer)
+  }
+  return decision
+}
+
+/**
+ * Resolve one capability request. Each snapshot first applies its own source
+ * layers; immutable delegation ceilings are then walked iteratively and may
+ * only narrow the result. This keeps child policy monotonic without flattening
+ * parent layers (flattening could let a specific allow override an independent
+ * parent deny).
+ */
+export function evaluateCapabilityPermission(
+  snapshot: CapabilityPermissionSnapshot,
+  requirement: CapabilityRequirement,
+): CapabilityDecision {
+  let current: CapabilityPermissionSnapshot | undefined = snapshot
+  let decision: CapabilityDecision = 'allow'
+  let depth = 0
+  while (current !== undefined) {
+    decision = narrow(decision, evaluateLocal(current, requirement))
+    current = current.ceiling
+    depth++
+    if (depth > 1024) throw new Error('capability permission ceiling depth exceeds 1024')
   }
   return decision
 }

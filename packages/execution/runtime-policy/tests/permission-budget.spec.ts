@@ -5,6 +5,7 @@ import {
   budgetSnapshot,
   evaluateCapabilityPermission,
   evaluateDelegatedPermission,
+  narrowBudgetLimits,
   remainingBudget,
 } from '@deepseek-ai/dsh-runtime-policy'
 import type { CapabilityPermissionSnapshot, CapabilityRequirement } from '@deepseek-ai/dsh-runtime-policy/types'
@@ -48,6 +49,21 @@ describe('runtime capability permission', () => {
     }
     expect(evaluateDelegatedPermission(parent, child, requirement)).toBe('deny')
   })
+
+  it('walks a captured parent ceiling without flattening source-layer semantics', () => {
+    const snapshot: CapabilityPermissionSnapshot = {
+      defaultDecision: 'allow',
+      rules: [{ capability: 'file.write', resource: { kind: 'file', value: '/workspace/**' }, decision: 'allow', source: 'runtime' }],
+      ceiling: {
+        defaultDecision: 'allow',
+        rules: [
+          { capability: 'file.write', resource: { kind: 'file', value: '*' }, decision: 'deny', source: 'sandbox' },
+          { capability: 'file.write', resource: { kind: 'file', value: '/workspace/**' }, decision: 'allow', source: 'config' },
+        ],
+      },
+    }
+    expect(evaluateCapabilityPermission(snapshot, workspaceWrite)).toBe('deny')
+  })
 })
 
 describe('global budget arithmetic', () => {
@@ -69,5 +85,12 @@ describe('global budget arithmetic', () => {
       consumed: { wallTimeMs: 125 },
       remaining: { wallTimeMs: 0 },
     })
+  })
+
+  it('never lets a delegated ceiling widen a deployment limit', () => {
+    expect(narrowBudgetLimits(
+      { toolCalls: 10, wallTimeMs: 1000 },
+      { toolCalls: 4, tokens: 8000 },
+    )).toEqual({ toolCalls: 4, wallTimeMs: 1000, tokens: 8000 })
   })
 })
