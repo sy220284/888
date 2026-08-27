@@ -9,6 +9,7 @@ A compaction capability family (see [capability seams](../../.agents/notes/imple
 | [`compaction/`](compaction/README.md) | Compaction seam and event vocabulary | `ctx.compaction` |
 | [`compaction-basic/`](compaction-basic/README.md) | Token-pressure and summarization backend | registers `ctx.compaction` |
 | [`compaction-tool-result-pruner/`](compaction-tool-result-pruner/README.md) | Optional model-free tool-result pruning | `ctx.toolResultPruner` |
+| [`recovery-compaction/`](recovery-compaction/README.md) | Context-window recovery strategy using the active compaction service | registers on `ctx.recovery` |
 | [`command-compact/`](command-compact/README.md) | Human compaction command | registers on `ctx.commands` |
 
 The backend, optional pruner, and human command compose through the seam; token measurement remains a separate LLM-family service. The [compaction capability-seam Agent Note](../../.agents/notes/implemented/feature/2026-06-18-compaction-capability-seam.md) owns the dependency rationale.

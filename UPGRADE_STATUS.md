@@ -6,7 +6,7 @@
 
 ## 当前阶段
 
-P0：架构宪法与运行时冻结合同。P0 代码已完成，准备进入 P1/P2。
+P1/P4：模型请求恢复与路由。P0 已完成；RecoveryService、上下文压缩恢复和 ModelRouter/Fallback 已落地，准备进入 Rust 执行平面。
 
 ## 本轮已落地
 
@@ -30,4 +30,6 @@ P0：架构宪法与运行时冻结合同。P0 代码已完成，准备进入 P1
 - 干净源码树脚本：已实际运行；
 - 完整 Vitest/工作区检查：当前容器没有 pnpm/node_modules，且无法联网获取依赖，因此尚未执行。
 
-下一步：P1 RecoveryService 接缝 + P2 Rust Execution Provider（Process / Shell / PTY / Filesystem / Sandbox / Network）。
+新增完成：`@deepseek-ai/dsh-recovery`、`@deepseek-ai/dsh-model-router`、`@deepseek-ai/dsh-recovery-compaction`；Provider 本地重试耗尽后才进入跨路由/压缩恢复，所有决策持久化。
+
+下一步：P2 Rust Execution Provider（Protocol / Process / Shell / PTY / Filesystem / Sandbox / Network / Cancellation），随后补 CredentialPool 与更完整 ModelRegistry。

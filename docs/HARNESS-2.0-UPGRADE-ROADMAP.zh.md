@@ -41,7 +41,7 @@ Claude Code 主要做规范与交互兼容，不复制闭源核心。
 - [ ] Session 格式升级与迁移机制实装；
 - [ ] 冷 Session 恢复/分叉强化；
 - [ ] Step 生命周期与崩溃修复；
-- [ ] RecoveryService 接缝；
+- [x] RecoveryService 接缝；
 - [ ] App Server 权威控制面边界。
 
 ## P2：Codex 执行平面
@@ -70,11 +70,12 @@ Claude Code 主要做规范与交互兼容，不复制闭源核心。
 ## P4：Hermes 模型与恢复能力
 
 - [ ] ModelRegistry；
-- [ ] ModelRouter；
+- [x] ModelRouter；
 - [ ] CredentialPool；
-- [ ] Provider/Model Fallback；
-- [ ] RecoveryService；
-- [ ] ContextOverflow / OutputLimit / Retry / Backoff 策略。
+- [x] Provider/Model Fallback；
+- [x] RecoveryService；
+- [x] ContextOverflow 压缩恢复；
+- [ ] OutputLimit / Credential rotation / 更完整 Retry / Backoff 策略。
 
 ## P5：Claude Code 生态兼容
 
