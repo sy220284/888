@@ -61,9 +61,9 @@ Claude Code 主要做规范与交互兼容，不复制闭源核心。
 ## P3：权限与资源调度
 
 - [x] `Allow / Ask / Deny` 权限核心；
-- [ ] 子 Agent 权限单调收紧；
-- [ ] Tool 资源声明；
-- [ ] 资源冲突图调度；
+- [x] 子 Agent 权限单调收紧；
+- [x] Tool 资源声明；
+- [x] 资源冲突图调度；
 - [ ] Remote Approval；
 - [x] WorldEffectReceipt。
 

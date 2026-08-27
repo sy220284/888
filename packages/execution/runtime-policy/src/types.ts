@@ -1,4 +1,5 @@
 import type { CallId } from '@deepseek-ai/dsh-llm/brand'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 /** Closed permission decision ordered from most to least permissive. */
 export type CapabilityDecision = 'allow' | 'ask' | 'deny'
@@ -36,6 +37,8 @@ export interface CapabilityPermission {
 export interface CapabilityPermissionSnapshot {
   readonly defaultDecision: CapabilityDecision
   readonly rules: readonly CapabilityPermission[]
+  /** Immutable parent ceiling captured at delegation; every local decision is narrowed by it. */
+  readonly ceiling?: CapabilityPermissionSnapshot
 }
 
 /** Budget dimensions owned by one global ledger. All values are non-negative safe integers. */
@@ -52,8 +55,17 @@ export interface GlobalBudgetSnapshot {
 /** Durable debit applied when a real operation starts or settles. */
 export interface GlobalBudgetCharge {
   readonly charge: BudgetVector
-  readonly reason: 'tool-dispatch' | 'tool-settle' | 'agent-start' | 'provider-cost' | 'runtime'
+  readonly reason: 'tool-dispatch' | 'tool-settle' | 'agent-start' | 'provider-cost' | 'runtime' | 'delegated'
   readonly callId?: CallId
+  /** Descendant session whose work caused a mirrored ancestor debit. */
+  readonly sourceSession?: SessionId
+}
+
+/** Immutable parent policy/budget ceiling captured before a delegated child is published. */
+export interface RuntimeDelegationSnapshot {
+  readonly parentSession: SessionId
+  readonly permissionCeiling: CapabilityPermissionSnapshot
+  readonly budgetCeiling: BudgetVector
 }
 
 /** The execution substrates visible to this session at the freeze boundary. */
@@ -104,6 +116,7 @@ export interface RuntimeSnapshotRefs {
   readonly budget: number
   readonly world: number
   readonly config: number
+  readonly delegation?: number
 }
 
 declare module '@deepseek-ai/dsh-session/types' {
@@ -112,6 +125,7 @@ declare module '@deepseek-ai/dsh-session/types' {
     budget?: number
     world?: number
     config?: number
+    delegation?: number
   }
 
   interface SessionEventMap {
@@ -121,6 +135,8 @@ declare module '@deepseek-ai/dsh-session/types' {
     'runtime/budget': GlobalBudgetSnapshot
     /** Records one durable global-budget debit caused by a real operation or observed provider/runtime usage. */
     'runtime/budget-charge': GlobalBudgetCharge
+    /** Captures the immutable parent permission and remaining-budget ceiling before a child is published. */
+    'runtime/delegation': RuntimeDelegationSnapshot
     /** Freezes the execution world and file-policy substrate visible to the current agent attempt. */
     'runtime/world': ExecutionWorldSnapshot
     /** Freezes non-message runtime configuration that must not drift inside the current model attempt. */

@@ -45,6 +45,7 @@
     "@deepseek-ai/dsh-brand": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
+    "@deepseek-ai/dsh-runtime-policy": "workspace:^",
     "@deepseek-ai/dsh-sandbox": "workspace:^",
     "@deepseek-ai/dsh-sandbox-policy": "workspace:^",
     "@deepseek-ai/dsh-scope": "workspace:^",
@@ -59,6 +60,9 @@
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-agent-presets": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-runtime-policy": {
       "optional": true
     },
     "@deepseek-ai/dsh-sandbox": {

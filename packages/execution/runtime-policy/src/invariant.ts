@@ -3,7 +3,13 @@ import type { Context } from '@deepseek-ai/cordis'
 import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { InvariantFailure, InvariantInstaller } from '@deepseek-ai/dsh-invariants'
 import { BUDGET_DIMENSIONS, assertBudgetVector, remainingBudget } from './budget.ts'
-import type { BudgetVector, CapabilityAccess, CapabilityDecision, CapabilityPermission } from './types.ts'
+import type {
+  BudgetVector,
+  CapabilityAccess,
+  CapabilityDecision,
+  CapabilityPermission,
+  RuntimeDelegationSnapshot,
+} from './types.ts'
 import type {} from './types.ts'
 
 const PACKAGE_NAME = '@deepseek-ai/dsh-runtime-policy'
@@ -16,6 +22,7 @@ interface RuntimeRefs {
   budget?: number
   world?: number
   config?: number
+  delegation?: number
 }
 
 interface EffectTrace {
@@ -26,9 +33,15 @@ interface EffectTrace {
   settled: boolean
 }
 
+interface DelegationTrace {
+  seq: number
+  snapshot: RuntimeDelegationSnapshot
+}
+
 interface Trace {
   openStep: boolean
   refs: RuntimeRefs
+  delegation?: DelegationTrace
   authoritativeCalls: Set<string>
   effects: Map<string, EffectTrace>
 }
@@ -75,39 +88,96 @@ function sameBudget(left: BudgetVector, right: BudgetVector): boolean {
   return BUDGET_DIMENSIONS.every(dimension => left[dimension] === right[dimension])
 }
 
-function validatePermission(data: unknown, fail: InvariantFailure): void {
-  const value = record(data, 'runtime/permission data', fail)
-  if (!decisions.has(value.defaultDecision as CapabilityDecision)) fail('runtime/permission defaultDecision is invalid')
-  if (!Array.isArray(value.rules)) fail('runtime/permission rules must be an array')
-  for (const [index, raw] of value.rules.entries()) {
-    const rule = record(raw, `runtime/permission rule ${index}`, fail)
-    nonEmptyString(rule.capability, `runtime/permission rule ${index} capability`, fail)
-    if (!decisions.has(rule.decision as CapabilityDecision)) fail(`runtime/permission rule ${index} decision is invalid`)
-    if (!sources.has(rule.source as CapabilityPermission['source'])) fail(`runtime/permission rule ${index} source is invalid`)
-    const resource = record(rule.resource, `runtime/permission rule ${index} resource`, fail)
-    if (!resourceKinds.has(String(resource.kind))) fail(`runtime/permission rule ${index} resource kind is invalid`)
-    nonEmptyString(resource.value, `runtime/permission rule ${index} resource value`, fail)
+function sameJsonValue(left: unknown, right: unknown): boolean {
+  if (left === right) return true
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false
+    return left.every((value, index) => sameJsonValue(value, right[index]))
+  }
+  if (left === null || right === null || typeof left !== 'object' || typeof right !== 'object') return false
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord).sort()
+  const rightKeys = Object.keys(rightRecord).sort()
+  if (leftKeys.length !== rightKeys.length || leftKeys.some((key, index) => key !== rightKeys[index])) return false
+  return leftKeys.every(key => sameJsonValue(leftRecord[key], rightRecord[key]))
+}
+
+function validatePermission(data: unknown, fail: InvariantFailure, rootLabel = 'runtime/permission data'): void {
+  let current: unknown = data
+  let depth = 0
+  while (current !== undefined) {
+    const label = depth === 0 ? rootLabel : `${rootLabel} ceiling ${depth}`
+    const value = record(current, label, fail)
+    if (!decisions.has(value.defaultDecision as CapabilityDecision)) fail(`${label} defaultDecision is invalid`)
+    if (!Array.isArray(value.rules)) fail(`${label} rules must be an array`)
+    for (const [index, raw] of value.rules.entries()) {
+      const rule = record(raw, `${label} rule ${index}`, fail)
+      nonEmptyString(rule.capability, `${label} rule ${index} capability`, fail)
+      if (!decisions.has(rule.decision as CapabilityDecision)) fail(`${label} rule ${index} decision is invalid`)
+      if (!sources.has(rule.source as CapabilityPermission['source'])) fail(`${label} rule ${index} source is invalid`)
+      const resource = record(rule.resource, `${label} rule ${index} resource`, fail)
+      if (!resourceKinds.has(String(resource.kind))) fail(`${label} rule ${index} resource kind is invalid`)
+      nonEmptyString(resource.value, `${label} rule ${index} resource value`, fail)
+    }
+    current = value.ceiling
+    depth++
+    if (depth > 1024) fail(`${rootLabel} ceiling depth exceeds 1024`)
   }
 }
 
-function validateBudgetSnapshot(data: unknown, fail: InvariantFailure): void {
+function validateDelegatedPermission(data: unknown, delegation: RuntimeDelegationSnapshot, fail: InvariantFailure): void {
+  const value = record(data, 'runtime/permission data', fail)
+  if (!sameJsonValue(value.ceiling, delegation.permissionCeiling)) {
+    fail('runtime/permission ceiling does not match the active runtime/delegation permissionCeiling')
+  }
+}
+
+function validateBudgetSnapshot(data: unknown, fail: InvariantFailure): BudgetVector {
   const value = record(data, 'runtime/budget data', fail)
   const limits = budgetVector(value.limits, 'runtime/budget limits', fail)
   const consumed = budgetVector(value.consumed, 'runtime/budget consumed', fail)
   const remaining = budgetVector(value.remaining, 'runtime/budget remaining', fail)
   if (!sameBudget(remaining, remainingBudget(limits, consumed))) fail('runtime/budget remaining does not match limits minus consumed')
+  return limits
 }
 
-function validateBudgetCharge(data: unknown, fail: InvariantFailure): void {
+function validateDelegatedBudget(limits: BudgetVector, ceiling: BudgetVector, fail: InvariantFailure): void {
+  for (const dimension of BUDGET_DIMENSIONS) {
+    const delegated = ceiling[dimension]
+    if (delegated === undefined) continue
+    const limit = limits[dimension]
+    if (limit === undefined || limit > delegated) {
+      fail(`runtime/budget ${dimension} limit widens the active runtime/delegation budgetCeiling`)
+    }
+  }
+}
+
+function validateBudgetCharge(data: unknown, fail: InvariantFailure): 'delegated' | 'local' {
   const value = record(data, 'runtime/budget-charge data', fail)
   const charge = budgetVector(value.charge, 'runtime/budget-charge charge', fail)
   if (!BUDGET_DIMENSIONS.some(dimension => (charge[dimension] ?? 0) > 0)) {
     fail('runtime/budget-charge must contain at least one positive debit')
   }
-  if (!['tool-dispatch', 'tool-settle', 'agent-start', 'provider-cost', 'runtime'].includes(String(value.reason))) {
+  const reason = String(value.reason)
+  if (!['tool-dispatch', 'tool-settle', 'agent-start', 'provider-cost', 'runtime', 'delegated'].includes(reason)) {
     fail('runtime/budget-charge reason is invalid')
   }
   if (value.callId !== undefined) nonEmptyString(value.callId, 'runtime/budget-charge callId', fail)
+  if (reason === 'delegated') {
+    nonEmptyString(value.sourceSession, 'runtime/budget-charge sourceSession', fail)
+    return 'delegated'
+  }
+  if (value.sourceSession !== undefined) fail('non-delegated runtime/budget-charge cannot carry sourceSession')
+  return 'local'
+}
+
+function validateDelegation(data: unknown, fail: InvariantFailure): string {
+  const value = record(data, 'runtime/delegation data', fail)
+  const parentSession = nonEmptyString(value.parentSession, 'runtime/delegation parentSession', fail)
+  validatePermission(value.permissionCeiling, fail, 'runtime/delegation permissionCeiling')
+  budgetVector(value.budgetCeiling, 'runtime/delegation budgetCeiling', fail)
+  return parentSession
 }
 
 function validateWorld(data: unknown, fail: InvariantFailure): void {
@@ -154,12 +224,13 @@ function cloneTrace(source: Trace): Trace {
   return {
     openStep: source.openStep,
     refs: { ...source.refs },
+    ...(source.delegation === undefined ? {} : { delegation: { ...source.delegation } }),
     authoritativeCalls: new Set(source.authoritativeCalls),
     effects: new Map([...source.effects].map(([id, effect]) => [id, { ...effect }])),
   }
 }
 
-function validateRuntimeRefs(event: SessionEvent<'step/snapshot'>, trace: Trace, fail: InvariantFailure): void {
+function validateRuntimeRefs(session: Session, event: SessionEvent<'step/snapshot'>, trace: Trace, fail: InvariantFailure): void {
   const refs = event.data.refs as typeof event.data.refs & RuntimeRefs
   const values = [refs.permission, refs.budget, refs.world, refs.config]
   const any = values.some(value => value !== undefined)
@@ -171,7 +242,23 @@ function validateRuntimeRefs(event: SessionEvent<'step/snapshot'>, trace: Trace,
   if (!runtimeActive) return
   if (!all) fail('step/snapshot must cite runtime permission/budget/world/config after runtime policy becomes active')
 
-  for (const [key, expected] of Object.entries(trace.refs) as [keyof RuntimeRefs, number | undefined][]) {
+  const boundary = session.header.seedLength ?? 0
+  const inActiveBody = event.seq >= boundary
+  const expectedDelegation = inActiveBody && session.header.parentSession !== undefined
+    ? trace.delegation?.seq
+    : trace.refs.delegation
+  if (inActiveBody && session.header.parentSession !== undefined && expectedDelegation === undefined) {
+    fail('delegated child step/snapshot requires runtime/delegation captured for its direct parent')
+  }
+  if (expectedDelegation !== undefined && refs.delegation === undefined) {
+    fail('step/snapshot must cite runtime/delegation after delegated runtime policy becomes active')
+  }
+  if (expectedDelegation === undefined && refs.delegation !== undefined) {
+    fail('step/snapshot cannot cite runtime/delegation when no delegation event is active')
+  }
+
+  const expectedRefs: RuntimeRefs = { ...trace.refs, delegation: expectedDelegation }
+  for (const [key, expected] of Object.entries(expectedRefs) as [keyof RuntimeRefs, number | undefined][]) {
     const actual = refs[key]
     if (expected !== undefined && actual !== expected) {
       fail(`step/snapshot ${key} ref ${String(actual)} does not match latest runtime/${key} seq ${expected}`)
@@ -182,7 +269,7 @@ function validateRuntimeRefs(event: SessionEvent<'step/snapshot'>, trace: Trace,
   }
 }
 
-function applyEvent(trace: Trace, event: SessionEvent, fail: InvariantFailure): void {
+function applyEvent(session: Session, trace: Trace, event: SessionEvent, fail: InvariantFailure): void {
   switch (event.type) {
     case 'step/start':
       trace.openStep = true
@@ -207,16 +294,38 @@ function applyEvent(trace: Trace, event: SessionEvent, fail: InvariantFailure): 
     case 'tool/code-dispatch':
       trace.authoritativeCalls.delete(String(event.data.subCallId))
       return
+    case 'runtime/delegation': {
+      if (trace.openStep) fail('runtime/delegation must be appended outside an open step')
+      const parentSession = validateDelegation(event.data, fail)
+      const boundary = session.header.seedLength ?? 0
+      if (event.seq >= boundary) {
+        if (session.header.parentSession === undefined) fail('active runtime/delegation requires session.header.parentSession')
+        if (session.header.parentSession !== parentSession) {
+          fail(`runtime/delegation parentSession ${parentSession} does not match session header ${String(session.header.parentSession)}`)
+        }
+        if (trace.delegation !== undefined && trace.delegation.seq >= boundary) {
+          fail('runtime/delegation may be captured only once for the active child lineage')
+        }
+      }
+      trace.refs.delegation = event.seq
+      if (session.header.parentSession === parentSession) {
+        trace.delegation = { seq: event.seq, snapshot: event.data }
+      }
+      return
+    }
     case 'runtime/permission':
       if (!trace.openStep) fail('runtime/permission must be appended inside an open step')
       validatePermission(event.data, fail)
+      if (trace.delegation !== undefined) validateDelegatedPermission(event.data, trace.delegation.snapshot, fail)
       trace.refs.permission = event.seq
       return
-    case 'runtime/budget':
+    case 'runtime/budget': {
       if (!trace.openStep) fail('runtime/budget must be appended inside an open step')
-      validateBudgetSnapshot(event.data, fail)
+      const limits = validateBudgetSnapshot(event.data, fail)
+      if (trace.delegation !== undefined) validateDelegatedBudget(limits, trace.delegation.snapshot.budgetCeiling, fail)
       trace.refs.budget = event.seq
       return
+    }
     case 'runtime/world':
       if (!trace.openStep) fail('runtime/world must be appended inside an open step')
       validateWorld(event.data, fail)
@@ -227,12 +336,13 @@ function applyEvent(trace: Trace, event: SessionEvent, fail: InvariantFailure): 
       validateConfig(event.data, fail)
       trace.refs.config = event.seq
       return
-    case 'runtime/budget-charge':
-      if (!trace.openStep) fail('runtime/budget-charge must be appended inside an open step')
-      validateBudgetCharge(event.data, fail)
+    case 'runtime/budget-charge': {
+      const kind = validateBudgetCharge(event.data, fail)
+      if (kind === 'local' && !trace.openStep) fail('local runtime/budget-charge must be appended inside an open step')
       return
+    }
     case 'step/snapshot':
-      validateRuntimeRefs(event, trace, fail)
+      validateRuntimeRefs(session, event, trace, fail)
       return
     case 'world/effect-start': {
       if (!trace.openStep) fail('world/effect-start must be appended inside an open step')
@@ -280,7 +390,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
 
   const seed = (session: Session): Trace => {
     const trace: Trace = { openStep: false, refs: {}, authoritativeCalls: new Set(), effects: new Map() }
-    for (const event of session.events) applyEvent(trace, event, fail)
+    for (const event of session.events) applyEvent(session, trace, event, fail)
     traces.set(session, trace)
     return trace
   }
@@ -292,7 +402,7 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     const [session, event] = args as [Session, SessionEvent]
     const current = traces.get(session) ?? seed(session)
     const candidate = cloneTrace(current)
-    applyEvent(candidate, event, fail)
+    applyEvent(session, candidate, event, fail)
     staged.set(event, { session, trace: candidate })
   }, { global: true })
   ctx.on('session/event', (session, event) => {
