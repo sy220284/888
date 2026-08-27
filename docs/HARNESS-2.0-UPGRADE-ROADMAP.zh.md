@@ -13,7 +13,7 @@ Claude Code 主要做规范与交互兼容，不复制闭源核心。
 
 ## P0：架构宪法
 
-状态：进行中。
+状态：P0 合同已完成，进入 P1/P2 实装准备。
 
 ### 已完成
 
@@ -28,13 +28,13 @@ Claude Code 主要做规范与交互兼容，不复制闭源核心。
 
 ### 下一批 P0 合同
 
-- [ ] `CapabilityPermission`：能力 + 资源的细粒度权限；
-- [ ] `GlobalBudget`：Token / 成本 / 时间 / 工具 / Agent / 风险预算；
-- [ ] `ExecutionWorld`：FS / Process / Network / Browser / Computer 的统一世界；
-- [ ] `WorldEffectReceipt`：所有真实副作用的可审计回执；
-- [ ] `AgentKind`：SubAgent / ForkAgent / TeamMember / BackgroundSessionAgent；
-- [ ] Canonical Event 与 Internal Signal 分层；
-- [ ] Step Snapshot 扩展 Permission / Budget / World / Config 引用。
+- [x] `CapabilityPermission`：能力 + 资源的细粒度权限；
+- [x] `GlobalBudget`：Token / 成本 / 时间 / 工具 / Agent / 风险预算；
+- [x] `ExecutionWorld`：FS / Process / Network / Browser / Computer 的统一世界；
+- [x] `WorldEffectReceipt`：所有真实副作用的可审计回执；
+- [x] `AgentKind`：SubAgent / ForkAgent / TeamMember / BackgroundSessionAgent；
+- [x] Canonical Event 与 Internal Signal 分层：持久事实写 Session Event，`agent/step-snapshot` 仅作内部 waterfall 接缝；
+- [x] Step Snapshot 扩展 Permission / Budget / World / Config 引用。
 
 ## P1：Harness Core 收束
 

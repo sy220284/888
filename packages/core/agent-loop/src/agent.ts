@@ -513,13 +513,18 @@ export class ReactLoopAgent implements Agent {
     /* v8 ignore next -- the first request for every route logs request/context */
     if (requestContextSeq === undefined) throw new Error(`agent "${this.id}": request context was not durably resolved`)
 
+    const snapshotRefs = await this.dispatch.waterfall(
+      'agent/step-snapshot',
+      { turn, step, attempt, header, signal },
+      () => Promise.resolve({ requestHeader: requestHeaderSeq, requestContext: requestContextSeq }),
+    )
     session.append('step/snapshot', {
       turn,
       step,
       attempt,
       agentId: this.id,
       surfaceSeqs: [...session.surface.nodes],
-      refs: { requestHeader: requestHeaderSeq, requestContext: requestContextSeq },
+      refs: snapshotRefs,
     })
     signal.throwIfAborted()
 
