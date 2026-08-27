@@ -29,7 +29,7 @@
       "requiredBy": ["python", "full"]
     },
     "uv": {
-      "versionPolicy": "locked-by-workflow",
+      "version": "0.12.0",
       "requiredBy": ["python", "full"]
     },
     "powershell": {
@@ -38,11 +38,11 @@
       "requiredBy": ["full"]
     }
   },
-  "dependencyLocks": [
-    "pnpm-lock.yaml",
-    "native/execution-core/Cargo.lock",
-    "python/sdk/uv.lock"
-  ],
+  "dependencyLocks": {
+    "npm": "pnpm-lock.yaml",
+    "cargo": "native/execution-core/Cargo.lock",
+    "python": "python/sdk/uv.lock"
+  },
   "security": {
     "downloadVerification": "sha256",
     "allowUnverifiedDownloads": false,
