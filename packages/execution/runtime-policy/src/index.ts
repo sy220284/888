@@ -26,10 +26,12 @@ import type {
 } from './types.ts'
 import { addBudget, assertBudgetVector, budgetExceeded, budgetSnapshot } from './budget.ts'
 import { evaluateCapabilityPermission } from './permission.ts'
+import { ResourceScheduler } from './resource-scheduler.ts'
 
 export type * from './types.ts'
 export * from './budget.ts'
 export * from './permission.ts'
+export * from './resource-scheduler.ts'
 
 export interface Config {
   /** Optional deployment-wide hard ceilings. Omission means unbounded for that dimension. */
@@ -175,11 +177,12 @@ export function defaultToolRequirements(exec: Pick<ToolExecution, 'name' | 'argu
   }
 
   // Unclassified tools must never become an implicit permission/effect hole.
-  // They require explicit approval and receive a conservative effect receipt
-  // until a plugin registers a more precise classifier (which may return []).
+  // They require explicit approval and receive a conservative effect receipt.
+  // The wildcard resource is also a global scheduler barrier until a plugin
+  // registers a precise classifier (which may explicitly return []).
   return [{
     capability: 'tool.execute',
-    resource: { kind: 'tool', value: exec.name },
+    resource: { kind: 'tool', value: '*' },
     access: 'control',
     risk: 2,
     effect: true,
@@ -207,7 +210,7 @@ function canonicalRequirement(agent: Agent, requirement: CapabilityRequirement, 
   const value = path.isAbsolute(requirement.resource.value)
     ? path.resolve(requirement.resource.value)
     : path.resolve(agent.session.header.cwd ?? workspaceRoot, requirement.resource.value)
-  return { ...requirement, resource: { ...requirement.resource, value } }
+  return Object.freeze({ ...requirement, resource: Object.freeze({ ...requirement.resource, value }) })
 }
 
 function agentKind(agent: Agent): AgentKind {
@@ -221,9 +224,11 @@ export class RuntimePolicyService extends Service {
   static inject = ['tools', 'sandboxPolicy', 'permissionPresets', 'agentLoop']
 
   readonly limits: BudgetVector
+  readonly resourceScheduler = new ResourceScheduler()
   private readonly configuredPermissions: readonly CapabilityPermission[]
   private readonly defaultDecision: CapabilityDecision
   private readonly requirementClassifiers: RegisteredRequirementClassifier[] = []
+  private readonly requirementCache = new WeakMap<ToolExecution, readonly CapabilityRequirement[]>()
   private nextRequirementClassifierOrder = 0
 
   constructor(ctx: Context, config: Config = {}) {
@@ -232,6 +237,10 @@ export class RuntimePolicyService extends Service {
     assertBudgetVector(this.limits, 'runtime-policy limits')
     this.configuredPermissions = [...(config.permissions ?? [])]
     this.defaultDecision = config.defaultDecision ?? 'allow'
+
+    ctx.effect(() => () => {
+      this.resourceScheduler.dispose(new Error('runtime policy disposed'))
+    }, 'runtime-policy: dispose resource scheduler')
 
     // Internal signal: execution-domain facts are persisted before the core
     // writes the canonical step/snapshot envelope that references them.
@@ -258,8 +267,9 @@ export class RuntimePolicyService extends Service {
       return { kind: 'allow' }
     })
 
-    // This boundary is after approval and before the tool body, so every real
-    // state-changing operation receives an effect-start record first.
+    // Only the body/around-dispatch stage overlaps. Resource locks therefore
+    // compose beneath ordered pre-execute/approval and preserve model-order
+    // result finalization in the existing AgentLoop scheduler.
     ctx.on('tools/execute', async (exec, next) => this.executeWithPolicy(exec, next))
   }
 
@@ -290,7 +300,15 @@ export class RuntimePolicyService extends Service {
     return () => void dispose()
   }
 
+  /**
+   * Resolve requirements exactly once for a registry-minted execution. The
+   * same frozen snapshot is reused by approval, resource scheduling, budget,
+   * and effect auditing so a stateful classifier cannot make those stages drift.
+   */
   requirements(exec: ToolExecution): CapabilityRequirement[] {
+    const cached = this.requirementCache.get(exec)
+    if (cached !== undefined) return [...cached]
+
     const workspaceRoot = exec.agent === undefined
       ? this.ctx.sandboxPolicy.workspaceRoot
       : this.ctx.sandboxPolicy.resolve({ session: exec.agent.session }).workspaceRoot
@@ -302,10 +320,12 @@ export class RuntimePolicyService extends Service {
       break
     }
     const requirements = selected ?? defaultToolRequirements(exec)
-    return [...requirements].map((requirement, index) => {
-      const normalized = normalizeRequirement(requirement, `tool requirement ${index}`)
-      return exec.agent === undefined ? normalized : canonicalRequirement(exec.agent, normalized, workspaceRoot)
-    })
+    const normalized = Object.freeze([...requirements].map((requirement, index) => {
+      const value = normalizeRequirement(requirement, `tool requirement ${index}`)
+      return exec.agent === undefined ? value : canonicalRequirement(exec.agent, value, workspaceRoot)
+    }))
+    this.requirementCache.set(exec, normalized)
+    return [...normalized]
   }
 
   permissionSnapshot(agent: Agent): CapabilityPermissionSnapshot {
@@ -382,74 +402,81 @@ export class RuntimePolicyService extends Service {
   }
 
   private async executeWithPolicy(exec: ToolDispatchExecution, next: () => Promise<ToolExecutionResult>): Promise<ToolExecutionResult> {
-    const agent = exec.agent
-    if (agent === undefined) return next()
     const requirements = this.requirements(exec)
-    const riskPoints = requirementRisk(requirements)
-    const agentStarts = requirements.some(requirement => requirement.capability === 'agent.spawn') ? 1 : 0
-    const charge: BudgetVector = {
-      toolCalls: 1,
-      ...(riskPoints > 0 ? { riskPoints } : {}),
-      ...(agentStarts > 0 ? { agentStarts } : {}),
-    }
-    const denial = this.admitCharge(agent.session, { charge, reason: 'tool-dispatch', callId: exec.callId })
-    if (denial !== undefined) {
-      return {
-        content: [{ type: 'text', text: `Error: ${denial}` }],
-        isError: true,
-        error: { message: denial, info: { name: 'BudgetExceededError', code: 'GLOBAL_BUDGET_EXCEEDED' } },
-      }
-    }
-
-    const effects = requirements.filter(requirement => requirement.effect === true)
-    const startedAt = Date.now()
-    let startSeq: number | undefined
-    let receiptId: string | undefined
-    if (effects.length > 0) {
-      receiptId = randomUUID()
-      startSeq = agent.session.append('world/effect-start', {
-        receiptId,
-        callId: exec.callId,
-        toolName: exec.name,
-        requirements: effects,
-        startedAt,
-      }).seq
-    }
-
+    const lease = await this.resourceScheduler.acquire(requirements, exec.signal)
     try {
-      const result = await next()
-      const elapsed = Math.max(0, Date.now() - startedAt)
-      if (elapsed > 0) {
-        this.recordCharge(agent.session, { charge: { wallTimeMs: elapsed }, reason: 'tool-settle', callId: exec.callId })
+      exec.signal.throwIfAborted()
+      const agent = exec.agent
+      if (agent === undefined) return await next()
+
+      const riskPoints = requirementRisk(requirements)
+      const agentStarts = requirements.some(requirement => requirement.capability === 'agent.spawn') ? 1 : 0
+      const charge: BudgetVector = {
+        toolCalls: 1,
+        ...(riskPoints > 0 ? { riskPoints } : {}),
+        ...(agentStarts > 0 ? { agentStarts } : {}),
       }
-      if (startSeq !== undefined && receiptId !== undefined) {
-        const receipt: WorldEffectReceipt = {
-          receiptId,
-          startSeq,
-          callId: exec.callId,
-          toolName: exec.name,
-          status: result.isError ? 'failed' : 'succeeded',
-          endedAt: Date.now(),
+      const denial = this.admitCharge(agent.session, { charge, reason: 'tool-dispatch', callId: exec.callId })
+      if (denial !== undefined) {
+        return {
+          content: [{ type: 'text', text: `Error: ${denial}` }],
+          isError: true,
+          error: { message: denial, info: { name: 'BudgetExceededError', code: 'GLOBAL_BUDGET_EXCEEDED' } },
         }
-        agent.session.append('world/effect-receipt', receipt)
       }
-      return result
-    } catch (error: unknown) {
-      const elapsed = Math.max(0, Date.now() - startedAt)
-      if (elapsed > 0) {
-        this.recordCharge(agent.session, { charge: { wallTimeMs: elapsed }, reason: 'tool-settle', callId: exec.callId })
-      }
-      if (startSeq !== undefined && receiptId !== undefined) {
-        agent.session.append('world/effect-receipt', {
+
+      const effects = requirements.filter(requirement => requirement.effect === true)
+      const startedAt = Date.now()
+      let startSeq: number | undefined
+      let receiptId: string | undefined
+      if (effects.length > 0) {
+        receiptId = randomUUID()
+        startSeq = agent.session.append('world/effect-start', {
           receiptId,
-          startSeq,
           callId: exec.callId,
           toolName: exec.name,
-          status: 'failed',
-          endedAt: Date.now(),
-        })
+          requirements: effects,
+          startedAt,
+        }).seq
       }
-      throw error
+
+      try {
+        const result = await next()
+        const elapsed = Math.max(0, Date.now() - startedAt)
+        if (elapsed > 0) {
+          this.recordCharge(agent.session, { charge: { wallTimeMs: elapsed }, reason: 'tool-settle', callId: exec.callId })
+        }
+        if (startSeq !== undefined && receiptId !== undefined) {
+          const receipt: WorldEffectReceipt = {
+            receiptId,
+            startSeq,
+            callId: exec.callId,
+            toolName: exec.name,
+            status: result.isError ? 'failed' : 'succeeded',
+            endedAt: Date.now(),
+          }
+          agent.session.append('world/effect-receipt', receipt)
+        }
+        return result
+      } catch (error: unknown) {
+        const elapsed = Math.max(0, Date.now() - startedAt)
+        if (elapsed > 0) {
+          this.recordCharge(agent.session, { charge: { wallTimeMs: elapsed }, reason: 'tool-settle', callId: exec.callId })
+        }
+        if (startSeq !== undefined && receiptId !== undefined) {
+          agent.session.append('world/effect-receipt', {
+            receiptId,
+            startSeq,
+            callId: exec.callId,
+            toolName: exec.name,
+            status: 'failed',
+            endedAt: Date.now(),
+          })
+        }
+        throw error
+      }
+    } finally {
+      lease.release()
     }
   }
 }
