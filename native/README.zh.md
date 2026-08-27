@@ -2,10 +2,9 @@
 
 [English](README.md) | 中文
 
-与 DeepSeek Harness 一同维护的原生源码和公开包。[`landlock-run/` workspace](landlock-run/README.zh.md) 负责 harness 使用的 Landlock 自限后执行启动器，包括其架构、由三个包组成的 npm 包家族、平台支持、开发工作流和[发布流程](landlock-run/docs/release.md)。
+与 DeepSeek Harness 一同维护的原生源码。
 
-## Workspace 与发布边界
+- [`landlock-run/`](landlock-run/README.zh.md) 负责 Linux Landlock 自限后执行启动器及其 npm 包装家族。
+- [`execution-core/`](execution-core/README.zh.md) 是 P2 原生执行侧车。第一阶段负责可执行文件解析、普通进程创建、Unix detached 进程组、Linux 父死亡信号以及通过逐行 JSON 协议暴露的整树信号。
 
-`landlock-run/` 及其包属于仓库根 pnpm workspace，并共用根锁文件。开发和 CI 中的 harness 消费方直接使用当前 workspace 的入口包，因此启动器约定变更与消费方更新可以在同一个改动中落地并一起测试。
-
-主仓库的 `Landlock Run` 工作流为每个受支持架构构建并测试。`Landlock Run Release` 汇集这些原生产物，打包并验证三个 npm tarball，随后可选择以同一个启动器版本发布。入口包继续将平台包声明为 npm 可选依赖，因此 npm 仍然只会安装与用户操作系统和 CPU 匹配的包。
+本分支不再由仓库 GitHub Actions 驱动原生构建/发布。构建和打包命令仍保存在源码中，但执行改为开发者/发布流程显式触发。

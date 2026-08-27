@@ -48,24 +48,24 @@ Claude Code 主要做规范与交互兼容，不复制闭源核心。
 
 仅吸收执行能力，不引入 Codex Thread/Agent：
 
-- [ ] Rust Native Protocol；
-- [ ] Process / Process Tree；
+- [x] Rust Native Protocol（P2a JSONL v1，真实编译待 Rust 工具链）；
+- [x] Process / Process Tree（Unix `setsid` + Linux 父死亡信号 + 整树信号）；
 - [ ] PTY；
-- [ ] Shell；
+- [x] Shell（继续复用现有 Shell 层，经 `ctx.subprocess` 切换到原生 Provider）；
 - [ ] Filesystem；
 - [ ] Sandbox；
 - [ ] Network Policy；
-- [ ] Cancellation 收敛；
-- [ ] Rust Provider 与现有 TypeScript Provider 双轨契约测试。
+- [x] Cancellation 收敛（普通进程 TERM→grace→KILL；PTY/Windows 继续在 P2b）；
+- [ ] Rust Provider 与现有 TypeScript Provider 双轨契约测试（已补原生 Provider 契约测试代码，待依赖/Rust 工具链执行）。
 
 ## P3：权限与资源调度
 
-- [ ] `Allow / Ask / Deny` 权限核心；
+- [x] `Allow / Ask / Deny` 权限核心；
 - [ ] 子 Agent 权限单调收紧；
 - [ ] Tool 资源声明；
 - [ ] 资源冲突图调度；
 - [ ] Remote Approval；
-- [ ] WorldEffectReceipt。
+- [x] WorldEffectReceipt。
 
 ## P4：Hermes 模型与恢复能力
 
