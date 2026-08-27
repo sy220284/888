@@ -25,7 +25,7 @@ import type {
   RuntimeSnapshotRefs,
   WorldEffectReceipt,
 } from './types.ts'
-import { BUDGET_DIMENSIONS, addBudget, assertBudgetVector, budgetExceeded, budgetSnapshot } from './budget.ts'
+import { addBudget, assertBudgetVector, budgetExceeded, budgetSnapshot, narrowBudgetLimits } from './budget.ts'
 import { evaluateCapabilityPermission } from './permission.ts'
 import { ResourceScheduler } from './resource-scheduler.ts'
 
@@ -101,26 +101,13 @@ function appendOrReuse<T extends 'runtime/permission' | 'runtime/budget' | 'runt
   return session.append(type, data as never).seq
 }
 
+/** Return only the delegation snapshot owned by this session's direct parent lineage. */
 function delegationEvent(session: Session): SessionEvent<'runtime/delegation'> | undefined {
-  return session.events.findLast((event): event is SessionEvent<'runtime/delegation'> => event.type === 'runtime/delegation')
-}
-
-function narrowBudgetLimits(base: BudgetVector, ceiling: BudgetVector | undefined): BudgetVector {
-  if (ceiling === undefined) return { ...base }
-  assertBudgetVector(base, 'runtime budget limits')
-  assertBudgetVector(ceiling, 'delegated budget ceiling')
-  const limits: BudgetVector = {}
-  for (const dimension of BUDGET_DIMENSIONS) {
-    const local = base[dimension]
-    const delegated = ceiling[dimension]
-    const value = local === undefined
-      ? delegated
-      : delegated === undefined
-        ? local
-        : Math.min(local, delegated)
-    if (value !== undefined) limits[dimension] = value
-  }
-  return limits
+  const parentSession = session.header.parentSession
+  if (parentSession === undefined) return undefined
+  return session.events.findLast((event): event is SessionEvent<'runtime/delegation'> => (
+    event.type === 'runtime/delegation' && event.data.parentSession === parentSession
+  ))
 }
 
 function usageTokens(usage: TokenUsage): number {
@@ -140,20 +127,42 @@ function usageSample(event: SessionEvent): { turn: number; step: number; tokens:
   return undefined
 }
 
-/** Fold durable charges plus provider usage, replacing repeated samples for the same step. */
+function usageKey(sample: { turn: number; step: number }): string {
+  return `${sample.turn}:${sample.step}`
+}
+
+/**
+ * Return only the positive provider-usage delta introduced by one persisted
+ * sample. Usage chunks are durable even when a request later fails, while a
+ * final assistant/message may repeat the cumulative count for the same step.
+ */
+export function usageTokenDelta(events: readonly SessionEvent[], event: SessionEvent): number {
+  const sample = usageSample(event)
+  if (sample === undefined) return 0
+  let previous = 0
+  for (const candidate of events) {
+    if (candidate.seq >= event.seq) break
+    const prior = usageSample(candidate)
+    if (prior === undefined || prior.turn !== sample.turn || prior.step !== sample.step) continue
+    previous = Math.max(previous, prior.tokens)
+  }
+  return Math.max(0, sample.tokens - previous)
+}
+
+/** Fold durable charges plus the maximum observed provider usage for every step. */
 function foldCharges(events: readonly SessionEvent[]): BudgetVector {
   let consumed: BudgetVector = {}
   let tokens = 0
-  let lastUsage: { turn: number; step: number; tokens: number } | undefined
+  const usageByStep = new Map<string, number>()
   for (const event of events) {
     const sample = usageSample(event)
     if (sample !== undefined) {
-      if (lastUsage !== undefined && lastUsage.turn === sample.turn && lastUsage.step === sample.step) {
-        tokens = tokens - lastUsage.tokens + sample.tokens
-      } else {
-        tokens += sample.tokens
+      const key = usageKey(sample)
+      const previous = usageByStep.get(key) ?? 0
+      if (sample.tokens > previous) {
+        tokens += sample.tokens - previous
+        usageByStep.set(key, sample.tokens)
       }
-      lastUsage = sample
     }
     if (event.type === 'runtime/budget-charge') consumed = addBudget(consumed, event.data.charge)
   }
@@ -161,7 +170,7 @@ function foldCharges(events: readonly SessionEvent[]): BudgetVector {
   return consumed
 }
 
-/** Child budget accounting starts after its latest delegation snapshot, never inside an inherited fork seed. */
+/** Child budget accounting starts after its owned delegation snapshot, never inside an inherited fork seed. */
 function foldSessionCharges(session: Session): BudgetVector {
   const delegation = delegationEvent(session)
   return foldCharges(delegation === undefined ? session.events : session.events.slice(delegation.seq + 1))
@@ -301,14 +310,12 @@ export class RuntimePolicyService extends Service {
     // result finalization in the existing AgentLoop scheduler.
     ctx.on('tools/execute', async (exec, next) => this.executeWithPolicy(exec, next))
 
-    // A child's own token usage is already folded from assistant/message. Mirror
-    // the final per-step usage only to currently-live ancestors so sibling and
-    // parent admissions observe one shared lineage budget without double-counting
-    // the child session itself.
+    // Usage chunks are durable even when the provider request later fails. Mirror
+    // each positive per-step delta immediately; a final assistant/message then
+    // contributes only any remaining cumulative delta instead of double-counting.
     ctx.on('session/event', (session, event) => {
-      if (event.type !== 'assistant/message' || event.data.usage === undefined) return
       if (session.header.parentSession === undefined) return
-      const tokens = usageTokens(event.data.usage)
+      const tokens = usageTokenDelta(session.events, event)
       if (tokens <= 0) return
       this.mirrorChargeToAncestors(session, { charge: { tokens }, reason: 'delegated', sourceSession: session.id })
     }, { global: true })
