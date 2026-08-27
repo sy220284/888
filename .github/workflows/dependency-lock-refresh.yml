@@ -1,11 +1,6 @@
 name: Dependency lock refresh
 
 on:
-  # Temporary branch trigger: regenerate once after synchronizing the latest main.
-  push:
-    branches: [harness-2.0/dev-environment-toolchain]
-    paths:
-      - '.github/workflows/dependency-lock-refresh.yml'
   workflow_dispatch:
     inputs:
       write_back:
@@ -22,8 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: harness-2.0/dev-environment-toolchain
       - uses: actions/setup-node@v4
         with:
           node-version: '22.19.0'
@@ -55,8 +48,8 @@ jobs:
             python/sdk/uv.lock
             THIRD_PARTY_NOTICES_RUST.md
           if-no-files-found: error
-      - name: Commit generated files on branch refresh
-        if: ${{ github.event_name == 'push' || inputs.write_back }}
+      - name: Commit generated files
+        if: ${{ inputs.write_back }}
         shell: bash
         run: |
           git add pnpm-lock.yaml native/execution-core/Cargo.lock python/sdk/uv.lock THIRD_PARTY_NOTICES_RUST.md
