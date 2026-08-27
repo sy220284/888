@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  RuntimePolicyService,
   addBudget,
   budgetExceeded,
   budgetSnapshot,
@@ -7,12 +8,34 @@ import {
   evaluateDelegatedPermission,
   narrowBudgetLimits,
   remainingBudget,
+  usageTokenDelta,
 } from '@deepseek-ai/dsh-runtime-policy'
+import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
 import type { CapabilityPermissionSnapshot, CapabilityRequirement } from '@deepseek-ai/dsh-runtime-policy/types'
 
 const workspaceWrite: CapabilityRequirement = {
   capability: 'file.write',
   resource: { kind: 'file', value: '/workspace/src/index.ts' },
+}
+
+function usageChunk(seq: number, tokens: number, turn = 1, step = 0): SessionEvent {
+  return {
+    seq,
+    type: 'assistant/chunk',
+    data: {
+      turn,
+      step,
+      chunk: { type: 'usage', usage: { inputTokens: tokens, outputTokens: 0 } },
+    },
+  } as unknown as SessionEvent
+}
+
+function usageMessage(seq: number, tokens: number, turn = 1, step = 0): SessionEvent {
+  return {
+    seq,
+    type: 'assistant/message',
+    data: { turn, step, usage: { inputTokens: tokens, outputTokens: 0 } },
+  } as unknown as SessionEvent
 }
 
 describe('runtime capability permission', () => {
@@ -92,5 +115,50 @@ describe('global budget arithmetic', () => {
       { toolCalls: 10, wallTimeMs: 1000 },
       { toolCalls: 4, tokens: 8000 },
     )).toEqual({ toolCalls: 4, wallTimeMs: 1000, tokens: 8000 })
+  })
+
+  it('charges durable usage chunks immediately and never double-counts a final cumulative sample', () => {
+    const first = usageChunk(0, 80)
+    const second = usageChunk(1, 120)
+    const final = usageMessage(2, 120)
+    const correctedLower = usageMessage(3, 110)
+
+    expect(usageTokenDelta([first], first)).toBe(80)
+    expect(usageTokenDelta([first, second], second)).toBe(40)
+    expect(usageTokenDelta([first, second, final], final)).toBe(0)
+    expect(usageTokenDelta([first, second, final, correctedLower], correctedLower)).toBe(0)
+  })
+
+  it('ignores inherited delegation snapshots that belong to a different parent lineage', () => {
+    const inheritedDelegation = {
+      seq: 0,
+      type: 'runtime/delegation',
+      data: {
+        parentSession: 'grandparent',
+        permissionCeiling: { defaultDecision: 'allow', rules: [] },
+        budgetCeiling: { tokens: 10 },
+      },
+    } as unknown as SessionEvent
+    const ownedDelegation = {
+      seq: 1,
+      type: 'runtime/delegation',
+      data: {
+        parentSession: 'parent',
+        permissionCeiling: { defaultDecision: 'allow', rules: [] },
+        budgetCeiling: { tokens: 40 },
+      },
+    } as unknown as SessionEvent
+    const service = { limits: { tokens: 100 } } as RuntimePolicyService
+    const inheritedOnly = {
+      header: { parentSession: 'parent' },
+      events: [inheritedDelegation],
+    } as unknown as Session
+    const withOwned = {
+      header: { parentSession: 'parent' },
+      events: [inheritedDelegation, ownedDelegation],
+    } as unknown as Session
+
+    expect(RuntimePolicyService.prototype.budgetLimits.call(service, inheritedOnly)).toEqual({ tokens: 100 })
+    expect(RuntimePolicyService.prototype.budgetLimits.call(service, withOwned)).toEqual({ tokens: 40 })
   })
 })
