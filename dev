@@ -1,15 +1,4 @@
 #!/usr/bin/env sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-if command -v node >/dev/null 2>&1; then
-  exec node "$ROOT/scripts/devtools/dev.mjs" "$@"
-fi
-case "${1:-}" in
-  setup|download|tool)
-    exec sh "$ROOT/scripts/devtools/bootstrap.sh" "$@"
-    ;;
-  *)
-    echo "Node is not available. Run: ./dev setup minimal" >&2
-    exit 1
-    ;;
-esac
+exec sh "$ROOT/scripts/devtools/bootstrap.sh" "$@"
