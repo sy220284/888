@@ -22,10 +22,20 @@ pub enum RequestKind {
         stdout_mode: OutputMode,
         stderr_mode: OutputMode,
     },
-    WriteStdin { process_id: String, data_b64: String },
-    CloseStdin { process_id: String },
-    SignalTree { process_id: String, signal: String },
-    TreeAlive { process_id: String },
+    WriteStdin {
+        process_id: String,
+        data_b64: String,
+    },
+    CloseStdin {
+        process_id: String,
+    },
+    SignalTree {
+        process_id: String,
+        signal: String,
+    },
+    TreeAlive {
+        process_id: String,
+    },
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,22 +72,41 @@ pub struct Response<T: Serialize> {
 
 impl<T: Serialize> Response<T> {
     pub fn success(id: u64, result: T) -> Self {
-        Self { id, ok: true, result: Some(result), error: None }
+        Self {
+            id,
+            ok: true,
+            result: Some(result),
+            error: None,
+        }
     }
 }
 
 impl Response<serde_json::Value> {
     pub fn failure(id: u64, error: impl Into<String>) -> Self {
-        Self { id, ok: false, result: None, error: Some(error.into()) }
+        Self {
+            id,
+            ok: false,
+            result: None,
+            error: Some(error.into()),
+        }
     }
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum Event {
-    Stdout { process_id: String, data_b64: String },
-    Stderr { process_id: String, data_b64: String },
-    StreamClosed { process_id: String, stream: &'static str },
+    Stdout {
+        process_id: String,
+        data_b64: String,
+    },
+    Stderr {
+        process_id: String,
+        data_b64: String,
+    },
+    StreamClosed {
+        process_id: String,
+        stream: &'static str,
+    },
     Exit {
         process_id: String,
         exit_code: Option<i32>,
