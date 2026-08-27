@@ -92,6 +92,10 @@ download_rustup() {
 }
 
 install_rust() {
+  if [ -d "$HOME/.cargo/bin" ]; then
+    PATH="$HOME/.cargo/bin:$PATH"
+    export PATH
+  fi
   if command -v rustup >/dev/null 2>&1; then
     rustup toolchain install "$RUST_VERSION" --profile minimal --component rustfmt --component clippy
   else
@@ -122,14 +126,17 @@ case "$command" in
     echo "Project dependency archives are populated later by pnpm/cargo/uv using their committed lock files."
     exit 0
     ;;
-  setup|tool)
-    if ! node_is_pinned; then install_node; fi
-    if profile_needs_rust "$profile"; then install_rust; fi
-    if profile_needs_python "$profile"; then install_uv; fi
-    exec node "$ROOT/scripts/devtools/dev.mjs" "$@"
-    ;;
-  *)
-    echo "usage: bootstrap.sh <setup|download> <profile>" >&2
-    exit 2
-    ;;
 esac
+
+if ! node_is_pinned; then install_node; fi
+if [ -d "$HOME/.cargo/bin" ]; then
+  PATH="$HOME/.cargo/bin:$PATH"
+  export PATH
+fi
+
+if [ "$command" = "setup" ]; then
+  if profile_needs_rust "$profile"; then install_rust; fi
+  if profile_needs_python "$profile"; then install_uv; fi
+fi
+
+exec node "$ROOT/scripts/devtools/dev.mjs" "$@"
