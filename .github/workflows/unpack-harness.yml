@@ -26,7 +26,13 @@ jobs:
           test -d .harness-unpack/deepseek-harness-master
           # 压缩包中个别工具目录包含嵌套 Git 仓库。源码需要保留，嵌套 .git 元数据不能提交到宿主仓库。
           find .harness-unpack/deepseek-harness-master -type d -name .git -prune -exec rm -rf {} +
-          rsync -a --exclude='.git/' --exclude='*/.git/' .harness-unpack/deepseek-harness-master/ ./
+          # GitHub Actions 的 GITHUB_TOKEN 不能安全地批量创建压缩包自带的工作流；
+          # 先提交其余源码，原工作流文件由仓库管理连接在后续一次性补回。
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='*/.git/' \
+            --exclude='.github/workflows/' \
+            .harness-unpack/deepseek-harness-master/ ./
           rm -rf .harness-unpack
 
       - name: 提交解压后的源码
