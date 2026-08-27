@@ -36,7 +36,7 @@ download() {
   url=$1
   target=$2
   if [ ! -f "$target" ]; then
-    echo "download: $url"
+    echo "download: $url" >&2
     curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "$url" -o "$target"
   fi
 }
@@ -100,7 +100,7 @@ install_rust() {
 }
 
 install_uv() {
-  if command -v uv >/dev/null 2>&1; then return; fi
+  if command -v uv >/dev/null 2>&1 && uv --version | grep -q "$UV_VERSION"; then return; fi
   py=python3
   command -v "$py" >/dev/null 2>&1 || py=python
   command -v "$py" >/dev/null 2>&1 || { echo "Python >=3.10 is required for the python/full profile" >&2; exit 1; }
