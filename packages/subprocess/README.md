@@ -8,6 +8,7 @@ The shared process substrate for one execution world: executable lookup, fully-s
 |---|---|---|
 | [`subprocess`](subprocess/README.md) (`@deepseek-ai/dsh-subprocess`) | `ctx.subprocess` | Service Definition: executable lookup, ordinary managed spawns, the terminal-process primitive, handle lifecycles, and shared environment/output vocabulary |
 | [`subprocess-local`](subprocess-local/README.md) (`@deepseek-ai/dsh-subprocess-local`) | — | Local Service Provider: detached process trees, bounded collection/spill, `node-pty`, foreground/session inspection, tree signalling, and terminate-and-join disposal |
+| [`subprocess-native`](subprocess-native/README.md) (`@deepseek-ai/dsh-subprocess-native`) | — | Opt-in native provider over `ctx.nativeExecution`; P2a covers ordinary process trees and deliberately rejects PTY until P2b |
 
 The service owns process lifetime across consumer reloads; consumers own what a process means (a bash command, a future non-shell runner) and every default that shapes one.
 

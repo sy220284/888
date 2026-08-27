@@ -97,6 +97,10 @@
     "website/**/*.ts",
     "website/.vitepress/**/*.ts"
   ],
+  // Under packages/client a test file names the face it covers: `*.client.*`
+  // belongs to the Client aggregate, `*.host.spec.ts` to this one. The two
+  // suffixes are mutually exclusive, so each aggregate excludes the other's
+  // and the package test glob above needs no per-file entry.
   "exclude": [
     "packages/client/*/src/**",
     "packages/*/*/tests/**/*.client.ts",
@@ -196,8 +200,11 @@
     { "path": "./packages/llm/recovery" },
     { "path": "./packages/llm/model-router" },
     { "path": "./packages/examples/agent-spine-demo" },
+    { "path": "./packages/execution/native-execution" },
+    { "path": "./packages/execution/native-client" },
     { "path": "./packages/subprocess/subprocess" },
     { "path": "./packages/subprocess/subprocess-local" },
+    { "path": "./packages/subprocess/subprocess-native" },
     { "path": "./packages/e2b/e2b" },
     { "path": "./packages/e2b/subprocess-e2b" },
     { "path": "./packages/shell/shell" },
