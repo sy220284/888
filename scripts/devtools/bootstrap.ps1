@@ -52,6 +52,12 @@ function Install-Node {
   $env:PATH = "$Prefix;$env:PATH"
 }
 
+function Node-IsPinned {
+  $Node = Get-Command node -ErrorAction SilentlyContinue
+  if (-not $Node) { return $false }
+  return ((& node --version) -eq "v$NodeVersion")
+}
+
 function Profile-NeedsRust([string]$Profile) { return @('test','native','full') -contains $Profile }
 function Profile-NeedsPython([string]$Profile) { return @('python','full') -contains $Profile }
 
@@ -80,7 +86,8 @@ function Install-Rust {
 }
 
 function Install-Uv {
-  if (Get-Command uv -ErrorAction SilentlyContinue) { return }
+  $Uv = Get-Command uv -ErrorAction SilentlyContinue
+  if ($Uv -and ((& uv --version) -match [regex]::Escape($UvVersion))) { return }
   $Python = Get-Command python -ErrorAction SilentlyContinue
   if (-not $Python) { throw 'Python >=3.10 is required for the python/full profile' }
   & python -m pip install --user "uv==$UvVersion"
@@ -99,7 +106,7 @@ if ($Command -eq 'download') {
 }
 
 if (@('setup','tool') -contains $Command) {
-  if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Install-Node }
+  if (-not (Node-IsPinned)) { Install-Node }
   if (Profile-NeedsRust $Profile) { Install-Rust }
   if (Profile-NeedsPython $Profile) { Install-Uv }
   & node (Join-Path $Root 'scripts/devtools/dev.mjs') @args
