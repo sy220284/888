@@ -72,13 +72,19 @@ function Download-Rustup {
   return $Bin
 }
 
+function Add-CargoPath {
+  $CargoBin = Join-Path $HOME '.cargo/bin'
+  if (Test-Path $CargoBin) { $env:PATH = "$CargoBin;$env:PATH" }
+}
+
 function Install-Rust {
+  Add-CargoPath
   if (Get-Command rustup -ErrorAction SilentlyContinue) {
     & rustup toolchain install $RustVersion --profile minimal --component rustfmt --component clippy
   } else {
     $Rustup = Download-Rustup
     & $Rustup -y --profile minimal --default-toolchain $RustVersion --component rustfmt --component clippy
-    $env:PATH = "$HOME\.cargo\bin;$env:PATH"
+    Add-CargoPath
   }
   if ($LASTEXITCODE -ne 0) { throw 'Rust installation failed' }
   & rustup override set $RustVersion
@@ -105,12 +111,13 @@ if ($Command -eq 'download') {
   exit 0
 }
 
-if (@('setup','tool') -contains $Command) {
-  if (-not (Node-IsPinned)) { Install-Node }
+if (-not (Node-IsPinned)) { Install-Node }
+Add-CargoPath
+
+if ($Command -eq 'setup') {
   if (Profile-NeedsRust $Profile) { Install-Rust }
   if (Profile-NeedsPython $Profile) { Install-Uv }
-  & node (Join-Path $Root 'scripts/devtools/dev.mjs') @args
-  exit $LASTEXITCODE
 }
 
-throw 'usage: bootstrap.ps1 <setup|download> <profile>'
+& node (Join-Path $Root 'scripts/devtools/dev.mjs') @args
+exit $LASTEXITCODE
