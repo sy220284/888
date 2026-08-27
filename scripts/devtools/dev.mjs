@@ -149,9 +149,15 @@ function installTool(name) {
     return
   }
   if (name === 'pnpm') {
-    if (!commandExists('corepack', ['--version'])) throw new Error('corepack is required; bootstrap the pinned Node toolchain first')
-    must(run('corepack', ['enable']), 'corepack enable')
-    must(run('corepack', ['prepare', `pnpm@${manifest.tools.pnpm.version}`, '--activate']), 'install pnpm')
+    if (commandExists('corepack', ['--version'])) {
+      must(run('corepack', ['enable']), 'corepack enable')
+      must(run('corepack', ['prepare', `pnpm@${manifest.tools.pnpm.version}`, '--activate']), 'install pnpm through corepack')
+    } else {
+      if (!commandExists('npm', ['--version'])) throw new Error('the pinned Node toolchain has neither corepack nor npm; pnpm cannot be installed')
+      must(run('npm', ['install', '--global', `pnpm@${manifest.tools.pnpm.version}`]), 'install pnpm through npm fallback')
+    }
+    const installed = toolState('pnpm')
+    if (!installed.ok) throw new Error(`pnpm installation did not activate ${manifest.tools.pnpm.version}: ${installed.actual}`)
     return
   }
   if (name === 'rust') {
