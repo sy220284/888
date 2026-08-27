@@ -7459,6 +7459,9 @@ importers:
 
   packages/subagent/subagent:
     dependencies:
+      '@deepseek-ai/dsh-runtime-policy':
+        specifier: workspace:^
+        version: link:../../execution/runtime-policy
       zod:
         specifier: ^4.4.3
         version: 4.4.3
