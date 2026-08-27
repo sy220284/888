@@ -1,0 +1,14 @@
+{
+  "linux": {
+    "native-build-chain": ["cc or clang/gcc", "system linker"],
+    "notes": "Install with the distribution package manager; CI uses the runner image toolchain."
+  },
+  "macos": {
+    "native-build-chain": ["Xcode Command Line Tools"],
+    "notes": "Install with xcode-select --install when absent."
+  },
+  "windows": {
+    "native-build-chain": ["MSVC Build Tools or clang-cl"],
+    "notes": "Use Visual Studio Build Tools with the Desktop C++ workload for the MSVC Rust target."
+  }
+}
