@@ -10,7 +10,7 @@ use protocol::{
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead};
 use std::sync::{Arc, Mutex};
 
 fn main() {
@@ -51,7 +51,7 @@ fn main() {
         for process in processes.values() {
             let _ = process::signal_tree(process.pid, "SIGKILL");
         }
-    }
+    };
 }
 
 fn handle(
