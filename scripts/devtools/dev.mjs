@@ -7,9 +7,13 @@ const root = resolve(import.meta.dirname, '../..')
 const manifest = JSON.parse(readFileSync(resolve(root, 'devtools/manifest.json'), 'utf8'))
 const profiles = JSON.parse(readFileSync(resolve(root, 'devtools/profiles.json'), 'utf8')).profiles
 const cargoManifest = 'native/execution-core/Cargo.toml'
+const windowsCmdTools = new Set(['corepack', 'npm', 'npx', 'pnpm'])
 
 function run(command, args = [], options = {}) {
-  return spawnSync(command, args, {
+  const useCmd = process.platform === 'win32' && windowsCmdTools.has(command)
+  const executable = useCmd ? (process.env.ComSpec || 'cmd.exe') : command
+  const commandArgs = useCmd ? ['/d', '/s', '/c', command, ...args] : args
+  return spawnSync(executable, commandArgs, {
     cwd: root,
     encoding: 'utf8',
     stdio: options.capture ? 'pipe' : 'inherit',
