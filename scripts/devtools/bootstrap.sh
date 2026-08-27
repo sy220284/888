@@ -66,6 +66,10 @@ install_node() {
   export PATH
 }
 
+node_is_pinned() {
+  command -v node >/dev/null 2>&1 && [ "$(node --version 2>/dev/null)" = "v$NODE_VERSION" ]
+}
+
 profile_needs_rust() {
   case "$1" in test|native|full) return 0 ;; *) return 1 ;; esac
 }
@@ -119,7 +123,7 @@ case "$command" in
     exit 0
     ;;
   setup|tool)
-    if ! command -v node >/dev/null 2>&1; then install_node; fi
+    if ! node_is_pinned; then install_node; fi
     if profile_needs_rust "$profile"; then install_rust; fi
     if profile_needs_python "$profile"; then install_uv; fi
     exec node "$ROOT/scripts/devtools/dev.mjs" "$@"
