@@ -21,6 +21,14 @@ pre-commit:
       run: node_modules/.bin/tsx scripts/run-oxlint.ts --config .oxlintrc.staged.json --fix --no-error-on-unmatched-pattern {staged_files}
       stage_fixed: true
 
+    - name: native rustfmt
+      glob: 'native/execution-core/**/*.{rs,toml}'
+      run: cargo fmt --manifest-path native/execution-core/Cargo.toml -- --check
+
+    - name: development tool declarations
+      glob: '{dev,dev.ps1,devtools/**,scripts/devtools/**,package.json,rust-toolchain.toml,python/sdk/pyproject.toml}'
+      run: node scripts/devtools/verify-manifest.mjs && node scripts/devtools/verify-download-policy.mjs
+
     # Regenerate rather than reject: a dependency edit that forgot the notices
     # would otherwise fail the test lane long after the commit. The glob matches
     # every input the generator reads, including the generator itself and the
@@ -28,7 +36,7 @@ pre-commit:
     # lefthook only inspects files present on disk — so that one case still
     # falls through to the freshness assertion in the test lane.
     - name: third-party notices (staged)
-      glob: '{package.json,*/package.json,*/*/package.json,*/*/*/package.json,*/*/*/*/package.json,pnpm-workspace.yaml,*/*/pnpm-workspace.yaml,pnpm-lock.yaml,vendor/README.md,python/*/pyproject.toml,scripts/gen-third-party-notices.ts,scripts/build-exe-for-python-sdk.ts}'
+      glob: '{package.json,*/package.json,*/*/package.json,*/*/*/package.json,*/*/*/*/package.json,pnpm-workspace.yaml,*/*/pnpm-workspace.yaml,pnpm-lock.yaml,native/**/Cargo.toml,native/**/Cargo.lock,vendor/README.md,python/*/pyproject.toml,scripts/gen-third-party-notices.ts,scripts/build-exe-for-python-sdk.ts}'
       run: node_modules/.bin/tsx scripts/gen-third-party-notices.ts && git add THIRD_PARTY_NOTICES.md
 
     - name: whitespace (staged)
@@ -53,3 +61,9 @@ pre-push:
   jobs:
     - name: typecheck
       run: pnpm run typecheck
+
+    - name: dependency locks
+      run: node scripts/devtools/verify-locks.mjs
+
+    - name: native gates when available
+      run: if command -v cargo >/dev/null 2>&1; then node scripts/devtools/native-gates.mjs; else echo 'cargo unavailable; CI owns native gates'; fi
