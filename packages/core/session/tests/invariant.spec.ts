@@ -67,6 +67,39 @@ describe('session-log invariants', () => {
     }).not.toThrow()
   })
 
+  it('binds step snapshots to the current request state and open step', async () => {
+    const { ctx } = await setup()
+    const session = ctx.sessions.create(SessionId('step-snapshot-invariant'))
+    session.append('turn/start', { turn: 1 })
+    session.append('step/start', { turn: 1, step: 1 })
+    const message = session.append('user/message', createUserMessage({
+      content: [{ type: 'text', text: 'hi' }], source: { kind: 'user' },
+    }), { surfaceOp: 'append' })
+    const header = session.append('request/header', {
+      header: { config: { provider: 'mock', model: 'mock' } },
+      reason: 'initial',
+    })
+    const context = session.append('request/context', { provider: 'mock', model: 'mock' })
+
+    expect(() => session.append('step/snapshot', {
+      turn: 1,
+      step: 1,
+      attempt: 1,
+      agentId: 'agent-1',
+      surfaceSeqs: [message.seq],
+      refs: { requestHeader: header.seq, requestContext: context.seq },
+    })).not.toThrow()
+
+    expect(() => session.append('step/snapshot', {
+      turn: 1,
+      step: 1,
+      attempt: 2,
+      agentId: 'agent-1',
+      surfaceSeqs: [message.seq],
+      refs: { requestHeader: header.seq - 1, requestContext: context.seq },
+    })).toThrow(/requestHeader ref/)
+  })
+
   it('does not advance committed trace state when a later dispatch listener vetoes', async () => {
     const { ctx } = await setup()
     const session = ctx.sessions.create(SessionId('dispatch-veto-rollback'))

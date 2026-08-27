@@ -220,6 +220,38 @@ export interface RequestContext {
 }
 
 /**
+ * Durable references that freeze the exact request state used by one model
+ * dispatch.  The interface is intentionally merge-extensible: future core
+ * services (permissions, budgets, execution worlds, and so on) may add their
+ * own event-sequence references without changing the step-snapshot envelope.
+ */
+export interface StepSnapshotRefs {
+  /** Sequence of the authoritative `request/header` snapshot for this dispatch. */
+  requestHeader: number
+  /** Sequence of the authoritative `request/context` record for this dispatch. */
+  requestContext: number
+}
+
+/**
+ * One immutable model-dispatch boundary inside a step.  A normal step has one
+ * snapshot; request retries create additional attempts without inventing a new
+ * step.  `surfaceSeqs` records the exact ordered model-visible surface at the
+ * dispatch boundary, while `refs` binds the non-message request state.
+ */
+export interface StepSnapshot {
+  turn: number
+  step: number
+  /** One-based request attempt within this step. */
+  attempt: number
+  /** Agent runtime id that owned the dispatch. */
+  agentId: string
+  /** Ordered surface-event sequence numbers used to derive request messages. */
+  surfaceSeqs: number[]
+  /** Durable references to the request state frozen for this attempt. */
+  refs: StepSnapshotRefs
+}
+
+/**
  * Why a `request/header` snapshot was appended: `'initial'` — the log's first
  * header (a new conversation); `'resume'` — a loop instance's first request
  * over a log that already has header events (process restart, fork seed);
@@ -252,6 +284,12 @@ export interface SessionEventMap {
   'turn/end': { turn: number; reason: TurnEndReason }
   /** Opens step `step` of turn `turn` — one model call plus the tool executions it requested. */
   'step/start': { turn: number; step: number }
+  /**
+   * Freezes the exact model-dispatch boundary for one request attempt inside
+   * the open step.  Retries append another snapshot with an incremented
+   * `attempt`; the step itself remains unchanged.
+   */
+  'step/snapshot': StepSnapshot
   /** Closes step `step` of turn `turn`. */
   'step/end': { turn: number; step: number }
   /**

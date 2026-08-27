@@ -336,9 +336,11 @@ export class ReactLoopAgent implements Agent {
     signal.throwIfAborted()
     const system = renderPrompt(assembly)
 
+    let attempt = 0
     while (true) {
+      attempt += 1
       const { request, preparedCall } = await this.buildRequest(
-        turn, step, assembly.tools, system, this.session.deriveMessages(), signal,
+        turn, step, attempt, assembly.tools, system, this.session.deriveMessages(), signal,
       )
       const assembler = new BlockAssembler()
       const chunkSeqs: number[] = []
@@ -426,6 +428,7 @@ export class ReactLoopAgent implements Agent {
   private async buildRequest(
     turn: number,
     step: number,
+    attempt: number,
     tools: GenerateOptions['tools'] & object,
     system: string,
     boundaryMessages: Message[],
@@ -481,12 +484,18 @@ export class ReactLoopAgent implements Agent {
       ...tools.length > 0 ? { tools } : {},
     })
     const baseline = this.session.requestHeader()
+    let requestHeaderSeq = this.session.events.findLast(event => event.type === 'request/header')?.seq
     if (!this.requestHeaderLogged) {
-      this.session.append('request/header', { header, reason: baseline === undefined ? 'initial' : 'resume' })
+      requestHeaderSeq = this.session.append(
+        'request/header',
+        { header, reason: baseline === undefined ? 'initial' : 'resume' },
+      ).seq
       this.requestHeaderLogged = true
     } else if (baseline === undefined || !headerEquals(baseline, header)) {
-      this.session.append('request/header', { header, reason: 'change' })
+      requestHeaderSeq = this.session.append('request/header', { header, reason: 'change' }).seq
     }
+    /* v8 ignore next -- a dispatch always owns a full request/header by this point */
+    if (requestHeaderSeq === undefined) throw new Error(`agent "${this.id}": request header was not durably resolved`)
 
     const contextWindow = preparedCall?.context?.contextWindow
     const requestContext: RequestContext = {
@@ -495,11 +504,23 @@ export class ReactLoopAgent implements Agent {
       ...contextWindow === undefined ? {} : { contextWindow },
     }
     const previousContext = session.requestContext()
+    let requestContextSeq = session.events.findLast(event => event.type === 'request/context')?.seq
     if (previousContext?.provider !== requestContext.provider
       || previousContext.model !== requestContext.model
       || previousContext.contextWindow !== requestContext.contextWindow) {
-      session.append('request/context', requestContext)
+      requestContextSeq = session.append('request/context', requestContext).seq
     }
+    /* v8 ignore next -- the first request for every route logs request/context */
+    if (requestContextSeq === undefined) throw new Error(`agent "${this.id}": request context was not durably resolved`)
+
+    session.append('step/snapshot', {
+      turn,
+      step,
+      attempt,
+      agentId: this.id,
+      surfaceSeqs: [...session.surface.nodes],
+      refs: { requestHeader: requestHeaderSeq, requestContext: requestContextSeq },
+    })
     signal.throwIfAborted()
 
     const request = markAgentLoopRequest(deepFreeze({
