@@ -117,7 +117,13 @@ function usageTokens(usage: TokenUsage): number {
     + (usage.cacheWriteTokens ?? 0)
 }
 
-function usageSample(event: SessionEvent): { turn: number; step: number; tokens: number } | undefined {
+interface UsageSample {
+  readonly turn: number
+  readonly step: number
+  readonly tokens: number
+}
+
+function usageSample(event: SessionEvent): UsageSample | undefined {
   if (event.type === 'assistant/chunk' && event.data.chunk.type === 'usage') {
     return { turn: event.data.turn, step: event.data.step, tokens: usageTokens(event.data.chunk.usage) }
   }
@@ -127,21 +133,37 @@ function usageSample(event: SessionEvent): { turn: number; step: number; tokens:
   return undefined
 }
 
-function usageKey(sample: { turn: number; step: number }): string {
+function usageStepKey(sample: Pick<UsageSample, 'turn' | 'step'>): string {
   return `${sample.turn}:${sample.step}`
+}
+
+/** Latest durable model-attempt boundary preceding one usage sample. */
+function usageAttemptBoundary(
+  events: readonly SessionEvent[],
+  event: SessionEvent,
+  sample: Pick<UsageSample, 'turn' | 'step'>,
+): number | undefined {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const candidate = events[index]
+    if (candidate === undefined || candidate.seq >= event.seq || candidate.type !== 'step/snapshot') continue
+    if (candidate.data.turn === sample.turn && candidate.data.step === sample.step) return candidate.seq
+  }
+  return undefined
 }
 
 /**
  * Return only the positive provider-usage delta introduced by one persisted
- * sample. Usage chunks are durable even when a request later fails, while a
- * final assistant/message may repeat the cumulative count for the same step.
+ * sample. Usage is cumulative only inside one model attempt: retries reuse the
+ * same turn/step but own a new step/snapshot boundary and must be billed again.
  */
 export function usageTokenDelta(events: readonly SessionEvent[], event: SessionEvent): number {
   const sample = usageSample(event)
   if (sample === undefined) return 0
+  const boundary = usageAttemptBoundary(events, event, sample)
   let previous = 0
   for (const candidate of events) {
     if (candidate.seq >= event.seq) break
+    if (boundary !== undefined && candidate.seq <= boundary) continue
     const prior = usageSample(candidate)
     if (prior === undefined || prior.turn !== sample.turn || prior.step !== sample.step) continue
     previous = Math.max(previous, prior.tokens)
@@ -149,19 +171,25 @@ export function usageTokenDelta(events: readonly SessionEvent[], event: SessionE
   return Math.max(0, sample.tokens - previous)
 }
 
-/** Fold durable charges plus the maximum observed provider usage for every step. */
+/** Fold durable charges plus the maximum provider usage observed in each model attempt. */
 function foldCharges(events: readonly SessionEvent[]): BudgetVector {
   let consumed: BudgetVector = {}
   let tokens = 0
-  const usageByStep = new Map<string, number>()
+  const attemptBoundaryByStep = new Map<string, number>()
+  const usageByAttempt = new Map<string, number>()
   for (const event of events) {
+    if (event.type === 'step/snapshot') {
+      attemptBoundaryByStep.set(`${event.data.turn}:${event.data.step}`, event.seq)
+    }
     const sample = usageSample(event)
     if (sample !== undefined) {
-      const key = usageKey(sample)
-      const previous = usageByStep.get(key) ?? 0
+      const stepKey = usageStepKey(sample)
+      const boundary = attemptBoundaryByStep.get(stepKey)
+      const key = boundary === undefined ? stepKey : `${stepKey}@${boundary}`
+      const previous = usageByAttempt.get(key) ?? 0
       if (sample.tokens > previous) {
         tokens += sample.tokens - previous
-        usageByStep.set(key, sample.tokens)
+        usageByAttempt.set(key, sample.tokens)
       }
     }
     if (event.type === 'runtime/budget-charge') consumed = addBudget(consumed, event.data.charge)
@@ -311,7 +339,7 @@ export class RuntimePolicyService extends Service {
     ctx.on('tools/execute', async (exec, next) => this.executeWithPolicy(exec, next))
 
     // Usage chunks are durable even when the provider request later fails. Mirror
-    // each positive per-step delta immediately; a final assistant/message then
+    // each positive per-attempt delta immediately; a final assistant/message then
     // contributes only any remaining cumulative delta instead of double-counting.
     ctx.on('session/event', (session, event) => {
       if (session.header.parentSession === undefined) return
