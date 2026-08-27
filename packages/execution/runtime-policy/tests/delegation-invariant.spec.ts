@@ -117,4 +117,32 @@ describe('runtime delegation invariants', () => {
       },
     })).toThrow(/must cite runtime\/delegation/)
   })
+
+  it('rejects a runtime permission snapshot whose ceiling diverges from its cited delegation', async () => {
+    const ctx = await setup()
+    const session = delegatedChild(ctx)
+    appendDelegation(session)
+    session.append('turn/start', { turn: 1 })
+    session.append('step/start', { turn: 1, step: 1 })
+
+    expect(() => session.append('runtime/permission', {
+      defaultDecision: 'allow',
+      rules: [],
+      ceiling: { defaultDecision: 'allow', rules: [] },
+    })).toThrow(/ceiling does not match the active runtime\/delegation/)
+  })
+
+  it('rejects a runtime budget snapshot that widens its delegated ceiling', async () => {
+    const ctx = await setup()
+    const session = delegatedChild(ctx)
+    appendDelegation(session)
+    session.append('turn/start', { turn: 1 })
+    session.append('step/start', { turn: 1, step: 1 })
+
+    expect(() => session.append('runtime/budget', {
+      limits: { toolCalls: 4, tokens: 1000 },
+      consumed: {},
+      remaining: { toolCalls: 4, tokens: 1000 },
+    })).toThrow(/toolCalls limit widens the active runtime\/delegation/)
+  })
 })
