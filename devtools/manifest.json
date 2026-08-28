@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "project": "DeepSeek Harness 2.0",
+  "tools": {
+    "git": {
+      "versionPolicy": "system",
+      "minimumVersion": "2.40.0",
+      "requiredBy": ["minimal", "test", "native", "python", "full"]
+    },
+    "node": {
+      "version": "22.19.0",
+      "sourceOfTruth": "package.json#engines.node",
+      "requiredBy": ["minimal", "test", "native", "python", "full"]
+    },
+    "pnpm": {
+      "version": "11.7.0",
+      "sourceOfTruth": "package.json#packageManager",
+      "requiredBy": ["minimal", "test", "native", "python", "full"]
+    },
+    "rust": {
+      "version": "1.98.0",
+      "sourceOfTruth": "rust-toolchain.toml",
+      "components": ["rustfmt", "clippy"],
+      "requiredBy": ["test", "native", "full"]
+    },
+    "python": {
+      "minimumVersion": "3.10",
+      "sourceOfTruth": "python/sdk/pyproject.toml#project.requires-python",
+      "requiredBy": ["python", "full"]
+    },
+    "uv": {
+      "version": "0.12.0",
+      "requiredBy": ["python", "full"]
+    },
+    "powershell": {
+      "versionPolicy": "system-or-project-compatible",
+      "optional": true,
+      "requiredBy": ["full"]
+    }
+  },
+  "dependencyLocks": {
+    "npm": "pnpm-lock.yaml",
+    "cargo": "native/execution-core/Cargo.lock",
+    "python": "python/sdk/uv.lock"
+  },
+  "security": {
+    "downloadVerification": "sha256",
+    "allowUnverifiedDownloads": false,
+    "preferOfficialSources": true
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "minimal": {
+      "description": "TypeScript 核心开发最小环境",
+      "tools": ["git", "node", "pnpm"],
+      "dependencyScopes": ["npm"],
+      "checks": ["typecheck", "lint", "test"]
+    },
+    "test": {
+      "description": "Harness 2.0 核心开发与测试环境",
+      "extends": "minimal",
+      "tools": ["rust"],
+      "dependencyScopes": ["cargo"],
+      "checks": ["check:all"]
+    },
+    "native": {
+      "description": "Rust 原生执行平面开发环境",
+      "extends": "test",
+      "tools": ["native-build-chain"],
+      "checks": ["native:all"]
+    },
+    "python": {
+      "description": "Python SDK 开发环境",
+      "extends": "minimal",
+      "tools": ["python", "uv"],
+      "dependencyScopes": ["python"],
+      "checks": ["python:test"]
+    },
+    "full": {
+      "description": "全仓开发、测试与发布准备环境",
+      "extends": ["native", "python"],
+      "tools": ["powershell"],
+      "dependencyScopes": ["npm", "cargo", "python"],
+      "checks": ["check:all"]
+    }
+  }
+}

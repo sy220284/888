@@ -16,6 +16,18 @@ updates:
       - "kind/dependency"
       - "area/infra"
 
+  - package-ecosystem: "cargo"
+    directory: "/native/execution-core"
+    schedule:
+      interval: "cron"
+      cronjob: "0 4 * * *"
+      timezone: "Asia/Shanghai"
+    cooldown:
+      default-days: 30
+    labels:
+      - "kind/dependency"
+      - "area/infra"
+
   - package-ecosystem: "uv"
     directory: "/python/sdk"
     schedule:
