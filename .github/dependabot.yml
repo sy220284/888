@@ -12,9 +12,6 @@ updates:
       timezone: "Asia/Shanghai"
     cooldown:
       default-days: 30
-    labels:
-      - "kind/dependency"
-      - "area/infra"
 
   - package-ecosystem: "cargo"
     directory: "/native/execution-core"
@@ -24,9 +21,6 @@ updates:
       timezone: "Asia/Shanghai"
     cooldown:
       default-days: 30
-    labels:
-      - "kind/dependency"
-      - "area/infra"
 
   - package-ecosystem: "uv"
     directory: "/python/sdk"
@@ -36,9 +30,6 @@ updates:
       timezone: "Asia/Shanghai"
     cooldown:
       default-days: 30
-    labels:
-      - "kind/dependency"
-      - "area/infra"
 
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -48,6 +39,3 @@ updates:
       timezone: "Asia/Shanghai"
     cooldown:
       default-days: 30
-    labels:
-      - "kind/dependency"
-      - "area/infra"
