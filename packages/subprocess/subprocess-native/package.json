@@ -23,7 +23,7 @@
   },
   "files": [
     "lib/index.js",
-    "lib/output.js",
+    "lib/invariant.js",
     "lib/types/**/*.d.ts"
   ],
   "license": "MIT",
