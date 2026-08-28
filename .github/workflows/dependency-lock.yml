@@ -16,6 +16,18 @@ on:
       - '.github/workflows/dependency-lock.yml'
   push:
     branches: [main]
+    paths:
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'packages/**/package.json'
+      - 'native/execution-core/Cargo.toml'
+      - 'native/execution-core/Cargo.lock'
+      - 'python/sdk/pyproject.toml'
+      - 'python/sdk/uv.lock'
+      - 'devtools/**'
+      - 'scripts/devtools/verify-locks.mjs'
+      - '.github/workflows/dependency-lock.yml'
   workflow_dispatch:
 
 permissions:
