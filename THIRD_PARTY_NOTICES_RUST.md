@@ -4,7 +4,7 @@ Generated from `cargo metadata --locked` for `native/execution-core/Cargo.toml`.
 
 | Package | Version | License | Source |
 | --- | --- | --- | --- |
-| base64 | 0.22.1 | MIT OR Apache-2.0 | https://github.com/marshallpierce/rust-base64 |
+| base64 | 0.23.0 | MIT OR Apache-2.0 | https://github.com/marshallpierce/rust-base64 |
 | itoa | 1.0.18 | MIT OR Apache-2.0 | https://github.com/dtolnay/itoa |
 | libc | 0.2.189 | MIT OR Apache-2.0 | https://github.com/rust-lang/libc |
 | memchr | 2.8.3 | Unlicense OR MIT | https://github.com/BurntSushi/memchr |
