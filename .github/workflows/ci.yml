@@ -20,7 +20,28 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@11.7.0 --activate
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run check:ci
+      - name: Workspace constraints
+        run: pnpm run constraints
+      - name: Runtime dependency closure
+        run: pnpm run verify-runtime-closure
+      - name: Package invariants
+        run: pnpm run verify-package-invariants
+      - name: Build TypeScript contracts
+        run: pnpm run build:lib:host
+      - name: Type check
+        run: pnpm run typecheck:contracts-ready
+      - name: Lint
+        run: pnpm run lint:contracts-ready
+      - name: Unit tests
+        run: pnpm run test
+      - name: Official build
+        run: pnpm run build:official
+      - name: Package publish validation
+        run: pnpm run publint
+      - name: NodeNext type exports
+        run: pnpm run verify-node-next-types
+      - name: Built package invariants
+        run: pnpm run verify-built-package-invariants
 
   native:
     runs-on: ubuntu-latest
