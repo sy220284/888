@@ -32,7 +32,7 @@ jobs:
         run: cargo generate-lockfile --manifest-path native/execution-core/Cargo.toml
       - name: Refresh Rust notices
         run: node scripts/devtools/rust-notices.mjs
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Refresh Python lock
