@@ -128,7 +128,7 @@ export class RecoveryService extends Service {
       if (resolution === undefined) continue
       if (resolution.strategy !== handler.id) throw new Error(`recovery strategy "${handler.id}" returned mismatched strategy "${resolution.strategy}"`)
       if (resolution.reason.trim().length === 0) throw new Error(`recovery strategy "${handler.id}" returned an empty reason`)
-      return Object.freeze({...resolution, ...resolution.route === undefined ? {} : { route: Object.freeze({ ...resolution.route }) }})
+      return Object.freeze({ ...resolution, ...resolution.route === undefined ? {} : { route: Object.freeze({ ...resolution.route }) } })
     }
     return undefined
   }

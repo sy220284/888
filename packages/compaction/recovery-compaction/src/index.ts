@@ -4,6 +4,7 @@
  */
 
 import type { Context } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-compaction'
 import type { RecoveryResolution } from '@deepseek-ai/dsh-recovery'
 
 export const name = 'recovery-compaction'
@@ -23,5 +24,5 @@ export function apply(ctx: Context): void {
       reason: 'compacted model-visible history after provider-confirmed context overflow',
     }
   }, { priority: 100 })
-  ctx.effect(() => () => dispose(), 'recovery-compaction: unregister strategy')
+  ctx.effect(() => () => { dispose() }, 'recovery-compaction: unregister strategy')
 }

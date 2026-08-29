@@ -8,7 +8,7 @@
 import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { LlmCallConfig, LlmFailure } from '@deepseek-ai/dsh-llm'
+import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { RecoveryRequest, RecoveryResolution } from '@deepseek-ai/dsh-recovery'
 
@@ -123,7 +123,7 @@ export class ModelRouter extends Service {
     }, { prepend: true })
 
     const disposeRecovery = ctx.recovery.register('model-fallback', request => this.recover(request), { priority: -100 })
-    ctx.effect(() => () => disposeRecovery(), 'model-router: unregister recovery strategy')
+    ctx.effect(() => () => { disposeRecovery() }, 'model-router: unregister recovery strategy')
   }
 
   /** Add or replace one fallback chain. */
@@ -159,7 +159,11 @@ export class ModelRouter extends Service {
     return Object.freeze({ from, to: Object.freeze(to) })
   }
 
-  private async recover(request: RecoveryRequest): Promise<RecoveryResolution | undefined> {
+  private recover(request: RecoveryRequest): Promise<RecoveryResolution | undefined> {
+    return Promise.resolve(this.resolveRecovery(request))
+  }
+
+  private resolveRecovery(request: RecoveryRequest): RecoveryResolution | undefined {
     if (!this.fallbackCodes.has(request.failure.code)) return undefined
     const routeEvents = request.agent.session.events.filter((event): event is SessionEvent<'model/route-selected'> =>
       event.type === 'model/route-selected'

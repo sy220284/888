@@ -257,7 +257,10 @@ function validateRuntimeRefs(session: Session, event: SessionEvent<'step/snapsho
     fail('step/snapshot cannot cite runtime/delegation when no delegation event is active')
   }
 
-  const expectedRefs: RuntimeRefs = { ...trace.refs, delegation: expectedDelegation }
+  const expectedRefs: RuntimeRefs = {
+    ...trace.refs,
+    ...(expectedDelegation === undefined ? {} : { delegation: expectedDelegation }),
+  }
   for (const [key, expected] of Object.entries(expectedRefs) as [keyof RuntimeRefs, number | undefined][]) {
     const actual = refs[key]
     if (expected !== undefined && actual !== expected) {
@@ -354,7 +357,9 @@ function applyEvent(session: Session, trace: Trace, event: SessionEvent, fail: I
       if (!Array.isArray(data.requirements) || data.requirements.length === 0) {
         fail('world/effect-start requirements must be a non-empty array')
       }
-      data.requirements.forEach((requirement, index) => validateRequirement(requirement, `world/effect-start requirement ${index}`, fail))
+      data.requirements.forEach((requirement, index) => {
+        validateRequirement(requirement, `world/effect-start requirement ${index}`, fail)
+      })
       if (!trace.authoritativeCalls.has(callId)) fail(`world/effect-start ${receiptId} has no prior authoritative tool call ${callId}`)
       if (trace.effects.has(receiptId)) fail(`world/effect-start repeats receiptId ${receiptId}`)
       trace.effects.set(receiptId, { seq: event.seq, callId, toolName, startedAt, settled: false })

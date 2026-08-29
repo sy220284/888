@@ -151,7 +151,7 @@ describe('global budget arithmetic', () => {
 
     const service = {
       limits: { tokens: 1000 },
-      budgetLimits: RuntimePolicyService.prototype.budgetLimits,
+      budgetLimits: () => ({ tokens: 1000 }),
     } as unknown as RuntimePolicyService
     const session = { header: {}, events } as unknown as Session
     expect(RuntimePolicyService.prototype.budgetSnapshot.call(service, session).consumed.tokens).toBe(140)

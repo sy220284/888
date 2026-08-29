@@ -12,17 +12,20 @@ async function setup(): Promise<Context> {
   await ctx.plugin(RecoveryService)
   return ctx
 }
-function fakeAgent(ctx: Context, id: string): Agent { const session = ctx.sessions.create(SessionId(id)); return { id: session.id, session } as Agent }
+function fakeAgent(ctx: Context, id: string): Agent {
+  const session = ctx.sessions.create(SessionId(id))
+  return { id: session.id, session } as Agent
+}
 describe('RecoveryService', () => {
   it('uses priority order and stops at the first owning strategy', async () => {
     const ctx = await setup(); const seen: string[] = []
     ctx.recovery.register('low', async () => { seen.push('low'); return { strategy: 'low', action: 'retry', reason: 'low' } }, { priority: 0 })
     ctx.recovery.register('high', async () => { seen.push('high'); return { strategy: 'high', action: 'retry', reason: 'high' } }, { priority: 10 })
-    const result = await ctx.recovery.resolve({agent: fakeAgent(ctx, 'recovery-priority'), turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' }, retryPolicy: undefined, signal: new AbortController().signal})
+    const result = await ctx.recovery.resolve({ agent: fakeAgent(ctx, 'recovery-priority'), turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' }, retryPolicy: undefined, signal: new AbortController().signal })
     expect(result?.strategy).toBe('high'); expect(seen).toEqual(['high'])
   })
   it('rejects mismatched strategy identities', async () => {
     const ctx = await setup(); ctx.recovery.register('owner', async () => ({ strategy: 'other', action: 'retry', reason: 'bad' }))
-    await expect(ctx.recovery.resolve({agent: fakeAgent(ctx, 'recovery-mismatch'), turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' }, retryPolicy: undefined, signal: new AbortController().signal})).rejects.toThrow(/mismatched strategy/)
+    await expect(ctx.recovery.resolve({ agent: fakeAgent(ctx, 'recovery-mismatch'), turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' }, retryPolicy: undefined, signal: new AbortController().signal })).rejects.toThrow(/mismatched strategy/)
   })
 })

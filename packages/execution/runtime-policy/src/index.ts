@@ -91,14 +91,16 @@ function sameJson(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right)
 }
 
-function appendOrReuse<T extends 'runtime/permission' | 'runtime/budget' | 'runtime/world' | 'runtime/config'>(
+type RuntimeSnapshotEventType = 'runtime/permission' | 'runtime/budget' | 'runtime/world' | 'runtime/config'
+
+function appendOrReuse(
   session: Session,
-  type: T,
-  data: Parameters<Session['append']>[1],
+  type: RuntimeSnapshotEventType,
+  data: never,
 ): number {
   const latest = session.events.findLast(event => event.type === type)
   if (latest !== undefined && sameJson(latest.data, data)) return latest.seq
-  return session.append(type, data as never).seq
+  return session.append(type, data).seq
 }
 
 /** Return only the delegation snapshot owned by this session's direct parent lineage. */
@@ -213,7 +215,7 @@ export function defaultToolRequirements(exec: Pick<ToolExecution, 'name' | 'argu
   const args = exec.arguments as Record<string, unknown> | undefined
   const stringArg = (...keys: string[]): string | undefined => {
     if (args === undefined || typeof args !== 'object') return undefined
-    for (const key of keys) if (typeof args[key] === 'string') return args[key] as string
+    for (const key of keys) if (typeof args[key] === 'string') return args[key]
     return undefined
   }
 
@@ -328,7 +330,10 @@ export class RuntimePolicyService extends Service {
         if (decision === 'ask') local = 'ask'
       }
       if (local === 'ask' || downstream.kind === 'ask') {
-        return { kind: 'ask', reason: downstream.kind === 'ask' ? downstream.reason : 'runtime capability policy requires approval' }
+        if (downstream.kind === 'ask') {
+          return downstream.reason === undefined ? { kind: 'ask' } : { kind: 'ask', reason: downstream.reason }
+        }
+        return { kind: 'ask', reason: 'runtime capability policy requires approval' }
       }
       return { kind: 'allow' }
     })
@@ -455,8 +460,8 @@ export class RuntimePolicyService extends Service {
     }
     return Object.freeze({
       parentSession: parent.session.id,
-      permissionCeiling: permissionCeiling as CapabilityPermissionSnapshot,
-      budgetCeiling: budgetCeiling as BudgetVector,
+      permissionCeiling,
+      budgetCeiling,
     })
   }
 

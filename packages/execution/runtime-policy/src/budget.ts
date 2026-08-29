@@ -5,9 +5,9 @@ export const BUDGET_DIMENSIONS: readonly BudgetDimension[] = [
 ]
 
 function assertVector(vector: BudgetVector, label: string): void {
-  for (const [key, value] of Object.entries(vector)) {
+  for (const [key, value] of Object.entries(vector) as Array<[string, unknown]>) {
     if (!BUDGET_DIMENSIONS.includes(key as BudgetDimension)) throw new TypeError(`${label}: unknown dimension ${key}`)
-    if (value === undefined || !Number.isSafeInteger(value) || value < 0) {
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
       throw new TypeError(`${label}.${key} must be a non-negative safe integer`)
     }
   }
