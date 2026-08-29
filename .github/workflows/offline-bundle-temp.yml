@@ -1,4 +1,4 @@
-name: Temporary offline local development bundle
+name: Temporary offline bundle splitter
 
 on:
   push:
@@ -9,134 +9,86 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
-  bundle:
+  split:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      RUSTUP_HOME: ${{ github.workspace }}/.portable/rustup
-      CARGO_HOME: ${{ github.workspace }}/.portable/cargo
-      COREPACK_HOME: ${{ github.workspace }}/.portable/corepack
-      UV_CACHE_DIR: ${{ github.workspace }}/.portable/uv-cache
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22.19.0'
+      - name: Download verified full bundle from previous run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euxo pipefail
+          mkdir -p .source .parts
+          curl --fail --location \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/9715027452/zip" \
+            -o .source/full.zip
+          unzip -q .source/full.zip -d .source/unpacked
+          cd .source/unpacked
+          sha256sum -c dsh-local-offline-full-Linux-X64.tar.gz.sha256
 
-      - name: Prepare pinned Node and pnpm with installed workspace dependencies
+      - name: Split bundle below connector download limit
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p .portable/node .portable/corepack .portable/pnpm-store
-          sh scripts/devtools/bootstrap.sh download full
-          tar -xzf .devtools/cache/node-v22.19.0-linux-x64.tar.gz --strip-components=1 -C .portable/node
-          export PATH="$PWD/.portable/node/bin:$PATH"
-          corepack enable
-          corepack prepare pnpm@11.7.0 --activate
-          pnpm --version
-          pnpm install --frozen-lockfile --store-dir "$PWD/.portable/pnpm-store"
-          rm -rf .portable/pnpm-store
-
-      - name: Prepare pinned Rust toolchain and Cargo dependency cache
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p "$RUSTUP_HOME" "$CARGO_HOME"
-          chmod +x .devtools/cache/rustup-init-x86_64-unknown-linux-gnu
-          .devtools/cache/rustup-init-x86_64-unknown-linux-gnu -y --profile minimal --default-toolchain 1.98.0 --component rustfmt --component clippy
-          export PATH="$CARGO_HOME/bin:$PATH"
-          rustc --version
-          cargo --version
-          cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Prepare portable Python 3.12, pinned uv and Python dependency cache
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p .portable/python .portable/uv-site .portable/bin "$UV_CACHE_DIR"
-          PYTHON_ROOT="$(dirname "$(dirname "$(command -v python)")")"
-          cp -a "$PYTHON_ROOT"/. .portable/python/
-          .portable/python/bin/python --version
-          python -m pip install --disable-pip-version-check --no-compile --target "$PWD/.portable/uv-site" 'uv==0.12.0'
-          cat > .portable/bin/uv <<'EOF'
-          #!/usr/bin/env bash
-          set -e
-          UV_ROOT="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-          export PYTHONPATH="$UV_ROOT/uv-site${PYTHONPATH:+:$PYTHONPATH}"
-          exec "$UV_ROOT/python/bin/python" -m uv "$@"
-          EOF
-          chmod +x .portable/bin/uv
-          .portable/bin/uv --version
-          (cd python/sdk && "$GITHUB_WORKSPACE/.portable/bin/uv" sync --frozen --python "$GITHUB_WORKSPACE/.portable/python/bin/python")
-          rm -rf python/sdk/.venv
-
-      - name: Assemble relocatable offline workspace
-        shell: bash
-        run: |
-          set -euxo pipefail
-          mkdir -p .offline/workspace .offline/portable .artifacts
-          rsync -a \
-            --exclude='.git' \
-            --exclude='.portable' \
-            --exclude='.devtools' \
-            --exclude='.offline' \
-            --exclude='.artifacts' \
-            ./ .offline/workspace/
-          cp -a .portable/. .offline/portable/
-          cat > .offline/activate.sh <<'EOF'
-          #!/usr/bin/env bash
-          set -e
-          BUNDLE_ROOT="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-          export COREPACK_HOME="$BUNDLE_ROOT/portable/corepack"
-          export CARGO_HOME="$BUNDLE_ROOT/portable/cargo"
-          export RUSTUP_HOME="$BUNDLE_ROOT/portable/rustup"
-          export UV_CACHE_DIR="$BUNDLE_ROOT/portable/uv-cache"
-          export PATH="$BUNDLE_ROOT/portable/node/bin:$BUNDLE_ROOT/portable/bin:$BUNDLE_ROOT/portable/python/bin:$CARGO_HOME/bin:$PATH"
-          cd "$BUNDLE_ROOT/workspace"
-          EOF
-          chmod +x .offline/activate.sh
-          cat > .offline/OFFLINE-README.txt <<'EOF'
-          Offline local bundle generated from sy220284/888 PR #26 workspace.
-          Run: source ./activate.sh
-          Verify: node --version; pnpm --version; rustc --version; python --version; uv --version
-          Node dependencies are already installed in workspace/node_modules.
-          Cargo registry/git cache, Rust 1.98.0, Python 3.12 and uv cache are under portable/.
-          To recreate Python deps offline: cd python/sdk && uv sync --offline --frozen --python ../../portable/python/bin/python
-          EOF
-
-      - name: Verify assembled bundle before archive
-        shell: bash
-        run: |
-          set -euxo pipefail
-          source .offline/activate.sh
-          test "$(node --version)" = 'v22.19.0'
-          test "$(pnpm --version)" = '11.7.0'
-          rustc --version | grep '1.98.0'
-          python --version | grep '3.12'
-          uv --version | grep '0.12.0'
-          node scripts/devtools/verify-locks.mjs
-
-      - name: Archive with permissions and symlinks preserved
-        shell: bash
-        run: |
-          set -euxo pipefail
-          tar -I 'gzip -1' -cf .artifacts/dsh-local-offline-full-Linux-X64.tar.gz -C .offline .
-          sha256sum .artifacts/dsh-local-offline-full-Linux-X64.tar.gz > .artifacts/dsh-local-offline-full-Linux-X64.tar.gz.sha256
-          ls -lh .artifacts/
+          split -b 240M -d -a 2 \
+            .source/unpacked/dsh-local-offline-full-Linux-X64.tar.gz \
+            .parts/part-
+          test "$(find .parts -maxdepth 1 -type f -name 'part-*' | wc -l)" -eq 4
+          cp .source/unpacked/dsh-local-offline-full-Linux-X64.tar.gz.sha256 .parts/original.sha256
+          (cd .parts && sha256sum part-* > parts.sha256)
+          ls -lh .parts
 
       - uses: actions/upload-artifact@v7
         with:
-          name: dsh-local-offline-full-Linux-X64
+          name: dsh-offline-part-00
+          path: .parts/part-00
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-offline-part-01
+          path: .parts/part-01
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-offline-part-02
+          path: .parts/part-02
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-offline-part-03
+          path: .parts/part-03
+          include-hidden-files: true
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 1
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-offline-checksums
           path: |
-            .artifacts/dsh-local-offline-full-Linux-X64.tar.gz
-            .artifacts/dsh-local-offline-full-Linux-X64.tar.gz.sha256
+            .parts/original.sha256
+            .parts/parts.sha256
           include-hidden-files: true
           compression-level: 0
           if-no-files-found: error
