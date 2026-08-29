@@ -92,6 +92,7 @@ type StubMode =
   | 'end-only'
   | 'init-exit'
   | 'init-timeout'
+  | 'init-echo-then-padded-prompt'
   | 'spawn-error'
   | 'send-error'
   | 'prompt-after-idle'
@@ -119,6 +120,7 @@ class StubTerminalSession implements TerminalBackendSession {
 
   constructor(mode: StubMode) {
     this.mode = mode
+    if (mode === 'init-echo-then-padded-prompt') this.scrollback = ''
   }
 
   startSend(request: TerminalSendRequest): TerminalSendOperation {
@@ -131,7 +133,14 @@ class StubTerminalSession implements TerminalBackendSession {
       if (this.mode === 'init-timeout') {
         return this.operation(Promise.resolve(this.result('', 'timeout')))
       }
+      if (this.mode === 'init-echo-then-padded-prompt') {
+        return this.operation(Promise.resolve(this.result(`${request.text}\n`, 'inferred_idle')))
+      }
       return this.operation(Promise.resolve(this.result(this.motd, 'stdin_read')))
+    }
+    if (this.mode === 'init-echo-then-padded-prompt' && request.text.length === 0) {
+      this.mode = 'normal'
+      return this.operation(Promise.resolve(this.result(`${this.motd}\t\n`, 'inferred_idle')))
     }
     if (this.mode === 'send-error') throw new Error('stub send failed')
     if (this.throwOnSend) throw new Error('PTY session has exited')
@@ -372,6 +381,12 @@ describe('tool-pwsh-persistent', () => {
 
     session.mode = 'prompt-collision'
     expect(text(await call(ctx, owner, 'complete prompt collision'))).toBe(session.motd)
+  })
+
+  it('waits past echoed setup source and accepts prompt-line padding', async () => {
+    const { ctx, owner, stub } = await setup({ backendType: 'stub' }, 'init-echo-then-padded-prompt')
+    expect(text(await call(ctx, owner, 'Write-Output ready'))).toBe('hello from stub')
+    expect(stub.sessions[0]?.sends).toBe(3)
   })
 
   it('reports the exit path when the shell exits between send settlement and the next poll', async () => {

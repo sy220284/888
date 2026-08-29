@@ -90,9 +90,9 @@ export const PWSH_PROMPT_SETUP =
   "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); '" + CONTROLLED_PROMPT + "' }"
 
 function endsWithPrompt(text: string, prompt: string): boolean {
-  return text.endsWith(prompt)
-    || text.endsWith(`${prompt}\r\n`)
-    || text.endsWith(`${prompt}\n`)
+  const index = text.lastIndexOf(prompt)
+  if (index < 0) return false
+  return text.slice(index + prompt.length).trim().length === 0
 }
 
 function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutionPolicy): string[] {

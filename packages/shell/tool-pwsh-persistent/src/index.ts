@@ -131,9 +131,9 @@ function commandOutput(
 }
 
 function textEndsWithPrompt(text: string): boolean {
-  return text.endsWith(SHELL_PROMPT)
-    || text.endsWith(`${SHELL_PROMPT}\r\n`)
-    || text.endsWith(`${SHELL_PROMPT}\n`)
+  const index = text.lastIndexOf(SHELL_PROMPT)
+  if (index < 0) return false
+  return text.slice(index + SHELL_PROMPT.length).trim().length === 0
 }
 
 function promptCompleted(result: TerminalSendResult): boolean {
