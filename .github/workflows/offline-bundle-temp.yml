@@ -33,7 +33,10 @@ jobs:
             -o .source/full.zip
           unzip -q .source/full.zip -d .source/unpacked
           cd .source/unpacked
-          sha256sum -c dsh-local-offline-full-Linux-X64.tar.gz.sha256
+          EXPECTED="$(awk '{print $1}' dsh-local-offline-full-Linux-X64.tar.gz.sha256)"
+          ACTUAL="$(sha256sum dsh-local-offline-full-Linux-X64.tar.gz | awk '{print $1}')"
+          test "$EXPECTED" = "$ACTUAL"
+          printf '%s  %s\n' "$ACTUAL" 'dsh-local-offline-full-Linux-X64.tar.gz' > dsh-local-offline-full-Linux-X64.tar.gz.sha256
 
       - name: Split bundle below connector download limit
         shell: bash
