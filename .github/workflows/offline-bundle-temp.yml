@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: '22.19.0'
 
-      - name: Prepare pinned Node and pnpm with offline store
+      - name: Prepare pinned Node and pnpm with installed workspace dependencies
         shell: bash
         run: |
           set -euxo pipefail
@@ -38,6 +38,7 @@ jobs:
           corepack prepare pnpm@11.7.0 --activate
           pnpm --version
           pnpm install --frozen-lockfile --store-dir "$PWD/.portable/pnpm-store"
+          rm -rf .portable/pnpm-store
 
       - name: Prepare pinned Rust toolchain and Cargo dependency cache
         shell: bash
@@ -80,7 +81,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p .offline/workspace .offline/portable .offline/bootstrap-cache .artifacts
+          mkdir -p .offline/workspace .offline/portable .artifacts
           rsync -a \
             --exclude='.git' \
             --exclude='.portable' \
@@ -89,7 +90,6 @@ jobs:
             --exclude='.artifacts' \
             ./ .offline/workspace/
           cp -a .portable/. .offline/portable/
-          cp -a .devtools/cache/. .offline/bootstrap-cache/
           cat > .offline/activate.sh <<'EOF'
           #!/usr/bin/env bash
           set -e
@@ -98,7 +98,6 @@ jobs:
           export CARGO_HOME="$BUNDLE_ROOT/portable/cargo"
           export RUSTUP_HOME="$BUNDLE_ROOT/portable/rustup"
           export UV_CACHE_DIR="$BUNDLE_ROOT/portable/uv-cache"
-          export PNPM_STORE_DIR="$BUNDLE_ROOT/portable/pnpm-store"
           export PATH="$BUNDLE_ROOT/portable/node/bin:$BUNDLE_ROOT/portable/bin:$BUNDLE_ROOT/portable/python/bin:$CARGO_HOME/bin:$PATH"
           cd "$BUNDLE_ROOT/workspace"
           EOF
@@ -108,7 +107,7 @@ jobs:
           Run: source ./activate.sh
           Verify: node --version; pnpm --version; rustc --version; python --version; uv --version
           Node dependencies are already installed in workspace/node_modules.
-          pnpm store, Cargo registry/git cache, Rust 1.98.0, Python 3.12 and uv cache are under portable/.
+          Cargo registry/git cache, Rust 1.98.0, Python 3.12 and uv cache are under portable/.
           To recreate Python deps offline: cd python/sdk && uv sync --offline --frozen --python ../../portable/python/bin/python
           EOF
 
@@ -128,14 +127,17 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          tar -czf .artifacts/dsh-local-offline-full-Linux-X64.tar.gz -C .offline .
+          tar -I 'gzip -1' -cf .artifacts/dsh-local-offline-full-Linux-X64.tar.gz -C .offline .
           sha256sum .artifacts/dsh-local-offline-full-Linux-X64.tar.gz > .artifacts/dsh-local-offline-full-Linux-X64.tar.gz.sha256
           ls -lh .artifacts/
 
       - uses: actions/upload-artifact@v7
         with:
           name: dsh-local-offline-full-Linux-X64
-          path: .artifacts/*
+          path: |
+            .artifacts/dsh-local-offline-full-Linux-X64.tar.gz
+            .artifacts/dsh-local-offline-full-Linux-X64.tar.gz.sha256
+          include-hidden-files: true
           compression-level: 0
           if-no-files-found: error
           retention-days: 1
