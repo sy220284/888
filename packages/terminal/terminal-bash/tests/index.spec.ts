@@ -392,7 +392,7 @@ describe('BashTerminalBackend startup rollback', () => {
         return {
           done: Promise.resolve({
             viewport: second ? 'dsh> ' : 'PowerShell 7.6.4\n',
-            waitReason: 'inferred_idle' as const,
+            waitReason: second ? 'stdin_read' as const : 'inferred_idle' as const,
             sessionStatus: { kind: 'running' as const }, truncated: false,
           }),
           readOutput: () => ({ delta: '', truncated: false }),
@@ -413,7 +413,7 @@ describe('BashTerminalBackend startup rollback', () => {
     expect(session.motd).toBe('dsh> ')
   })
 
-  it('ignores an echoed pwsh setup prompt and accepts prompt-line padding', async () => {
+  it('ignores an echoed pwsh setup prompt until the backend reports input readiness', async () => {
     const ctx = new Context()
     await ctx.plugin(EmptySandbox)
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access', workspaceRoot: '/workspace' })
@@ -422,10 +422,11 @@ describe('BashTerminalBackend startup rollback', () => {
       motd: '',
       startSend: (request: TerminalSendRequest) => {
         sends.push(request)
-        const viewport = sends.length === 1 ? `${PWSH_PROMPT_SETUP}\n` : 'dsh> \t\n'
+        const first = sends.length === 1
+        const viewport = first ? `${PWSH_PROMPT_SETUP}\n` : 'dsh> '
         return {
           done: Promise.resolve({
-            viewport, waitReason: 'inferred_idle' as const,
+            viewport, waitReason: first ? 'inferred_idle' as const : 'stdin_read' as const,
             sessionStatus: { kind: 'running' as const }, truncated: false,
           }),
           readOutput: () => ({ delta: '', truncated: false }),
@@ -442,7 +443,7 @@ describe('BashTerminalBackend startup rollback', () => {
     )
     await backend.spawn(spec(agent(ctx)))
     expect(sends).toHaveLength(2)
-    expect(session.motd).toBe('dsh> \t\n')
+    expect(session.motd).toBe('dsh> ')
   })
 
   it('rejects a pwsh bootstrap whose shell exits or times out', async () => {

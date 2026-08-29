@@ -89,12 +89,6 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
 export const PWSH_PROMPT_SETUP =
   "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); '" + CONTROLLED_PROMPT + "' }"
 
-function endsWithPrompt(text: string, prompt: string): boolean {
-  const index = text.lastIndexOf(prompt)
-  if (index < 0) return false
-  return text.slice(index + prompt.length).trim().length === 0
-}
-
 function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutionPolicy): string[] {
   const argv = [config.shellPath, ...config.shellArgs]
   if (policy.mode === 'danger-full-access') return argv
@@ -127,8 +121,9 @@ async function startupSession(
     // UTF-8, and an un-pinned console writes its host code page for
     // non-ASCII output. The banner-to-prompt gap can outlast the silence
     // bound, so the wait loops over follow-up sends until the controlled
-    // prompt is actually visible (in the viewport or the retained scrollback
-    // when it landed between sends), bounded by the send deadline.
+    // backend has authoritatively observed the shell waiting for input. An
+    // echoed copy of this source can contain the printable prompt but cannot
+    // produce that readiness state because it contains no raw OSC marker.
     let viewport = ''
     for (;;) {
       const first = viewport.length === 0
@@ -141,8 +136,7 @@ async function startupSession(
       if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
       if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
       viewport = result.viewport
-      const scrollback = session.read({ offset: 0, count: 20 }).text
-      if (endsWithPrompt(viewport, CONTROLLED_PROMPT) || endsWithPrompt(scrollback, CONTROLLED_PROMPT)) break
+      if (result.waitReason === 'stdin_read') break
     }
     session.motd = viewport
   }
