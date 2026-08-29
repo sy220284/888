@@ -142,8 +142,7 @@ async function startupSession(
       if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
       viewport = result.viewport
       const scrollback = session.read({ offset: 0, count: 20 }).text
-      if (result.waitReason === 'stdin_read'
-        || textEndsWithControlledPrompt(viewport)
+      if (textEndsWithControlledPrompt(viewport)
         || textEndsWithControlledPrompt(scrollback)) break
     }
     session.motd = viewport

@@ -415,7 +415,7 @@ describe('BashTerminalBackend startup rollback', () => {
     expect(session.motd).toBe('dsh> ')
   })
 
-  it('ignores an echoed pwsh setup prompt until the backend reports input readiness', async () => {
+  it('ignores an echoed pwsh setup even when stdin readiness arrives before the controlled prompt', async () => {
     const ctx = new Context()
     await ctx.plugin(EmptySandbox)
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access', workspaceRoot: '/workspace' })
@@ -428,7 +428,7 @@ describe('BashTerminalBackend startup rollback', () => {
         const viewport = first ? `${PWSH_PROMPT_SETUP}\n` : 'dsh> '
         return {
           done: Promise.resolve({
-            viewport, waitReason: first ? 'inferred_idle' as const : 'stdin_read' as const,
+            viewport, waitReason: 'stdin_read' as const,
             sessionStatus: { kind: 'running' as const }, truncated: false,
           }),
           readOutput: () => ({ delta: '', truncated: false }),
