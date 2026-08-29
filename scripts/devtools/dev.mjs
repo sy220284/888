@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
+import { projectToolPath } from './tool-paths.mjs'
 
 const root = resolve(import.meta.dirname, '../..')
 const manifest = JSON.parse(readFileSync(resolve(root, 'devtools/manifest.json'), 'utf8'))
@@ -10,7 +11,7 @@ const cargoManifest = 'native/execution-core/Cargo.toml'
 const windowsCmdTools = new Set(['corepack', 'npm', 'npx', 'pnpm'])
 
 function run(command, args = [], options = {}) {
-  const useCmd = process.platform === 'win32' && windowsCmdTools.has(command)
+  const useCmd = process.platform === 'win32' && (windowsCmdTools.has(command) || command.toLowerCase().endsWith('.cmd'))
   const executable = useCmd ? (process.env.ComSpec || 'cmd.exe') : command
   const commandArgs = useCmd ? ['/d', '/s', '/c', command, ...args] : args
   return spawnSync(executable, commandArgs, {
@@ -73,6 +74,14 @@ function atLeast(actualText, minimum) {
   return true
 }
 
+function pinnedToolState(name) {
+  const path = projectToolPath(name)
+  if (path === '' || !existsSync(path)) return { ok: false, actual: 'missing' }
+  const text = output(path, ['--version'])
+  const version = manifest.tools[name].version
+  return { ok: text.includes(version), actual: text || 'missing' }
+}
+
 function toolState(name) {
   switch (name) {
     case 'git': {
@@ -87,6 +96,11 @@ function toolState(name) {
       const text = output('pnpm', ['--version'])
       return { ok: text === manifest.tools.pnpm.version, actual: text || 'missing' }
     }
+    case 'prettier':
+    case 'shfmt':
+    case 'taplo':
+    case 'ruff':
+      return pinnedToolState(name)
     case 'rust': {
       const rustc = output('rustc', ['--version'])
       const cargo = output('cargo', ['--version'])
@@ -164,16 +178,47 @@ function installTool(name) {
     if (!installed.ok) throw new Error(`pnpm installation did not activate ${manifest.tools.pnpm.version}: ${installed.actual}`)
     return
   }
+  if (name === 'prettier') {
+    if (!commandExists('npm', ['--version'])) throw new Error('npm is required to install the pinned Prettier tool')
+    must(run('npm', [
+      'install',
+      '--prefix', resolve(root, '.devtools/npm'),
+      '--no-save',
+      '--ignore-scripts',
+      `prettier@${manifest.tools.prettier.version}`,
+    ]), `install Prettier ${manifest.tools.prettier.version}`)
+    return
+  }
   if (name === 'rust') {
     if (!commandExists('rustup', ['--version'])) throw new Error('rustup is missing; run the platform bootstrap first')
     must(run('rustup', ['toolchain', 'install', manifest.tools.rust.version, '--profile', 'minimal', '--component', 'rustfmt', '--component', 'clippy']), 'install Rust toolchain')
     must(run('rustup', ['override', 'set', manifest.tools.rust.version]), 'select project Rust toolchain')
     return
   }
+  if (name === 'shfmt') {
+    must(run('node', ['scripts/devtools/install-shfmt.mjs']), `install shfmt ${manifest.tools.shfmt.version}`)
+    return
+  }
+  if (name === 'taplo') {
+    if (!commandExists('cargo', ['--version'])) throw new Error('Cargo is required before installing Taplo')
+    must(run('cargo', [
+      'install',
+      '--root', resolve(root, '.devtools/cargo'),
+      'taplo-cli',
+      '--version', manifest.tools.taplo.version,
+      '--locked',
+    ]), `install Taplo ${manifest.tools.taplo.version}`)
+    return
+  }
   if (name === 'uv') {
     const py = process.platform === 'win32' ? 'python' : (commandExists('python3') ? 'python3' : 'python')
     if (!commandExists(py, ['--version'])) throw new Error('Python is required before installing uv')
     must(run(py, ['-m', 'pip', 'install', '--user', `uv==${manifest.tools.uv.version}`]), `install uv ${manifest.tools.uv.version}`)
+    return
+  }
+  if (name === 'ruff') {
+    if (!commandExists('uv', ['--version'])) throw new Error('uv is required before installing Ruff')
+    must(run('uv', ['tool', 'install', `ruff==${manifest.tools.ruff.version}`]), `install Ruff ${manifest.tools.ruff.version}`)
     return
   }
   if (name === 'node') throw new Error('Node must be installed by bootstrap because this command runs on Node')
@@ -225,8 +270,13 @@ function check(profileName = 'test') {
   if (profile.dependencyScopes.includes('python')) must(run('node', ['scripts/devtools/python-gates.mjs']), 'Python SDK gates')
 }
 
+function format(formatArgs) {
+  const actualArgs = formatArgs.includes('--check') || formatArgs.includes('--write') ? formatArgs : ['--write', ...formatArgs]
+  must(run('node', ['scripts/devtools/format.mjs', ...actualArgs]), 'repository format')
+}
+
 function usage() {
-  console.log(`Usage:\n  ./dev setup <minimal|test|native|python|full>\n  ./dev doctor [--profile <profile>]\n  ./dev tool install <tool>\n  ./dev deps install <profile>\n  ./dev deps verify\n  ./dev check [profile]\n  ./dev download <profile>`)
+  console.log(`Usage:\n  ./dev setup <minimal|test|native|python|full>\n  ./dev doctor [--profile <profile>]\n  ./dev tool install <tool>\n  ./dev deps install <profile>\n  ./dev deps verify\n  ./dev check [profile]\n  ./dev format [--check] [--only prettier,python,shell,toml,rust]\n  ./dev download <profile>`)
 }
 
 const args = process.argv.slice(2)
@@ -240,6 +290,7 @@ try {
   else if (command === 'deps' && args[1] === 'install') installDependencies(expandProfile(args[2] ?? 'test').dependencyScopes)
   else if (command === 'deps' && args[1] === 'verify') verifyDependencies()
   else if (command === 'check') check(args[1] ?? 'test')
+  else if (command === 'format') format(args.slice(1))
   else if (command === 'download') {
     console.error('Run ./scripts/devtools/bootstrap.sh download <profile> or .\\scripts\\devtools\\bootstrap.ps1 download <profile>.')
     process.exitCode = 2
