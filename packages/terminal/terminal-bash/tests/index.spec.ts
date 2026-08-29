@@ -354,7 +354,7 @@ describe('BashTerminalBackend startup rollback', () => {
         sent = request
         return {
           done: Promise.resolve({
-            viewport: '__DSH_PWSH_STARTUP_READY__\ndsh> ', waitReason: 'stdin_read' as const,
+            viewport: 'dsh> ', waitReason: 'stdin_read' as const,
             sessionStatus: { kind: 'running' as const }, truncated: false,
           }),
           readOutput: () => ({ delta: '', truncated: false }),
@@ -372,7 +372,7 @@ describe('BashTerminalBackend startup rollback', () => {
     expect(await backend.spawn(spec(agent(ctx)))).toBe(session)
     expect(sent).toMatchObject({ submit: true })
     expect(sent?.text).toContain(ENCODING_PREAMBLE + PWSH_PROMPT_SETUP)
-    expect(sent?.text).toContain("('__DSH_PWSH_STARTUP_' + 'READY__')")
+    expect(sent?.text).not.toContain('dsh> ')
     expect(session.motd).toBe('dsh> ')
     expect(spawned?.env).toMatchObject({
       TERM: 'dumb', NO_COLOR: '1', DSH_SHELL: '1', DSH_SESSION_ID: 'agent', DSH_PTY_SESSION_ID: 'pty-1',
@@ -393,7 +393,7 @@ describe('BashTerminalBackend startup rollback', () => {
         const second = sends.length > 1
         return {
           done: Promise.resolve({
-            viewport: second ? '__DSH_PWSH_STARTUP_READY__\ndsh> ' : 'PowerShell 7.6.4\n',
+            viewport: second ? 'dsh> ' : 'PowerShell 7.6.4\n',
             waitReason: second ? 'stdin_read' as const : 'inferred_idle' as const,
             sessionStatus: { kind: 'running' as const }, truncated: false,
           }),
@@ -425,7 +425,7 @@ describe('BashTerminalBackend startup rollback', () => {
       startSend: (request: TerminalSendRequest) => {
         sends.push(request)
         const first = sends.length === 1
-        const viewport = first ? `${PWSH_PROMPT_SETUP}\n` : '__DSH_PWSH_STARTUP_READY__\ndsh> '
+        const viewport = first ? `${PWSH_PROMPT_SETUP}\n` : 'dsh> '
         return {
           done: Promise.resolve({
             viewport, waitReason: first ? 'inferred_idle' as const : 'stdin_read' as const,
@@ -481,7 +481,7 @@ describe('BashTerminalBackend startup rollback', () => {
         sends.push(request)
         return {
           done: Promise.resolve({
-            viewport: '__DSH_PWSH_STARTUP_READY__\ndsh> ', waitReason: 'stdin_read' as const,
+            viewport: 'dsh> ', waitReason: 'stdin_read' as const,
             sessionStatus: { kind: 'running' as const }, truncated: false,
           }),
           readOutput: () => ({ delta: '', truncated: false }),

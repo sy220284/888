@@ -87,11 +87,7 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
  * input are unreliable under PSReadLine.
  */
 export const PWSH_PROMPT_SETUP =
-  "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); '" + CONTROLLED_PROMPT + "' }"
-
-const PWSH_STARTUP_READY = '__DSH_PWSH_STARTUP_READY__'
-const PWSH_STARTUP_SETUP = ENCODING_PREAMBLE + PWSH_PROMPT_SETUP
-  + "; [Console]::WriteLine(('__DSH_PWSH_STARTUP_' + 'READY__'))"
+  "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); ('dsh' + '> ') }"
 
 function textEndsWithControlledPrompt(text: string): boolean {
   return text.trimEnd().endsWith(CONTROLLED_PROMPT.trimEnd())
@@ -129,17 +125,14 @@ async function startupSession(
     // UTF-8, and an un-pinned console writes its host code page for
     // non-ASCII output. The banner-to-prompt gap can outlast the silence
     // bound, so the wait loops over follow-up sends until the controlled
-    // backend has observed the shell waiting for input or the unique runtime
-    // sentinel followed by the controlled printable prompt. The submitted
-    // source deliberately builds the sentinel from two strings, so its echo
-    // cannot spoof execution readiness.
+    // backend has observed the shell waiting for input or the controlled
+    // printable prompt. The submitted source builds the prompt from two
+    // strings, so its PSReadLine echo cannot spoof readiness.
     let viewport = ''
-    let motd = ''
-    let startupReady = false
     let first = true
     for (;;) {
       const operation = session.startSend({
-        text: first ? PWSH_STARTUP_SETUP : '',
+        text: first ? ENCODING_PREAMBLE + PWSH_PROMPT_SETUP : '',
         submit: first,
         ...signal !== undefined ? { signal } : {},
       })
@@ -147,14 +140,13 @@ async function startupSession(
       const result = await operation.done
       if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
       if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
-      motd = result.viewport
-      viewport += result.viewport
-      startupReady ||= result.viewport.includes(PWSH_STARTUP_READY)
-      if (startupReady && (result.waitReason === 'stdin_read' || textEndsWithControlledPrompt(viewport))) break
+      viewport = result.viewport
+      const scrollback = session.read({ offset: 0, count: 20 }).text
+      if (result.waitReason === 'stdin_read'
+        || textEndsWithControlledPrompt(viewport)
+        || textEndsWithControlledPrompt(scrollback)) break
     }
-    session.motd = motd
-      .replaceAll(`${PWSH_STARTUP_READY}\n`, '')
-      .replaceAll(PWSH_STARTUP_READY, '')
+    session.motd = viewport
   }
   if (signal === undefined) {
     await start()
