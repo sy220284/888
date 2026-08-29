@@ -264,6 +264,9 @@ async function respondToSessionExit(
  */
 const PWSH_PROMPT_SETUP =
   "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); '" + SHELL_PROMPT + "' }"
+const PWSH_STARTUP_READY = '__DSH_PERSISTENT_PWSH_READY__'
+const PWSH_STARTUP_SETUP = PWSH_PROMPT_SETUP
+  + "; [Console]::WriteLine(('__DSH_PERSISTENT_PWSH_' + 'READY__'))"
 
 function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShells {
   const pending = new WeakMap<Agent, Promise<TerminalSessionId>>()
@@ -312,9 +315,10 @@ function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShell
           }, 'tool-pwsh-persistent owner cache cleanup')
         }
         let first = true
+        let startupReady = false
         for (;;) {
           const setup = ctx.terminals.startSend(owner, spawned.sessionId, {
-            text: first ? PWSH_PROMPT_SETUP : '',
+            text: first ? PWSH_STARTUP_SETUP : '',
             submit: first,
             signal: combinedSignal,
           })
@@ -324,7 +328,9 @@ function persistentShells(ctx: Context, config: ResolvedConfig): PersistentShell
             throw new Error('persistent pwsh shell did not accept initialization')
           }
           const scrollback = ctx.terminals.read(owner, spawned.sessionId, { offset: 0, count: 20 }).text
-          if (promptCompleted(result) || textEndsWithPrompt(scrollback)) break
+          startupReady ||= result.viewport.includes(PWSH_STARTUP_READY)
+            || scrollback.includes(PWSH_STARTUP_READY)
+          if (startupReady && (promptCompleted(result) || textEndsWithPrompt(scrollback))) break
         }
         return spawned.sessionId
       } catch (error: unknown) {

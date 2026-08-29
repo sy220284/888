@@ -136,11 +136,11 @@ class StubTerminalSession implements TerminalBackendSession {
       if (this.mode === 'init-echo-then-padded-prompt') {
         return this.operation(Promise.resolve(this.result(`${request.text}\n`, 'inferred_idle')))
       }
-      return this.operation(Promise.resolve(this.result(this.motd, 'stdin_read')))
+      return this.operation(Promise.resolve(this.result(`__DSH_PERSISTENT_PWSH_READY__\n${this.motd}`, 'stdin_read')))
     }
     if (this.mode === 'init-echo-then-padded-prompt' && request.text.length === 0) {
       this.mode = 'normal'
-      return this.operation(Promise.resolve(this.result(`${this.motd}\t\n`, 'inferred_idle')))
+      return this.operation(Promise.resolve(this.result(`__DSH_PERSISTENT_PWSH_READY__\n${this.motd}\t\n`, 'inferred_idle')))
     }
     if (this.mode === 'send-error') throw new Error('stub send failed')
     if (this.throwOnSend) throw new Error('PTY session has exited')
