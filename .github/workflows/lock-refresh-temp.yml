@@ -1,0 +1,43 @@
+name: Temporary js-yaml lock refresh
+
+on:
+  push:
+    branches:
+      - security/js-yaml-4.3.1-clean
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: security/js-yaml-4.3.1-clean
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.19.0'
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.7.0 --activate
+      - name: Refresh pnpm lockfile
+        run: pnpm install --lockfile-only
+      - name: Guard generated scope
+        shell: bash
+        run: |
+          unexpected="$(git diff --name-only | grep -v '^pnpm-lock.yaml$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "Unexpected generated files:"
+            echo "$unexpected"
+            exit 1
+          fi
+      - name: Commit clean lockfile and remove temporary workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/lock-refresh-temp.yml
+          git add pnpm-lock.yaml
+          git commit -m "chore(deps): refresh js-yaml lockfile"
+          git push origin HEAD:security/js-yaml-4.3.1-clean
