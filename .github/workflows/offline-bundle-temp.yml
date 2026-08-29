@@ -18,7 +18,6 @@ jobs:
       RUSTUP_HOME: ${{ github.workspace }}/.portable/rustup
       CARGO_HOME: ${{ github.workspace }}/.portable/cargo
       COREPACK_HOME: ${{ github.workspace }}/.portable/corepack
-      UV_PYTHON_INSTALL_DIR: ${{ github.workspace }}/.portable/uv-python
       UV_CACHE_DIR: ${{ github.workspace }}/.portable/uv-cache
     steps:
       - uses: actions/checkout@v4
@@ -56,30 +55,38 @@ jobs:
         with:
           python-version: '3.12'
 
-      - uses: astral-sh/setup-uv@v7
-        with:
-          version: '0.12.0'
-
-      - name: Prepare pinned uv, managed Python and Python dependency cache
+      - name: Prepare portable Python 3.12, pinned uv and Python dependency cache
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p .portable/bin "$UV_PYTHON_INSTALL_DIR" "$UV_CACHE_DIR"
-          cp "$(command -v uv)" .portable/bin/uv
+          mkdir -p .portable/python .portable/uv-site .portable/bin "$UV_CACHE_DIR"
+          PYTHON_ROOT="$(dirname "$(dirname "$(command -v python)")")"
+          cp -a "$PYTHON_ROOT"/. .portable/python/
+          .portable/python/bin/python --version
+          python -m pip install --disable-pip-version-check --no-compile --target "$PWD/.portable/uv-site" 'uv==0.12.0'
+          cat > .portable/bin/uv <<'EOF'
+          #!/usr/bin/env bash
+          set -e
+          UV_ROOT="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+          export PYTHONPATH="$UV_ROOT/uv-site${PYTHONPATH:+:$PYTHONPATH}"
+          exec "$UV_ROOT/python/bin/python" -m uv "$@"
+          EOF
+          chmod +x .portable/bin/uv
           .portable/bin/uv --version
-          .portable/bin/uv python install 3.12
-          (cd python/sdk && "$GITHUB_WORKSPACE/.portable/bin/uv" sync --frozen --python 3.12)
+          (cd python/sdk && "$GITHUB_WORKSPACE/.portable/bin/uv" sync --frozen --python "$GITHUB_WORKSPACE/.portable/python/bin/python")
+          rm -rf python/sdk/.venv
 
       - name: Assemble relocatable offline workspace
         shell: bash
         run: |
           set -euxo pipefail
-          mkdir -p .offline/workspace .offline/portable .offline/bootstrap-cache
+          mkdir -p .offline/workspace .offline/portable .offline/bootstrap-cache .artifacts
           rsync -a \
             --exclude='.git' \
             --exclude='.portable' \
             --exclude='.devtools' \
             --exclude='.offline' \
+            --exclude='.artifacts' \
             ./ .offline/workspace/
           cp -a .portable/. .offline/portable/
           cp -a .devtools/cache/. .offline/bootstrap-cache/
@@ -90,23 +97,22 @@ jobs:
           export COREPACK_HOME="$BUNDLE_ROOT/portable/corepack"
           export CARGO_HOME="$BUNDLE_ROOT/portable/cargo"
           export RUSTUP_HOME="$BUNDLE_ROOT/portable/rustup"
-          export UV_PYTHON_INSTALL_DIR="$BUNDLE_ROOT/portable/uv-python"
           export UV_CACHE_DIR="$BUNDLE_ROOT/portable/uv-cache"
           export PNPM_STORE_DIR="$BUNDLE_ROOT/portable/pnpm-store"
-          export PATH="$BUNDLE_ROOT/portable/node/bin:$BUNDLE_ROOT/portable/bin:$CARGO_HOME/bin:$PATH"
+          export PATH="$BUNDLE_ROOT/portable/node/bin:$BUNDLE_ROOT/portable/bin:$BUNDLE_ROOT/portable/python/bin:$CARGO_HOME/bin:$PATH"
           cd "$BUNDLE_ROOT/workspace"
           EOF
           chmod +x .offline/activate.sh
           cat > .offline/OFFLINE-README.txt <<'EOF'
-          Offline local bundle generated from sy220284/888.
+          Offline local bundle generated from sy220284/888 PR #26 workspace.
           Run: source ./activate.sh
-          Then verify: node --version; pnpm --version; rustc --version; uv --version
+          Verify: node --version; pnpm --version; rustc --version; python --version; uv --version
           Node dependencies are already installed in workspace/node_modules.
-          Cargo registry/git cache and Rust 1.98.0 are under portable/.
-          uv cache and a managed Python 3.12 installation are under portable/.
+          pnpm store, Cargo registry/git cache, Rust 1.98.0, Python 3.12 and uv cache are under portable/.
+          To recreate Python deps offline: cd python/sdk && uv sync --offline --frozen --python ../../portable/python/bin/python
           EOF
 
-      - name: Verify assembled bundle before upload
+      - name: Verify assembled bundle before archive
         shell: bash
         run: |
           set -euxo pipefail
@@ -114,14 +120,22 @@ jobs:
           test "$(node --version)" = 'v22.19.0'
           test "$(pnpm --version)" = '11.7.0'
           rustc --version | grep '1.98.0'
+          python --version | grep '3.12'
           uv --version | grep '0.12.0'
           node scripts/devtools/verify-locks.mjs
+
+      - name: Archive with permissions and symlinks preserved
+        shell: bash
+        run: |
+          set -euxo pipefail
+          tar -czf .artifacts/dsh-local-offline-full-Linux-X64.tar.gz -C .offline .
+          sha256sum .artifacts/dsh-local-offline-full-Linux-X64.tar.gz > .artifacts/dsh-local-offline-full-Linux-X64.tar.gz.sha256
+          ls -lh .artifacts/
 
       - uses: actions/upload-artifact@v7
         with:
           name: dsh-local-offline-full-Linux-X64
-          path: .offline
-          include-hidden-files: true
+          path: .artifacts/*
           compression-level: 0
           if-no-files-found: error
           retention-days: 1
