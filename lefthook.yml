@@ -14,6 +14,39 @@ pre-commit:
       glob: '.agents/notes/archived/**'
       run: node_modules/.bin/tsx scripts/verify-archived-agent-notes.ts
 
+    - name: prettier (staged)
+      glob: '*.{md,mdx,json,jsonc,yaml,yml,css,scss,less,html}'
+      exclude:
+        - '.agents/notes/archived/**'
+        - 'native/landlock-run/**'
+        - 'vendor/**'
+        - 'website/.generated/**'
+        - 'THIRD_PARTY_NOTICES.md'
+        - 'pnpm-lock.yaml'
+      run: node scripts/devtools/format.mjs --only prettier -- {staged_files}
+      stage_fixed: true
+
+    - name: python format (staged)
+      glob: '*.{py,pyi}'
+      run: node scripts/devtools/format.mjs --only python -- {staged_files}
+      stage_fixed: true
+
+    - name: shell format (staged)
+      glob: '*.{sh,bash}'
+      exclude:
+        - 'native/landlock-run/**'
+        - 'vendor/**'
+      run: node scripts/devtools/format.mjs --only shell -- {staged_files}
+      stage_fixed: true
+
+    - name: toml format (staged)
+      glob: '*.toml'
+      exclude:
+        - 'native/landlock-run/**'
+        - 'vendor/**'
+      run: node scripts/devtools/format.mjs --only toml -- {staged_files}
+      stage_fixed: true
+
     - name: lint (staged)
       glob: '*.{ts,tsx,mts,cts,mjs}'
       exclude:
@@ -26,7 +59,7 @@ pre-commit:
       run: cargo fmt --manifest-path native/execution-core/Cargo.toml -- --check
 
     - name: development tool declarations
-      glob: '{dev,dev.ps1,devtools/**,scripts/devtools/**,package.json,rust-toolchain.toml,python/sdk/pyproject.toml}'
+      glob: '{dev,dev.ps1,devtools/**,scripts/devtools/**,package.json,rust-toolchain.toml,python/sdk/pyproject.toml,.prettierrc.json,.prettierignore}'
       run: node scripts/devtools/verify-manifest.mjs && node scripts/devtools/verify-download-policy.mjs
 
     # Regenerate rather than reject: a dependency edit that forgot the notices
