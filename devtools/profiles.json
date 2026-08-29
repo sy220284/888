@@ -3,14 +3,14 @@
   "profiles": {
     "minimal": {
       "description": "TypeScript 核心开发最小环境",
-      "tools": ["git", "node", "pnpm"],
+      "tools": ["git", "node", "pnpm", "prettier"],
       "dependencyScopes": ["npm"],
       "checks": ["typecheck", "lint", "test"]
     },
     "test": {
-      "description": "Harness 2.0 核心开发与测试环境",
+      "description": "Harness 2.0 核心开发、格式化与测试环境",
       "extends": "minimal",
-      "tools": ["rust"],
+      "tools": ["rust", "shfmt", "taplo"],
       "dependencyScopes": ["cargo"],
       "checks": ["check:all"]
     },
@@ -23,12 +23,12 @@
     "python": {
       "description": "Python SDK 开发环境",
       "extends": "minimal",
-      "tools": ["python", "uv"],
+      "tools": ["python", "uv", "ruff"],
       "dependencyScopes": ["python"],
       "checks": ["python:test"]
     },
     "full": {
-      "description": "全仓开发、测试与发布准备环境",
+      "description": "全仓开发、格式化、测试与发布准备环境",
       "extends": ["native", "python"],
       "tools": ["powershell"],
       "dependencyScopes": ["npm", "cargo", "python"],
