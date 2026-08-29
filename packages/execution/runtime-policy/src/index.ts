@@ -20,6 +20,7 @@ import type {
   CapabilityRequirement,
   ExecutionWorldSnapshot,
   GlobalBudgetCharge,
+  GlobalBudgetSnapshot,
   ResolvedRuntimeConfigSnapshot,
   RuntimeDelegationSnapshot,
   RuntimeSnapshotRefs,
@@ -287,12 +288,13 @@ function agentKind(agent: Agent): AgentKind {
   return 'primary'
 }
 
+/** Runtime permission, budget, resource scheduling, and world-freeze service. */
 export class RuntimePolicyService extends Service {
   static Config = Config
   static inject = ['tools', 'sandboxPolicy', 'permissionPresets', 'agentLoop', 'sessions']
 
   readonly limits: BudgetVector
-  readonly resourceScheduler = new ResourceScheduler()
+  readonly resourceScheduler: ResourceScheduler = new ResourceScheduler()
   private readonly configuredPermissions: readonly CapabilityPermission[]
   private readonly defaultDecision: CapabilityDecision
   private readonly requirementClassifiers: RegisteredRequirementClassifier[] = []
@@ -354,7 +356,13 @@ export class RuntimePolicyService extends Service {
     }, { global: true })
   }
 
-  /** Register a tool-owned requirement classifier. First non-undefined result wins. */
+  /**
+   * Register a tool-owned requirement classifier. First non-undefined result wins.
+   * @param id Stable classifier identifier.
+   * @param classify Requirement classifier.
+   * @param options Ordering options.
+   * @returns Function that unregisters the classifier.
+   */
   registerToolRequirements(
     id: string,
     classify: ToolRequirementClassifier,
@@ -385,6 +393,8 @@ export class RuntimePolicyService extends Service {
    * Resolve requirements exactly once for a registry-minted execution. The
    * same frozen snapshot is reused by approval, resource scheduling, budget,
    * and effect auditing so a stateful classifier cannot make those stages drift.
+   * @param exec Registry-minted tool execution.
+   * @returns Detached normalized capability requirements.
    */
   requirements(exec: ToolExecution): CapabilityRequirement[] {
     const cached = this.requirementCache.get(exec)
@@ -409,6 +419,11 @@ export class RuntimePolicyService extends Service {
     return [...normalized]
   }
 
+  /**
+   * Resolve the effective permission snapshot for an agent.
+   * @param agent Agent whose policy is resolved.
+   * @returns Effective immutable permission snapshot.
+   */
   permissionSnapshot(agent: Agent): CapabilityPermissionSnapshot {
     const policy = this.ctx.sandboxPolicy.resolve({ session: agent.session })
     const rules: CapabilityPermission[] = [
@@ -438,12 +453,21 @@ export class RuntimePolicyService extends Service {
     }
   }
 
-  /** Effective session-local limits after the immutable delegation ceiling narrows deployment limits. */
+  /**
+   * Resolve effective session-local budget limits.
+   * @param session Session whose delegation ceiling is applied.
+   * @returns Effective budget limits.
+   */
   budgetLimits(session: Session): BudgetVector {
     return narrowBudgetLimits(this.limits, delegationEvent(session)?.data.budgetCeiling)
   }
 
-  budgetSnapshot(session: Session) {
+  /**
+   * Resolve the current global budget snapshot.
+   * @param session Session whose durable charges are folded.
+   * @returns Current limits, consumption, and remaining budget.
+   */
+  budgetSnapshot(session: Session): GlobalBudgetSnapshot {
     return budgetSnapshot(this.budgetLimits(session), foldSessionCharges(session))
   }
 
@@ -451,6 +475,8 @@ export class RuntimePolicyService extends Service {
    * Capture the parent's exact permission ceiling and remaining budget before
    * the child publication boundary. A later parent policy switch belongs to
    * the parent's future and cannot widen an already delegated child.
+   * @param parent Parent agent at the delegation boundary.
+   * @returns Frozen child delegation ceiling.
    */
   captureDelegation(parent: Agent): RuntimeDelegationSnapshot {
     const permissionCeiling = snapshotJsonValue(this.permissionSnapshot(parent))
@@ -465,6 +491,11 @@ export class RuntimePolicyService extends Service {
     })
   }
 
+  /**
+   * Capture the execution world visible to an agent.
+   * @param agent Agent whose sandbox and capabilities are captured.
+   * @returns Execution world snapshot.
+   */
   worldSnapshot(agent: Agent): ExecutionWorldSnapshot {
     const policy = this.ctx.sandboxPolicy.resolve({ session: agent.session })
     const capabilities: ExecutionWorldSnapshot['capabilities'][number][] = ['fs', 'process']
@@ -477,6 +508,12 @@ export class RuntimePolicyService extends Service {
     }
   }
 
+  /**
+   * Capture the resolved runtime configuration for one epoch.
+   * @param agent Agent whose runtime configuration is captured.
+   * @param header Durable epoch header.
+   * @returns Resolved runtime configuration snapshot.
+   */
   resolvedConfig(agent: Agent, header: EpochHeader): ResolvedRuntimeConfigSnapshot {
     return {
       agentKind: agentKind(agent),
@@ -488,7 +525,12 @@ export class RuntimePolicyService extends Service {
     }
   }
 
-  /** Persist/reuse all execution-domain freeze facts and return their exact seqs. */
+  /**
+   * Persist or reuse all execution-domain freeze facts.
+   * @param agent Agent whose execution facts are frozen.
+   * @param header Durable epoch header.
+   * @returns Exact sequence references for the frozen facts.
+   */
   freeze(agent: Agent, header: EpochHeader): RuntimeSnapshotRefs {
     const delegation = delegationEvent(agent.session)?.seq
     const permission = appendOrReuse(agent.session, 'runtime/permission', this.permissionSnapshot(agent) as never)
