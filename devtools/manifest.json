@@ -17,10 +17,22 @@
       "sourceOfTruth": "package.json#packageManager",
       "requiredBy": ["minimal", "test", "native", "python", "full"]
     },
+    "prettier": {
+      "version": "3.9.6",
+      "requiredBy": ["minimal", "test", "native", "python", "full"]
+    },
     "rust": {
       "version": "1.98.0",
       "sourceOfTruth": "rust-toolchain.toml",
       "components": ["rustfmt", "clippy"],
+      "requiredBy": ["test", "native", "full"]
+    },
+    "shfmt": {
+      "version": "3.13.1",
+      "requiredBy": ["test", "native", "full"]
+    },
+    "taplo": {
+      "version": "0.10.0",
       "requiredBy": ["test", "native", "full"]
     },
     "python": {
@@ -30,6 +42,10 @@
     },
     "uv": {
       "version": "0.12.0",
+      "requiredBy": ["python", "full"]
+    },
+    "ruff": {
+      "version": "0.16.5",
       "requiredBy": ["python", "full"]
     },
     "powershell": {
