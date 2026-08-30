@@ -84,37 +84,6 @@ jobs:
             echo "python=$python"
           } >> "$GITHUB_OUTPUT"
 
-  lockfile-refresh:
-    if: needs.changes.outputs.code == 'true'
-    needs: changes
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22.19.0'
-      - run: corepack enable
-      - run: corepack prepare pnpm@11.7.0 --activate
-      - name: Generate refreshed lockfile
-        run: pnpm install --no-frozen-lockfile --lockfile-only
-      - name: Commit refreshed lockfile
-        shell: bash
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- pnpm-lock.yaml; then
-            echo "pnpm-lock.yaml is already current."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pnpm-lock.yaml
-          git commit -m "chore: refresh pnpm lockfile"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
-
   typescript-static:
     if: needs.changes.outputs.code == 'true'
     needs: changes
