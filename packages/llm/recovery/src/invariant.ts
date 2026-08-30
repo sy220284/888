@@ -15,7 +15,8 @@ function validateEvent(event: SessionEvent, fail: InvariantFailure): void {
   if (!positive(data.turn) || !positive(data.step) || !positive(data.attempt)) fail('recovery/decision turn, step, and attempt must be positive safe integers')
   if (data.provider.trim().length === 0 || data.model.trim().length === 0) fail('recovery/decision provider and model must be non-empty')
   if (data.strategy.trim().length === 0 || data.reason.trim().length === 0) fail('recovery/decision strategy and reason must be non-empty')
-  if (data.action !== 'retry') fail(`recovery/decision carries unsupported action ${JSON.stringify(data.action)}`)
+  const action: unknown = data.action
+  if (action !== 'retry') fail(`recovery/decision carries unsupported action ${JSON.stringify(action)}`)
   if (data.route !== undefined && (data.route.provider.trim().length === 0 || data.route.model.trim().length === 0)) fail('recovery/decision route must carry non-empty provider and model')
 }
 const install: InvariantInstaller = Object.assign((ctx: Context, fail: InvariantFailure) => {

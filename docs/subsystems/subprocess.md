@@ -273,6 +273,38 @@ async getSandbox(): Promise<Sandbox>
 
 Source: [`packages/e2b/e2b/src/index.ts`](../../packages/e2b/e2b/src/index.ts)
 
+<a id="ctxnativeexecution--nativeexecutionruntime-abstract-seam"></a>
+
+### `ctx.nativeExecution` — `NativeExecutionRuntime` (abstract seam)
+
+Low-level native execution capability. It deliberately knows nothing about Session, Agent, tools, permissions, budgets, or shell semantics.
+
+```ts cordis-catalog
+/**
+ * Read native execution host metadata.
+ * @returns Native execution handshake metadata.
+ */
+abstract hello(): Promise<NativeExecutionHello>
+
+/**
+ * Resolve one executable against an optional environment.
+ * @param command Executable name or path.
+ * @param env Environment used for path resolution.
+ * @param signal Optional cancellation signal.
+ * @returns Resolved executable path.
+ */
+abstract resolveExecutable( command: string, env?: Readonly<Record<string, string>>, signal?: AbortSignal, ): Promise<string>
+
+/**
+ * Spawn one native process.
+ * @param spec Process spawn specification.
+ * @returns Live native process handle.
+ */
+abstract spawn(spec: NativeProcessSpawnSpec): NativeProcessHandle
+```
+
+Source: [`packages/execution/native-execution/src/index.ts`](../../packages/execution/native-execution/src/index.ts)
+
 <a id="ctxsubprocess--subprocessruntime-abstract-seam"></a>
 
 ### `ctx.subprocess` — `SubprocessRuntime` (abstract seam)

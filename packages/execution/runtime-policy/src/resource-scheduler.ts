@@ -9,7 +9,7 @@ interface Waiter {
   readonly requirements: readonly CapabilityRequirement[]
   readonly signal?: AbortSignal
   readonly resolve: (lease: ResourceLease) => void
-  readonly reject: (error: unknown) => void
+  readonly reject: (error: Error) => void
   abortListener?: () => void
 }
 
@@ -62,8 +62,12 @@ export function requirementsConflict(
   return false
 }
 
-function abortError(signal: AbortSignal): unknown {
-  return signal.reason ?? new Error('resource acquisition aborted')
+function asError(reason: unknown): Error {
+  return reason instanceof Error ? reason : new Error(String(reason))
+}
+
+function abortError(signal: AbortSignal): Error {
+  return signal.reason === undefined ? new Error('resource acquisition aborted') : asError(signal.reason)
 }
 
 /**
@@ -117,7 +121,7 @@ export class ResourceScheduler {
       if (waiter.signal !== undefined && waiter.abortListener !== undefined) {
         waiter.signal.removeEventListener('abort', waiter.abortListener)
       }
-      waiter.reject(reason)
+      waiter.reject(asError(reason))
     }
   }
 

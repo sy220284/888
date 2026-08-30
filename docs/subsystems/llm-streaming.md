@@ -887,6 +887,56 @@ stream(options: GenerateOptions): AsyncIterable<StreamChunk>
 
 Source: [`packages/llm/llm/src/index.ts`](../../packages/llm/llm/src/index.ts)
 
+<a id="ctxmodels--modelrouter"></a>
+
+### `ctx.models` — `ModelRouter`
+
+Provider/model fallback router (`ctx.models`).
+
+```ts cordis-catalog
+/**
+ * Add or replace one fallback chain.
+ * @param from Source model route.
+ * @param to Ordered fallback routes.
+ */
+setFallbacks(from: ModelRoute, to: readonly ModelRoute[]): void
+
+/**
+ * Return a detached configured chain for diagnostics.
+ * @param from Source model route.
+ * @returns Detached ordered fallback chain.
+ */
+fallbacks(from: ModelRoute): readonly ModelRoute[]
+```
+
+Source: [`packages/llm/model-router/src/index.ts`](../../packages/llm/model-router/src/index.ts)
+
+<a id="ctxrecovery--recoveryservice"></a>
+
+### `ctx.recovery` — `RecoveryService`
+
+Ordered model-request recovery strategy registry (`ctx.recovery`).
+
+```ts cordis-catalog
+/**
+ * Register one recovery strategy.
+ * @param id Stable strategy identifier.
+ * @param run Recovery handler.
+ * @param options Ordering options.
+ * @returns Function that unregisters the strategy.
+ */
+register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void
+
+/**
+ * Resolve a failed request through registered strategies.
+ * @param request Failed request context.
+ * @returns First accepted recovery resolution, if any.
+ */
+async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined>
+```
+
+Source: [`packages/llm/recovery/src/index.ts`](../../packages/llm/recovery/src/index.ts)
+
 <a id="llm-events"></a>
 
 ### `llm/*` events

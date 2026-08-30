@@ -999,6 +999,35 @@ Types: [Scoped](scope.zh.md)
 
 Source: [`packages/core/agent/src/runtime-types.ts`](../../packages/core/agent/src/runtime-types.ts)
 
+<a id="agentstep-snapshot--waterfall"></a>
+
+#### `agent/step-snapshot` — waterfall
+
+Extend the durable Step Snapshot refs after the request header/context are resolved and before model dispatch. Core supplies the request refs; outer domains append their own canonical snapshot events and merge references through `next()`. This is an internal runtime signal, never a second persistence channel.
+
+```ts cordis-catalog
+/**
+ * Extend the durable Step Snapshot refs after the request header/context are
+ * resolved and before model dispatch. Core supplies the request refs; outer
+ * domains append their own canonical snapshot events and merge references
+ * through `next()`. This is an internal runtime signal, never a second
+ * persistence channel.
+ * @param payload.agent - the agent owning the request.
+ * @param payload.turn - current open turn.
+ * @param payload.step - current open step.
+ * @param payload.attempt - one-based request attempt in this step.
+ * @param payload.header - exact canonical request header being frozen.
+ * @param payload.signal - current turn cancellation signal.
+ * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
+ * @mode waterfall
+ */
+'agent/step-snapshot'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; attempt: number; header: EpochHeader; signal: AbortSignal }, next: () => Promise<StepSnapshotRefs>): Promise<StepSnapshotRefs>
+```
+
+Types: [EpochHeader](session.zh.md) · [Scoped](scope.zh.md) · [StepSnapshotRefs](session.zh.md)
+
+Source: [`packages/core/agent/src/runtime-types.ts`](../../packages/core/agent/src/runtime-types.ts)
+
 <a id="agentturn-stopping--serial"></a>
 
 #### `agent/turn-stopping` — serial
