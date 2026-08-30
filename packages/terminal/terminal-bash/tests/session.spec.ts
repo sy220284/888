@@ -153,7 +153,7 @@ describe('LocalPtySession readiness and output', () => {
     vi.useFakeTimers()
     const terminal = new FakeTerminal()
     const inspector = new FakeInspector()
-    const responseWrite = Promise.withResolvers<void>()
+    const responseWrite = Promise.withResolvers<undefined>()
     terminal.write = async (data: string) => {
       terminal.writes.push(data)
       if (data.includes('[1;1R')) await responseWrite.promise
@@ -176,7 +176,7 @@ describe('LocalPtySession readiness and output', () => {
     await Promise.resolve()
     expect(terminal.writes).toEqual(['\x1b[1;1R'])
 
-    responseWrite.resolve()
+    responseWrite.resolve(undefined)
     await Promise.resolve()
     await Promise.resolve()
     expect(terminal.writes).toEqual(['\x1b[1;1R', 'Write-Output ready\r'])

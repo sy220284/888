@@ -401,7 +401,7 @@ export class LocalPtySession implements TerminalBackendSession {
     const response = this.terminalQueries.push(data)
     if (response.length === 0) return
     const prior = this.deviceResponseWrite
-    const write = (prior ?? Promise.resolve()).then(async () => await this.terminal.write(response))
+    const write = (prior ?? Promise.resolve()).then(async () => { await this.terminal.write(response) })
     this.deviceResponseWrite = write
     void write.then(
       () => { if (this.deviceResponseWrite === write) this.deviceResponseWrite = undefined },
