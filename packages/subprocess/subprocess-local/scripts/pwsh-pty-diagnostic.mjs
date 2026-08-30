@@ -39,6 +39,7 @@ async function run(variant) {
     }
     terminal.onData((data) => {
       output += data
+      for (const _query of data.matchAll(/\x1b\[6n/g)) terminal.write('\x1b[1;1R')
       if (!sent && /PS [^\r\n>]*> $/.test(output)) setTimeout(send, variant.waitAfterPromptMs)
       if (output.includes('__DSH_PWSH_STARTUP_READY__')) setTimeout(() => finish('ready'), 250)
     })
