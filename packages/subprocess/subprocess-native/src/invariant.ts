@@ -15,8 +15,8 @@ export const name = 'subprocess-native-invariant'
 export const inject = ['invariants']
 
 /**
- * No additional runtime invariant: this provider delegates process execution
- * to the native execution service and owns no independent durable state.
+ * No runtime invariant: this provider delegates process execution to the
+ * native execution service and owns no independent durable state.
  */
 const install: InvariantInstaller = () => {}
 
