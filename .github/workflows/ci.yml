@@ -59,19 +59,19 @@ jobs:
             esac
 
             case "$path" in
-              native/*|scripts/devtools/native-gates.mjs|scripts/devtools/rust-notices.mjs|Cargo.toml|Cargo.lock)
+              native/*|rust-toolchain.toml|THIRD_PARTY_NOTICES_RUST.md|scripts/devtools/native-gates.mjs|scripts/devtools/rust-notices.mjs|Cargo.toml|Cargo.lock)
                 native=true
                 ;;
             esac
 
             case "$path" in
-              python/*|scripts/devtools/python-gates.mjs|pyproject.toml|uv.lock)
+              python/*|pytest.ini|scripts/devtools/python-gates.mjs|pyproject.toml|uv.lock)
                 python=true
                 ;;
             esac
 
             case "$path" in
-              package.json|pnpm-lock.yaml|.github/workflows/ci.yml)
+              scripts/devtools/*|package.json|pnpm-lock.yaml|pnpm-workspace.yaml|.github/workflows/ci.yml)
                 native=true
                 python=true
                 ;;
