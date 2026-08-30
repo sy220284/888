@@ -65,8 +65,8 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
     DSH_PTY_SESSION_ID: spec.sessionId,
   }
   if (dialect === 'pwsh') {
-    // pwsh ignores PS1/PROMPT_COMMAND; its prompt is installed by the launch
-    // command instead, and NO_COLOR keeps the renderer quiet.
+    // pwsh ignores PS1/PROMPT_COMMAND; its prompt is installed by the startup
+    // bootstrap instead, and NO_COLOR keeps the renderer quiet.
     return { ...common, NO_COLOR: '1' }
   }
   return {
@@ -137,19 +137,8 @@ async function startupSession(
       first = false
       const result = await operation.done
       const scrollback = session.read({ offset: 0, count: 20 }).text
-      if (result.waitReason === 'session_exit') {
-        throw new Error(`PTY shell exited during startup: ${JSON.stringify({
-          viewport: result.viewport,
-          scrollback,
-          status: result.sessionStatus,
-        })}`)
-      }
-      if (result.waitReason === 'timeout') {
-        throw new Error(`PTY shell did not reach readiness before startup timeout: ${JSON.stringify({
-          viewport: result.viewport,
-          scrollback,
-        })}`)
-      }
+      if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
+      if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
       startupReady ||= result.viewport.includes(PWSH_STARTUP_READY)
         || scrollback.includes(PWSH_STARTUP_READY)
       if (startupReady && (result.waitReason === 'stdin_read'
