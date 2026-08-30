@@ -15,8 +15,8 @@ export const name = 'recovery-compaction-invariant'
 export const inject = ['invariants']
 
 /**
- * No additional runtime invariant: this adapter delegates state ownership to
- * the compaction and recovery services and keeps no independent cache/event state.
+ * No runtime invariant: this adapter delegates state ownership to the
+ * compaction and recovery services and keeps no independent cache/event state.
  */
 const install: InvariantInstaller = () => {}
 
