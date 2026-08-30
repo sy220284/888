@@ -97,12 +97,12 @@ function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutio
   // process in its interactive loop for LocalPtySession.initialize().
   const argv = config.shellDialect === 'pwsh'
     ? [
-        config.shellPath,
-        ...config.shellArgs,
-        '-NoExit',
-        '-Command',
-        ENCODING_PREAMBLE + PWSH_PROMPT_SETUP,
-      ]
+      config.shellPath,
+      ...config.shellArgs,
+      '-NoExit',
+      '-Command',
+      ENCODING_PREAMBLE + PWSH_PROMPT_SETUP,
+    ]
     : [config.shellPath, ...config.shellArgs]
   if (policy.mode === 'danger-full-access') return argv
   const sandbox = ctx.get('sandbox')
