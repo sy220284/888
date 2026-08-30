@@ -15,8 +15,8 @@ export const name = 'native-client-invariant'
 export const inject = ['invariants']
 
 /**
- * No additional runtime invariant: the client is a transport adapter and does
- * not own independent durable state beyond the native execution service.
+ * No runtime invariant: the client is a transport adapter and does not own
+ * independent durable state beyond the native execution service.
  */
 const install: InvariantInstaller = () => {}
 
