@@ -6,19 +6,38 @@ import { describe, expect, it } from 'vitest'
 const root = resolve(import.meta.dirname, '..')
 
 describe('Harness 2.0 workflows', () => {
-  it('keeps the primary CI matrix small, pinned, and complete', () => {
+  it('keeps the primary CI lanes scoped, parallel, pinned, and complete', () => {
     const workflow = loadWorkflow('.github/workflows/ci.yml')
     const events = record(workflow.on, 'ci.yml must define workflow events')
     expect(Object.keys(events).sort()).toEqual(['pull_request', 'push', 'workflow_dispatch'])
     expect(events.push).toMatchObject({ branches: ['main'] })
     expect(workflow.permissions).toEqual({ contents: 'read' })
+    expect(workflow.concurrency).toMatchObject({ 'cancel-in-progress': true })
 
     const jobs = record(workflow.jobs, 'ci.yml must define jobs')
-    expect(Object.keys(jobs).sort()).toEqual(['native', 'python', 'typescript'])
+    expect(Object.keys(jobs).sort()).toEqual([
+      'changes',
+      'native',
+      'python',
+      'typescript',
+      'typescript-build',
+      'typescript-static',
+      'typescript-tests',
+    ])
 
-    const typescript = job(workflow, 'typescript')
-    expect(typescript['runs-on']).toBe('ubuntu-latest')
-    expect(commands(typescript)).toEqual([
+    const changes = job(workflow, 'changes')
+    expect(changes['runs-on']).toBe('ubuntu-latest')
+    expect(workflowSteps(changes).find(step => step.uses === 'actions/checkout@v4')).toMatchObject({
+      with: { 'fetch-depth': 0 },
+    })
+    expect(commands(changes).join('\n')).toContain('git diff --name-only')
+    expect(commands(changes).join('\n')).toContain('code=true')
+    expect(commands(changes).join('\n')).toContain('native=true')
+    expect(commands(changes).join('\n')).toContain('python=true')
+
+    const typescriptStatic = job(workflow, 'typescript-static')
+    expect(typescriptStatic.needs).toBe('changes')
+    expect(commands(typescriptStatic)).toEqual([
       'corepack enable',
       'corepack prepare pnpm@11.7.0 --activate',
       'pnpm install --frozen-lockfile',
@@ -28,20 +47,51 @@ describe('Harness 2.0 workflows', () => {
       'pnpm run build:lib:host',
       'pnpm run typecheck:contracts-ready',
       'pnpm run lint:contracts-ready',
-      'pnpm run test',
+    ])
+    expect(setupNodeVersions(typescriptStatic)).toEqual(['22.19.0'])
+
+    const typescriptTests = job(workflow, 'typescript-tests')
+    expect(typescriptTests.needs).toBe('changes')
+    expect(typescriptTests.strategy).toMatchObject({
+      'fail-fast': false,
+      matrix: { shard: [1, 2, 3] },
+    })
+    expect(commands(typescriptTests)).toEqual([
+      'corepack enable',
+      'corepack prepare pnpm@11.7.0 --activate',
+      'pnpm install --frozen-lockfile',
+      'pnpm run build:lib:host',
+      'pnpm exec vitest run --shard=${{ matrix.shard }}/3',
+    ])
+    expect(setupNodeVersions(typescriptTests)).toEqual(['22.19.0'])
+
+    const typescriptBuild = job(workflow, 'typescript-build')
+    expect(typescriptBuild.needs).toBe('changes')
+    expect(commands(typescriptBuild)).toEqual([
+      'corepack enable',
+      'corepack prepare pnpm@11.7.0 --activate',
+      'pnpm install --frozen-lockfile',
+      'pnpm run build:lib:host',
       'pnpm run build:official',
       'pnpm run publint',
       'pnpm run verify-node-next-types',
       'pnpm run verify-built-package-invariants',
     ])
-    expect(setupNodeVersions(typescript)).toEqual(['22.19.0'])
+    expect(setupNodeVersions(typescriptBuild)).toEqual(['22.19.0'])
+
+    const typescript = job(workflow, 'typescript')
+    expect(typescript['runs-on']).toBe('ubuntu-latest')
+    expect(typescript.needs).toEqual(['changes', 'typescript-static', 'typescript-tests', 'typescript-build'])
+    expect(commands(typescript).join('\n')).toContain('A TypeScript lane did not succeed')
 
     const native = job(workflow, 'native')
+    expect(native.needs).toBe('changes')
     expect(commands(native).join('\n')).toContain('rustup toolchain install 1.98.0')
     expect(commands(native)).toContain('node scripts/devtools/native-gates.mjs')
     expect(commands(native)).toContain('node scripts/devtools/rust-notices.mjs --check')
 
     const python = job(workflow, 'python')
+    expect(python.needs).toBe('changes')
     expect(commands(python)).toContain("python -m pip install 'uv==0.12.0'")
     expect(commands(python)).toContain('uv sync --frozen --project python/sdk --group test')
     expect(commands(python)).toContain('node scripts/devtools/python-gates.mjs')
