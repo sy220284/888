@@ -177,12 +177,10 @@ describe('LocalPtySession readiness and output', () => {
     expect(terminal.writes).toEqual(['\x1b[1;1R'])
 
     responseWrite.resolve(undefined)
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
     expect(terminal.writes).toEqual(['\x1b[1;1R', 'Write-Output ready\r'])
     terminal.emitData('\x1b[5n\x1b[?6n')
-    await Promise.resolve()
-    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(0)
     expect(terminal.writes).toEqual([
       '\x1b[1;1R',
       'Write-Output ready\r',
