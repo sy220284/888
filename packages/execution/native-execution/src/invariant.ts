@@ -15,8 +15,8 @@ export const name = 'native-execution-invariant'
 export const inject = ['invariants']
 
 /**
- * No additional runtime invariant: this package defines the native execution
- * service contract and does not own independent runtime state.
+ * No runtime invariant: this package defines the native execution service
+ * contract and does not own independent runtime state.
  */
 const install: InvariantInstaller = () => {}
 
