@@ -5,7 +5,7 @@
   "references": [
     { "path": "../../../vendor/cordis" },
     { "path": "../../../vendor/schemastery" },
-    { "path": "../../runtime-diagnostics/invariants" },
-    { "path": "../native-execution" }
+    { "path": "../native-execution" },
+    { "path": "../../runtime-diagnostics/invariants" }
   ]
 }

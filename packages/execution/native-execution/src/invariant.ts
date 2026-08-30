@@ -11,12 +11,12 @@ const PACKAGE_NAME = '@deepseek-ai/dsh-native-execution'
 
 /** Cordis companion plugin name. */
 export const name = 'native-execution-invariant'
-/** Service required before reserving package ownership. */
+/** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: this package defines the native execution service
- * contract and does not own independent runtime state.
+ * No runtime invariant: this package defines the native execution seam while concrete
+ * providers own their runtime state guarantees.
  */
 const install: InvariantInstaller = () => {}
 

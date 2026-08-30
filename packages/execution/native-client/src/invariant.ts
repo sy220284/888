@@ -11,12 +11,12 @@ const PACKAGE_NAME = '@deepseek-ai/dsh-native-client'
 
 /** Cordis companion plugin name. */
 export const name = 'native-client-invariant'
-/** Service required before reserving package ownership. */
+/** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: the client is a transport adapter and does not own
- * independent durable state beyond the native execution service.
+ * No runtime invariant: transport and native execution guarantees are owned by the
+ * corresponding execution seam.
  */
 const install: InvariantInstaller = () => {}
 

@@ -12,9 +12,6 @@
       "path": "../../../vendor/cordis"
     },
     {
-      "path": "../../runtime-diagnostics/invariants"
-    },
-    {
       "path": "../../execution/native-execution"
     },
     {
@@ -22,6 +19,9 @@
     },
     {
       "path": "../../util/timeout"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

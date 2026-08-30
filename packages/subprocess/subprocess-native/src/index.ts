@@ -29,7 +29,7 @@ function waitMs(ms: number): Promise<void> { return new Promise(resolve => setTi
 function mergedChildEnv(explicit: NodeJS.ProcessEnv | undefined): Record<string, string> {
   const env: Record<string, string> = { ...scrubbedParentEnv() }
   for (const [key, value] of Object.entries(explicit ?? {})) {
-    if (value === undefined) delete env[key]
+    if (value === undefined) Reflect.deleteProperty(env, key)
     else env[key] = value
   }
   return env
@@ -38,7 +38,7 @@ function mergedChildEnv(explicit: NodeJS.ProcessEnv | undefined): Record<string,
 async function waitForStream(stream: Readable | undefined, graceMs: number): Promise<boolean> {
   if (stream === undefined || stream.readableEnded || stream.destroyed) return true
   const result = await Promise.race([
-    new Promise<void>(resolve => {
+    new Promise<void>((resolve) => {
       const done = (): void => { cleanup(); resolve() }
       const cleanup = (): void => {
         stream.off('end', done)
@@ -51,8 +51,14 @@ async function waitForStream(stream: Readable | undefined, graceMs: number): Pro
     }),
     waitMs(graceMs).then(() => false),
   ])
-  if (result === false && !stream.destroyed) stream.destroy()
+  if (result === false) stream.destroy()
   return result !== false
+}
+
+function asBuffer(chunk: unknown): Buffer {
+  if (Buffer.isBuffer(chunk)) return chunk
+  if (chunk instanceof Uint8Array) return Buffer.from(chunk)
+  return Buffer.from(String(chunk))
 }
 
 class NativeSubprocessHandle implements SubprocessHandle {
@@ -74,8 +80,12 @@ class NativeSubprocessHandle implements SubprocessHandle {
     if (spec.stdio.stderr === 'inherit') native.stderr?.pipe(process.stderr, { end: false })
     this.stdoutCollector = isCollect(spec.stdio.stdout) ? new NativeOutputCollector(spec.stdio.stdout, 'stdout') : undefined
     this.stderrCollector = isCollect(spec.stdio.stderr) ? new NativeOutputCollector(spec.stdio.stderr, 'stderr') : undefined
-    if (this.stdoutCollector !== undefined) native.stdout?.on('data', chunk => { this.stdoutCollector?.push(Buffer.from(chunk)) })
-    if (this.stderrCollector !== undefined) native.stderr?.on('data', chunk => { this.stderrCollector?.push(Buffer.from(chunk)) })
+    if (this.stdoutCollector !== undefined) native.stdout?.on('data', (chunk: unknown) => {
+      this.stdoutCollector?.push(asBuffer(chunk))
+    })
+    if (this.stderrCollector !== undefined) native.stderr?.on('data', (chunk: unknown) => {
+      this.stderrCollector?.push(asBuffer(chunk))
+    })
     this.collected = {
       ...(this.stdoutCollector !== undefined ? { stdout: this.stdoutCollector } : {}),
       ...(this.stderrCollector !== undefined ? { stderr: this.stderrCollector } : {}),
@@ -110,7 +120,11 @@ class NativeSubprocessHandle implements SubprocessHandle {
       if (signal === undefined) await waitMs(15)
       else {
         const tick = AbortSignal.timeout(15)
-        try { await new Promise<void>((resolve) => tick.addEventListener('abort', () => resolve(), { once: true })) } catch { /* timer only */ }
+        try {
+          await new Promise<void>((resolve) => {
+            tick.addEventListener('abort', () => { resolve() }, { once: true })
+          })
+        } catch { /* timer only */ }
       }
     }
     return true

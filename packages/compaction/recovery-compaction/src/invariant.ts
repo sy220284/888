@@ -11,12 +11,12 @@ const PACKAGE_NAME = '@deepseek-ai/dsh-recovery-compaction'
 
 /** Cordis companion plugin name. */
 export const name = 'recovery-compaction-invariant'
-/** Service required before reserving package ownership. */
+/** Service required before the companion can reserve package ownership. */
 export const inject = ['invariants']
 
 /**
- * No runtime invariant: this adapter delegates state ownership to the
- * compaction and recovery services and keeps no independent cache/event state.
+ * No runtime invariant: this package delegates compaction and recovery state guarantees
+ * to the owning compaction and recovery seams.
  */
 const install: InvariantInstaller = () => {}
 

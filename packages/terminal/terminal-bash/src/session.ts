@@ -74,6 +74,29 @@ class BoundedTextBuffer {
   }
 }
 
+const TERMINAL_QUERY_PREFIXES = ['\x1b', '\x1b[', '\x1b[5', '\x1b[6', '\x1b[?', '\x1b[?6'] as const
+
+/** Minimal replies for terminal status queries issued before PSReadLine accepts input. */
+class TerminalQueryResponder {
+  private pending = ''
+
+  push(text: string): string {
+    const input = this.pending + text
+    let pendingLength = 0
+    for (const prefix of TERMINAL_QUERY_PREFIXES) {
+      if (prefix.length > pendingLength && input.endsWith(prefix)) pendingLength = prefix.length
+    }
+    const complete = pendingLength === 0 ? input : input.slice(0, -pendingLength)
+    this.pending = pendingLength === 0 ? '' : input.slice(-pendingLength)
+    let response = ''
+    for (const match of complete.matchAll(/\x1b\[(\??)([56])n/g)) {
+      if (match[2] === '5') response += '\x1b[0n'
+      else response += match[1] === '?' ? '\x1b[?1;1R' : '\x1b[1;1R'
+    }
+    return response
+  }
+}
+
 class LocalSendOperation implements TerminalSendOperation {
   private readonly output: BoundedTextBuffer
   private readonly promise: PromiseWithResolvers<TerminalSendResult>
@@ -157,6 +180,7 @@ export class LocalPtySession implements TerminalBackendSession {
   motd = ''
   readonly pid: number
   private readonly decoder = new TextDecoder()
+  private readonly terminalQueries = new TerminalQueryResponder()
   private readonly sanitizer: TerminalSanitizer
   private readonly scrollback: BoundedTextBuffer
   private readonly outputEnded = Promise.withResolvers<void>()
@@ -184,6 +208,7 @@ export class LocalPtySession implements TerminalBackendSession {
   private closing = false
   private closePromise: Promise<void> | undefined
   private transportFailure: Error | undefined
+  private deviceResponseWrite: Promise<void> | undefined
 
   constructor(
     private readonly terminal: SubprocessTerminalHandle,
@@ -260,6 +285,10 @@ export class LocalPtySession implements TerminalBackendSession {
   private async beginSend(operation: LocalSendOperation, request: TerminalSendRequest): Promise<void> {
     let foreground: SubprocessTerminalForeground | undefined
     try {
+      // A terminal query response is input owned by the emulation layer. Keep
+      // later user input behind it even when a remote provider resolves writes
+      // asynchronously.
+      await this.deviceResponseWrite
       foreground = await this.terminal.inspectForeground()
     } catch (error: unknown) {
       // A pre-write inspection failure while cancellation owns the slot must not
@@ -363,7 +392,24 @@ export class LocalPtySession implements TerminalBackendSession {
 
   private readonly onTerminalData = (chunk: Buffer | Uint8Array | string): void => {
     const bytes = typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : chunk
-    this.onData(this.decoder.decode(bytes, { stream: true }))
+    const data = this.decoder.decode(bytes, { stream: true })
+    this.respondToTerminalQueries(data)
+    this.onData(data)
+  }
+
+  private respondToTerminalQueries(data: string): void {
+    const response = this.terminalQueries.push(data)
+    if (response.length === 0) return
+    const prior = this.deviceResponseWrite
+    const write = (prior ?? Promise.resolve()).then(async () => { await this.terminal.write(response) })
+    this.deviceResponseWrite = write
+    void write.then(
+      () => { if (this.deviceResponseWrite === write) this.deviceResponseWrite = undefined },
+      (error: unknown) => {
+        if (this.deviceResponseWrite === write) this.deviceResponseWrite = undefined
+        this.onTransportFailure(error)
+      },
+    )
   }
 
   private readonly onTerminalEnd = (): void => {
@@ -550,6 +596,7 @@ export class LocalPtySession implements TerminalBackendSession {
     // stdin_read/inferred_idle/timeout during the grace period.
     this.stopPolling()
     try {
+      await this.deviceResponseWrite
       await this.terminal.terminate()
     } catch (error: unknown) {
       throw new Error(`PTY cleanup failed (${reason})`, { cause: error })

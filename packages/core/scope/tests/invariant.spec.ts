@@ -54,6 +54,7 @@ describe('scoped-dispatch invariants', () => {
       'agent/session-start': [{ agent, source: 'startup' }],
       'agent/pre-step': [{ agent, messages: [message], turn: 1, step: 1, signal }, () => Promise.resolve({ kind: 'enter', messages: [message] })],
       'agent/request': [{ agent, turn: 1, step: 1, signal }, () => Promise.resolve(config)],
+      'agent/step-snapshot': [{ agent, turn: 1, step: 1, attempt: 1, header: { config }, signal }, () => Promise.resolve({ requestHeader: 0, requestContext: 0 })],
       'agent/request-error': [
         {
           agent,

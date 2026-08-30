@@ -21,14 +21,17 @@ interface ResolvedConfig { binaryPath: string }
 interface Deferred<T> { promise: Promise<T>; resolve(value: T | PromiseLike<T>): void; reject(reason?: unknown): void }
 interface ResponseFrame { id: number; ok: boolean; result?: unknown; error?: string }
 type EventFrame =
-  | { event: 'stdout' | 'stderr'; process_id: string; data_b64: string }
+  | { event: 'stdout'; process_id: string; data_b64: string }
+  | { event: 'stderr'; process_id: string; data_b64: string }
   | { event: 'stream_closed'; process_id: string; stream: 'stdout' | 'stderr' }
   | { event: 'exit'; process_id: string; exit_code: number | null; signal: NodeJS.Signals | null }
 
 type ProtocolFrame = ResponseFrame | EventFrame
 
 function asError(error: unknown): Error { return error instanceof Error ? error : new Error(String(error)) }
-function abortError(signal: AbortSignal): unknown { return signal.reason ?? new Error('native execution request aborted') }
+function abortError(signal: AbortSignal): Error {
+  return signal.reason === undefined ? new Error('native execution request aborted') : asError(signal.reason)
+}
 
 function sidecarEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {}
@@ -44,10 +47,16 @@ class DeferredStdin extends Writable {
   constructor(private readonly handle: SidecarHandle) { super({ decodeStrings: true }) }
   override _write(chunk: Buffer | string, encoding: BufferEncoding, callback: (error?: Error | null) => void): void {
     const bytes = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk, encoding)
-    void this.handle.writeStdin(bytes).then(() => callback(), error => callback(asError(error)))
+    void this.handle.writeStdin(bytes).then(
+      () => { callback() },
+      (error: unknown) => { callback(asError(error)) },
+    )
   }
   override _final(callback: (error?: Error | null) => void): void {
-    void this.handle.closeStdin().then(() => callback(), error => callback(asError(error)))
+    void this.handle.closeStdin().then(
+      () => { callback() },
+      (error: unknown) => { callback(asError(error)) },
+    )
   }
 }
 
@@ -169,8 +178,8 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     this.child = spawn(binaryPath, [], { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true, env: sidecarEnvironment() })
     this.child.stderr.pipe(process.stderr)
     const lines = createInterface({ input: this.child.stdout, crlfDelay: Infinity })
-    lines.on('line', line => { this.acceptLine(line) })
-    this.child.once('error', error => { this.failAll(error) })
+    lines.on('line', (line) => { this.acceptLine(line) })
+    this.child.once('error', (error) => { this.failAll(error) })
     this.child.once('exit', (code, signal) => {
       this.failAll(new Error(`native execution sidecar exited (${String(code ?? signal ?? 'unknown')})`))
     })
@@ -216,7 +225,12 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     this.pending.set(id, state)
     const frame = JSON.stringify({ id, ...payload }) + '\n'
     try {
-      await new Promise<void>((resolve, reject) => this.child.stdin.write(frame, error => error ? reject(error) : resolve()))
+      await new Promise<void>((resolve, reject) => {
+        this.child.stdin.write(frame, (error) => {
+          if (error === null || error === undefined) resolve()
+          else reject(asError(error))
+        })
+      })
     } catch (error: unknown) {
       this.pending.delete(id)
       state.reject(error)
@@ -227,7 +241,10 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
       const onAbort = (): void => { cleanup(); reject(abortError(signal)) }
       const cleanup = (): void => { signal.removeEventListener('abort', onAbort) }
       signal.addEventListener('abort', onAbort, { once: true })
-      void state.promise.then(value => { cleanup(); resolve(value as T) }, error => { cleanup(); reject(error) })
+      void state.promise.then(
+        (value) => { cleanup(); resolve(value as T) },
+        (error: unknown) => { cleanup(); reject(asError(error)) },
+      )
       if (signal.aborted) onAbort()
     })
   }
@@ -239,7 +256,8 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
       const state = this.pending.get(frame.id)
       if (state === undefined) return
       this.pending.delete(frame.id)
-      frame.ok ? state.resolve(frame.result) : state.reject(new Error(frame.error ?? 'native execution request failed'))
+      if (frame.ok) state.resolve(frame.result)
+      else state.reject(new Error(frame.error ?? 'native execution request failed'))
       return
     }
     const handle = this.handles.get(frame.process_id)
