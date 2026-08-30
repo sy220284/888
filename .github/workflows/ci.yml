@@ -84,6 +84,25 @@ jobs:
             echo "python=$python"
           } >> "$GITHUB_OUTPUT"
 
+  lockfile-refresh:
+    if: needs.changes.outputs.code == 'true'
+    needs: changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.19.0'
+      - run: corepack enable
+      - run: corepack prepare pnpm@11.7.0 --activate
+      - name: Generate refreshed lockfile
+        run: pnpm install --no-frozen-lockfile --lockfile-only
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refreshed-lockfile
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+
   typescript-static:
     if: needs.changes.outputs.code == 'true'
     needs: changes
@@ -142,6 +161,8 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@11.7.0 --activate
       - run: pnpm install --frozen-lockfile
+      - name: Build TypeScript contracts
+        run: pnpm run build:lib:host
       - name: Official build
         run: pnpm run build:official
       - name: Package publish validation
