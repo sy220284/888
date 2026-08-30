@@ -6,7 +6,6 @@ on:
       - fix/package-invariants-baseline
     paths:
       - '.github/workflows/offline-bundle-temp.yml'
-      - 'packages/subprocess/subprocess-local/scripts/pwsh-pty-diagnostic.mjs'
       - 'packages/shell/tool-pwsh-persistent/**'
       - 'packages/terminal/terminal-bash/**'
 
@@ -25,5 +24,17 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@11.7.0 --activate
       - run: pnpm install --frozen-lockfile
-      - name: Probe PowerShell PTY startup modes
-        run: node packages/subprocess/subprocess-local/scripts/pwsh-pty-diagnostic.mjs
+      - name: Persistent state in isolation
+        run: >-
+          pnpm exec vitest run --reporter=verbose --maxWorkers=1
+          packages/terminal/terminal-bash/tests/local.spec.ts
+          -t 'bootstraps a persistent pwsh'
+      - name: UTF-8 pinning in isolation
+        run: >-
+          pnpm exec vitest run --reporter=verbose --maxWorkers=1
+          packages/terminal/terminal-bash/tests/local.spec.ts
+          -t 'pins UTF-8 output encoding'
+      - name: Loader composition in isolation
+        run: >-
+          pnpm exec vitest run --reporter=verbose --maxWorkers=1
+          packages/shell/tool-pwsh-persistent/tests/loader-composition.spec.ts
