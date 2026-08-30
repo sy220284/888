@@ -186,15 +186,13 @@ function validateEvent(
       if (trace.lastRequestContextSeq === null || event.data.refs.requestContext !== trace.lastRequestContextSeq) {
         fail(`step/snapshot requestContext ref ${event.data.refs.requestContext} does not match latest ${trace.lastRequestContextSeq}`)
       }
-      let previousSurfaceSeq = -1
+      const surfaceSeqs = new Set<number>()
       for (const seq of event.data.surfaceSeqs) {
         if (!Number.isSafeInteger(seq) || seq < 0 || seq >= event.seq) {
           fail(`step/snapshot surface seq must point backward to a non-negative safe integer, got ${seq}`)
         }
-        if (seq <= previousSurfaceSeq) {
-          fail('step/snapshot surfaceSeqs must be strictly increasing')
-        }
-        previousSurfaceSeq = seq
+        if (surfaceSeqs.has(seq)) fail('step/snapshot surfaceSeqs must not contain duplicates')
+        surfaceSeqs.add(seq)
       }
       break
     }

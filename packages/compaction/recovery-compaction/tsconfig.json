@@ -6,6 +6,7 @@
     { "path": "../../../vendor/cosmokit" },
     { "path": "../../../vendor/cordis" },
     { "path": "../compaction" },
-    { "path": "../../llm/recovery" }
+    { "path": "../../llm/recovery" },
+    { "path": "../../runtime-diagnostics/invariants" }
   ]
 }
