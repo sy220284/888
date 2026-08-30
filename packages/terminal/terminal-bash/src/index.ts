@@ -65,8 +65,8 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
     DSH_PTY_SESSION_ID: spec.sessionId,
   }
   if (dialect === 'pwsh') {
-    // pwsh ignores PS1/PROMPT_COMMAND; its prompt is installed by the startup
-    // bootstrap instead, and NO_COLOR keeps the renderer quiet.
+    // pwsh ignores PS1/PROMPT_COMMAND; its prompt is installed by the launch
+    // command instead, and NO_COLOR keeps the renderer quiet.
     return { ...common, NO_COLOR: '1' }
   }
   return {
@@ -89,12 +89,21 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
 export const PWSH_PROMPT_SETUP =
   "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); ('dsh' + '> ') }"
 
-function textEndsWithControlledPrompt(text: string): boolean {
-  return text.trimEnd().endsWith(CONTROLLED_PROMPT.trimEnd())
-}
-
 function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutionPolicy): string[] {
-  const argv = [config.shellPath, ...config.shellArgs]
+  // Install the pwsh prompt before the interactive host starts reading from
+  // the PTY. Writing this bootstrap through PSReadLine races the initial host
+  // prompt on loaded CI machines and can make the shell exit before it is
+  // published. `-NoExit -Command` runs the setup once, then leaves the same
+  // process in its interactive loop for LocalPtySession.initialize().
+  const argv = config.shellDialect === 'pwsh'
+    ? [
+        config.shellPath,
+        ...config.shellArgs,
+        '-NoExit',
+        '-Command',
+        ENCODING_PREAMBLE + PWSH_PROMPT_SETUP,
+      ]
+    : [config.shellPath, ...config.shellArgs]
   if (policy.mode === 'danger-full-access') return argv
   const sandbox = ctx.get('sandbox')
   if (sandbox === undefined) {
@@ -109,43 +118,10 @@ function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutio
 // session already owns the send lifecycle the race protects.
 async function startupSession(
   session: LocalPtySession,
-  dialect: ShellDialect,
   signal?: AbortSignal,
 ): Promise<void> {
   const start = async (): Promise<void> => {
-    if (dialect === 'bash') {
-      await session.initialize(signal)
-      return
-    }
-    // pwsh cannot install its prompt from the environment: write the prompt
-    // function through the session and wait for the first marker prompt,
-    // which is also the readiness contract of the bash initialize path. The
-    // first send also pins UTF-8 output (the shared pwsh-local preamble)
-    // before anything runs: the session decode path treats PTY bytes as
-    // UTF-8, and an un-pinned console writes its host code page for
-    // non-ASCII output. The banner-to-prompt gap can outlast the silence
-    // bound, so the wait loops over follow-up sends until the controlled
-    // backend has observed the shell waiting for input or the controlled
-    // printable prompt. The submitted source builds the prompt from two
-    // strings, so its PSReadLine echo cannot spoof readiness.
-    let viewport = ''
-    let first = true
-    for (;;) {
-      const operation = session.startSend({
-        text: first ? ENCODING_PREAMBLE + PWSH_PROMPT_SETUP : '',
-        submit: first,
-        ...signal !== undefined ? { signal } : {},
-      })
-      first = false
-      const result = await operation.done
-      if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
-      if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
-      viewport = result.viewport
-      const scrollback = session.read({ offset: 0, count: 20 }).text
-      if (textEndsWithControlledPrompt(viewport)
-        || textEndsWithControlledPrompt(scrollback)) break
-    }
-    session.motd = viewport
+    await session.initialize(signal)
   }
   if (signal === undefined) {
     await start()
@@ -197,7 +173,7 @@ export class BashTerminalBackend implements TerminalBackend {
     })
     const session = this.createSession(terminal, this.config)
     try {
-      await startupSession(session, this.config.shellDialect, spec.signal)
+      await startupSession(session, spec.signal)
       return session
     } catch (error) {
       try {

@@ -90,9 +90,6 @@ type StubMode =
   | 'torn-status'
   | 'finish-torn-status'
   | 'end-only'
-  | 'init-exit'
-  | 'init-timeout'
-  | 'init-echo-then-padded-prompt'
   | 'spawn-error'
   | 'send-error'
   | 'prompt-after-idle'
@@ -114,34 +111,18 @@ class StubTerminalSession implements TerminalBackendSession {
   closed: string[] = []
   mode: StubMode
   sends = 0
+  sentTexts: string[] = []
   pendingText = ''
   historyTruncated = false
   throwOnSend = false
 
   constructor(mode: StubMode) {
     this.mode = mode
-    if (mode === 'init-echo-then-padded-prompt') this.scrollback = ''
   }
 
   startSend(request: TerminalSendRequest): TerminalSendOperation {
     this.sends += 1
-    if (request.text.startsWith('function prompt')) {
-      if (this.mode === 'init-exit') {
-        this.statusValue = { kind: 'exited', exitCode: 1, signal: null }
-        return this.operation(Promise.resolve(this.result('', 'session_exit')))
-      }
-      if (this.mode === 'init-timeout') {
-        return this.operation(Promise.resolve(this.result('', 'timeout')))
-      }
-      if (this.mode === 'init-echo-then-padded-prompt') {
-        return this.operation(Promise.resolve(this.result(`${request.text}\n`, 'inferred_idle')))
-      }
-      return this.operation(Promise.resolve(this.result(this.motd, 'stdin_read')))
-    }
-    if (this.mode === 'init-echo-then-padded-prompt' && request.text.length === 0) {
-      this.mode = 'normal'
-      return this.operation(Promise.resolve(this.result(`${this.motd}\t\n`, 'inferred_idle')))
-    }
+    this.sentTexts.push(request.text)
     if (this.mode === 'send-error') throw new Error('stub send failed')
     if (this.throwOnSend) throw new Error('PTY session has exited')
     if (this.mode === 'wait-for-abort' || this.mode === 'end-on-abort') {
@@ -352,7 +333,7 @@ describe('tool-pwsh-persistent', () => {
     expect(text(await call(ctx, owner, 'Write-Output one'))).toBe('hello from stub')
     expect(text(await call(ctx, owner, 'Write-Output two'))).toBe('hello from stub')
     expect(stub.sessions).toHaveLength(1)
-    expect(stub.sessions[0]?.sends).toBe(3)
+    expect(stub.sessions[0]?.sends).toBe(2)
 
     const ownerWithoutCwd = agent(ctx, undefined)
     expect(text(await call(ctx, ownerWithoutCwd, 'pwd'))).toBe('hello from stub')
@@ -383,10 +364,12 @@ describe('tool-pwsh-persistent', () => {
     expect(text(await call(ctx, owner, 'complete prompt collision'))).toBe(session.motd)
   })
 
-  it('waits past echoed setup source and accepts prompt-line padding', async () => {
-    const { ctx, owner, stub } = await setup({ backendType: 'stub' }, 'init-echo-then-padded-prompt')
+  it('uses the prompt published by the backend without a second initialization send', async () => {
+    const { ctx, owner, stub } = await setup({ backendType: 'stub' })
     expect(text(await call(ctx, owner, 'Write-Output ready'))).toBe('hello from stub')
-    expect(stub.sessions[0]?.sends).toBe(3)
+    expect(stub.sessions[0]?.sends).toBe(1)
+    expect(stub.sessions[0]?.sentTexts[0]).toContain('Invoke-Expression')
+    expect(stub.sessions[0]?.sentTexts[0]).not.toContain('function prompt')
   })
 
   it('reports the exit path when the shell exits between send settlement and the next poll', async () => {
@@ -565,15 +548,6 @@ describe('tool-pwsh-persistent', () => {
       expect(text(await queued)).toBe('hello from stub')
       expect(stub.sessions[0]?.closed).toContain('persistent pwsh command aborted')
       expect(stub.sessions).toHaveLength(2)
-    },
-  )
-
-  it.each(['init-exit', 'init-timeout'] as const)(
-    'fails initialization and closes the unusable shell for %s',
-    async (mode) => {
-      const { ctx, owner, stub } = await setup({ backendType: 'stub' }, mode)
-      expect((await call(ctx, owner, 'pwd')).isError).toBe(true)
-      expect(stub.sessions[0]?.closed).toContain('persistent pwsh initialization failed')
     },
   )
 
