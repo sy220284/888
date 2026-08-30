@@ -89,21 +89,16 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
 export const PWSH_PROMPT_SETUP =
   "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); ('dsh' + '> ') }"
 
+const PWSH_STARTUP_READY = '__DSH_PWSH_STARTUP_READY__'
+const PWSH_STARTUP_SETUP = ENCODING_PREAMBLE + PWSH_PROMPT_SETUP
+  + "; [Console]::WriteLine(('__DSH_PWSH_STARTUP_' + 'READY__'))"
+
+function textEndsWithControlledPrompt(text: string): boolean {
+  return text.trimEnd().endsWith(CONTROLLED_PROMPT.trimEnd())
+}
+
 function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutionPolicy): string[] {
-  // Install the pwsh prompt before the interactive host starts reading from
-  // the PTY. Writing this bootstrap through PSReadLine races the initial host
-  // prompt on loaded CI machines and can make the shell exit before it is
-  // published. `-NoExit -Command` runs the setup once, then leaves the same
-  // process in its interactive loop for LocalPtySession.initialize().
-  const argv = config.shellDialect === 'pwsh'
-    ? [
-      config.shellPath,
-      ...config.shellArgs,
-      '-NoExit',
-      '-Command',
-      ENCODING_PREAMBLE + PWSH_PROMPT_SETUP,
-    ]
-    : [config.shellPath, ...config.shellArgs]
+  const argv = [config.shellPath, ...config.shellArgs]
   if (policy.mode === 'danger-full-access') return argv
   const sandbox = ctx.get('sandbox')
   if (sandbox === undefined) {
@@ -118,10 +113,42 @@ function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutio
 // session already owns the send lifecycle the race protects.
 async function startupSession(
   session: LocalPtySession,
+  dialect: ShellDialect,
   signal?: AbortSignal,
 ): Promise<void> {
   const start = async (): Promise<void> => {
+    // First let the unmodified interactive host reach its native prompt. A
+    // bootstrap written before that boundary races PSReadLine initialization
+    // on loaded CI machines; using `-Command` at process launch avoids the
+    // race but changes the host's stdin mode. Once initialize() proves the
+    // ordinary host is ready, install the shared UTF-8/prompt protocol through
+    // that known-good interactive input path.
     await session.initialize(signal)
+    if (dialect === 'bash') return
+
+    let startupReady = false
+    let first = true
+    for (;;) {
+      const operation = session.startSend({
+        text: first ? PWSH_STARTUP_SETUP : '',
+        submit: first,
+        ...signal !== undefined ? { signal } : {},
+      })
+      first = false
+      const result = await operation.done
+      if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
+      if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
+      const scrollback = session.read({ offset: 0, count: 20 }).text
+      startupReady ||= result.viewport.includes(PWSH_STARTUP_READY)
+        || scrollback.includes(PWSH_STARTUP_READY)
+      if (startupReady && (result.waitReason === 'stdin_read'
+        || textEndsWithControlledPrompt(result.viewport)
+        || textEndsWithControlledPrompt(scrollback))) break
+    }
+    // The backend owns this exact printable prompt. Publishing only that
+    // stable contract keeps PSReadLine's echoed bootstrap out of consumers'
+    // prompt discovery and MOTD.
+    session.motd = CONTROLLED_PROMPT
   }
   if (signal === undefined) {
     await start()
@@ -173,7 +200,7 @@ export class BashTerminalBackend implements TerminalBackend {
     })
     const session = this.createSession(terminal, this.config)
     try {
-      await startupSession(session, spec.signal)
+      await startupSession(session, this.config.shellDialect, spec.signal)
       return session
     } catch (error) {
       try {

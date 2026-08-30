@@ -9,6 +9,7 @@ import SandboxProvider from '@deepseek-ai/dsh-sandbox'
 import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
 import SandboxPolicyService, { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
 import TerminalSessionService, { TerminalBackendCleanupError, TerminalSessionId } from '@deepseek-ai/dsh-terminal'
+import type { TerminalSendRequest } from '@deepseek-ai/dsh-terminal'
 import { BashTerminalBackend, PWSH_PROMPT_SETUP } from '@deepseek-ai/dsh-terminal-bash'
 import { ENCODING_PREAMBLE } from '@deepseek-ai/dsh-pwsh-local'
 import * as ptyLocal from '@deepseek-ai/dsh-terminal-bash'
@@ -341,16 +342,35 @@ describe('BashTerminalBackend startup rollback', () => {
     await session.close('test complete')
   })
 
-  it('bootstraps a pwsh dialect in its launch command and scrubs bash-only env', async () => {
+  it('waits for the native pwsh host before bootstrapping its prompt and encoding', async () => {
     const ctx = new Context()
     await ctx.plugin(EmptySandbox)
     await ctx.plugin(SandboxPolicyService, { mode: 'danger-full-access', workspaceRoot: '/workspace' })
     let spawned: SubprocessTerminalSpawnSpec | undefined
     const signal = new AbortController().signal
-    const initialized = vi.fn<(signal?: AbortSignal) => Promise<void>>().mockResolvedValue(undefined)
+    const order: string[] = []
+    const initialized = vi.fn<(signal?: AbortSignal) => Promise<void>>().mockImplementation(async () => {
+      order.push('initialize')
+    })
+    let sent: TerminalSendRequest | undefined
     const session = {
-      motd: 'dsh> ',
+      motd: 'PS /workspace> ',
       initialize: initialized,
+      startSend: (request: TerminalSendRequest) => {
+        order.push('bootstrap')
+        sent = request
+        return {
+          done: Promise.resolve({
+            viewport: '__DSH_PWSH_STARTUP_READY__\ndsh> ',
+            waitReason: 'stdin_read' as const,
+            sessionStatus: { kind: 'running' as const },
+            truncated: false,
+          }),
+          readOutput: () => ({ delta: '', truncated: false }),
+          cancel: () => false,
+        }
+      },
+      read: () => ({ text: '', totalLines: 0, lineBegin: 0, lineEnd: 0, truncated: false }),
     } as unknown as LocalPtySession
     const backend = new BashTerminalBackend(
       ctx,
@@ -359,10 +379,12 @@ describe('BashTerminalBackend startup rollback', () => {
       () => session,
     )
     expect(await backend.spawn({ ...spec(agent(ctx)), signal })).toBe(session)
-    expect(spawned?.argv).toEqual([
-      'pwsh', '-NoLogo', '-NoProfile', '-NoExit', '-Command', ENCODING_PREAMBLE + PWSH_PROMPT_SETUP,
-    ])
+    expect(spawned?.argv).toEqual(['pwsh', '-NoLogo', '-NoProfile'])
     expect(initialized).toHaveBeenCalledWith(signal)
+    expect(order).toEqual(['initialize', 'bootstrap'])
+    expect(sent).toMatchObject({ submit: true, signal })
+    expect(sent?.text).toContain(ENCODING_PREAMBLE + PWSH_PROMPT_SETUP)
+    expect(sent?.text).not.toContain('__DSH_PWSH_STARTUP_READY__')
     expect(session.motd).toBe('dsh> ')
     expect(spawned?.env).toMatchObject({
       TERM: 'dumb', NO_COLOR: '1', DSH_SHELL: '1', DSH_SESSION_ID: 'agent', DSH_PTY_SESSION_ID: 'pty-1',
