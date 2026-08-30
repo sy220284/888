@@ -24,8 +24,22 @@ jobs:
       - run: corepack enable
       - run: corepack prepare pnpm@11.7.0 --activate
       - run: pnpm install --frozen-lockfile
-      - name: Focused real PowerShell tests
+      - name: Persistent state in isolation
+        if: always()
+        continue-on-error: true
         run: >-
-          pnpm exec vitest run --reporter=verbose
+          pnpm exec vitest run --reporter=verbose --maxWorkers=1
           packages/terminal/terminal-bash/tests/local.spec.ts
+          -t 'bootstraps a persistent pwsh'
+      - name: UTF-8 pinning in isolation
+        if: always()
+        continue-on-error: true
+        run: >-
+          pnpm exec vitest run --reporter=verbose --maxWorkers=1
+          packages/terminal/terminal-bash/tests/local.spec.ts
+          -t 'pins UTF-8 output encoding'
+      - name: Loader composition in isolation
+        if: always()
+        run: >-
+          pnpm exec vitest run --reporter=verbose --maxWorkers=1
           packages/shell/tool-pwsh-persistent/tests/loader-composition.spec.ts
