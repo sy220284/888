@@ -376,7 +376,8 @@ function applyEvent(session: Session, trace: Trace, event: SessionEvent, fail: I
       const callId = nonEmptyString(data.callId, 'world/effect-receipt callId', fail)
       const toolName = nonEmptyString(data.toolName, 'world/effect-receipt toolName', fail)
       const endedAt = nonNegativeSafeInteger(data.endedAt, 'world/effect-receipt endedAt', fail)
-      if (startSeq !== effect.seq || callId !== effect.callId || toolName !== effect.toolName) {
+      const identityMatches = startSeq === effect.seq && callId === effect.callId && toolName === effect.toolName
+      if (!identityMatches) {
         fail(`world/effect-receipt ${receiptId} identity diverges from its start`)
       }
       if (data.status !== 'succeeded' && data.status !== 'failed') fail(`world/effect-receipt ${receiptId} status is invalid`)
@@ -400,22 +401,25 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     return trace
   }
 
-  ctx.sessions.list().forEach(seed)
-  ctx.on('session/created', (session) => { seed(session) }, { global: true })
-  ctx.on('internal/dispatch', (_mode, eventName, args) => {
+  const stageDispatch = (_mode: unknown, eventName: string, args: unknown[]): void => {
     if (eventName !== 'session/event') return
     const [session, event] = args as [Session, SessionEvent]
     const current = traces.get(session) ?? seed(session)
     const candidate = cloneTrace(current)
     applyEvent(session, candidate, event, fail)
     staged.set(event, { session, trace: candidate })
-  }, { global: true })
-  ctx.on('session/event', (session, event) => {
+  }
+  const publish = (session: Session, event: SessionEvent): void => {
     const candidate = staged.get(event)
     if (candidate === undefined || candidate.session !== session) return fail('session/event reached publication without runtime-policy validation')
     staged.delete(event)
     traces.set(session, candidate.trace)
-  }, { global: true })
+  }
+
+  for (const session of ctx.sessions.list()) seed(session)
+  ctx.on('session/created', seed, { global: true })
+  ctx.on('internal/dispatch', stageDispatch, { global: true })
+  ctx.on('session/event', publish, { global: true })
 }, { inject: ['sessions'] })
 
 export const apply = (ctx: Context): Promise<() => void> =>

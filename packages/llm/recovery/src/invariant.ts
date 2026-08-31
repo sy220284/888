@@ -19,11 +19,18 @@ function validateEvent(event: SessionEvent, fail: InvariantFailure): void {
   if (action !== 'retry') fail(`recovery/decision carries unsupported action ${JSON.stringify(action)}`)
   if (data.route !== undefined && (data.route.provider.trim().length === 0 || data.route.model.trim().length === 0)) fail('recovery/decision route must carry non-empty provider and model')
 }
+function validateHistory(ctx: Context, fail: InvariantFailure): void {
+  for (const session of ctx.sessions.list()) {
+    for (const event of session.events) validateEvent(event, fail)
+  }
+}
+
 const install: InvariantInstaller = Object.assign((ctx: Context, fail: InvariantFailure) => {
-  for (const session of ctx.sessions.list()) for (const event of session.events) validateEvent(event, fail)
+  validateHistory(ctx, fail)
   ctx.on('internal/dispatch', (_mode, eventName, args) => {
     if (eventName !== 'session/event') return
-    validateEvent((args as [Session, SessionEvent])[1], fail)
+    const event = (args as [Session, SessionEvent])[1]
+    validateEvent(event, fail)
   }, { global: true })
 }, { inject: ['sessions'] })
 export const apply = (ctx: Context): Promise<() => void> => Promise.resolve(ctx.invariants.register(PACKAGE_NAME, install))

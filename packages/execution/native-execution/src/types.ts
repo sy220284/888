@@ -1,9 +1,13 @@
 import type { Readable, Writable } from 'node:stream'
 
+/** Process-tree signals supported by the native execution protocol. */
 export type NativeExecutionSignal = 'SIGINT' | 'SIGTERM' | 'SIGKILL' | 'SIGTSTP' | 'SIGHUP'
+/** Native process standard-input source. */
 export type NativeInputMode = 'ignore' | 'pipe' | { readonly data: string | Uint8Array }
+/** Native process output routing mode. */
 export type NativeOutputMode = 'pipe' | 'ignore'
 
+/** Complete native process spawn request. */
 export interface NativeProcessSpawnSpec {
   readonly argv: readonly string[]
   readonly cwd: string
@@ -13,11 +17,13 @@ export interface NativeProcessSpawnSpec {
   readonly stderr: NativeOutputMode
 }
 
+/** Native process completion status. */
 export interface NativeProcessOutcome {
   readonly exitCode: number | null
   readonly signal: NodeJS.Signals | null
 }
 
+/** Live native process control and output surface. */
 export interface NativeProcessHandle {
   readonly pid: number
   readonly stdin: Writable | undefined
@@ -28,6 +34,7 @@ export interface NativeProcessHandle {
   treeAlive(): Promise<boolean>
 }
 
+/** Native sidecar capabilities negotiated at startup. */
 export interface NativeExecutionCapabilities {
   readonly processTree: boolean
   readonly terminal: boolean
@@ -35,6 +42,7 @@ export interface NativeExecutionCapabilities {
   readonly networkPolicy: boolean
 }
 
+/** Validated native sidecar handshake. */
 export interface NativeExecutionHello {
   readonly protocol: number
   readonly platform: string

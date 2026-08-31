@@ -11,6 +11,7 @@
     "sandbox-exec",
     "tar",
     "taskkill",
+    "uv",
     "where.exe"
   ],
   "ignoreWorkspaces": [
@@ -24,6 +25,7 @@
   "workspaces": {
     ".": {
       "entry": [
+        "scripts/build-exe-for-python-sdk.ts",
         "scripts/**/*.mjs",
         "scripts/**/*.cjs",
         "scripts/types/client-build-environment/index.d.ts"
@@ -209,6 +211,21 @@
       "project": [
         "src/**/*.ts",
         "tests/**/*.ts"
+      ]
+    },
+    "packages/compaction/recovery-compaction": {
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/execution/native-client": {
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/execution/native-execution": {
+      "project": [
+        "src/**/*.ts"
       ]
     },
     "packages/typert/generator": {
