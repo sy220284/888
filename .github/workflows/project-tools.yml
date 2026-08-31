@@ -36,12 +36,15 @@ permissions:
 
 concurrency:
   group: project-tools-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   DSH_TOOL_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'test' }}
   DSH_INCLUDE_DEPENDENCIES: ${{ github.event_name == 'workflow_dispatch' && inputs.include_dependencies || 'no' }}
   DSH_RUN_CHECKS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_checks || 'no' }}
+  DSH_RUST_VERSION: '1.98.0'
+  DSH_PNPM_VERSION: '11.7.0'
+  DSH_UV_VERSION: '0.12.0'
 
 jobs:
   validate-tooling:
@@ -81,26 +84,44 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22.19.0'
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
       - uses: actions/setup-go@v6
         with:
           go-version: stable
           cache: false
+      - uses: actions/setup-python@v6
+        if: env.DSH_TOOL_PROFILE == 'full' && (env.DSH_INCLUDE_DEPENDENCIES == 'yes' || env.DSH_RUN_CHECKS == 'yes')
+        with:
+          python-version: '3.12'
 
-      - name: Prepare project profile on Unix
+      - name: Pin Rust toolchain on Unix
         if: runner.os != 'Windows'
         shell: bash
-        run: sh ./dev setup "$DSH_TOOL_PROFILE"
+        run: |
+          rustup toolchain install "$DSH_RUST_VERSION" --profile minimal --component rustfmt --component clippy
+          rustup override set "$DSH_RUST_VERSION"
 
-      - name: Prepare project profile on Windows
+      - name: Pin Rust toolchain on Windows
         if: runner.os == 'Windows'
         shell: pwsh
-        run: .\dev.ps1 setup $env:DSH_TOOL_PROFILE
+        run: |
+          rustup toolchain install $env:DSH_RUST_VERSION --profile minimal --component rustfmt --component clippy
+          rustup override set $env:DSH_RUST_VERSION
 
       - name: Build portable project utility bundle
         run: node scripts/devtools/build-project-tools.mjs .artifacts/project-tools
+
+      - name: Activate pinned pnpm for dependency cache
+        if: env.DSH_INCLUDE_DEPENDENCIES == 'yes'
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@$DSH_PNPM_VERSION" --activate
+          pnpm --version
+
+      - name: Install pinned uv for full dependency cache
+        if: env.DSH_INCLUDE_DEPENDENCIES == 'yes' && env.DSH_TOOL_PROFILE == 'full'
+        shell: bash
+        run: python -m pip install "uv==$DSH_UV_VERSION"
 
       - name: Prepare lock-resolved dependency caches on Unix
         if: runner.os != 'Windows' && env.DSH_INCLUDE_DEPENDENCIES == 'yes'
@@ -145,6 +166,16 @@ jobs:
           path: .artifacts/dependency-cache
           if-no-files-found: error
           retention-days: 14
+
+      - name: Prepare selected project profile for checks on Unix
+        if: runner.os != 'Windows' && env.DSH_RUN_CHECKS == 'yes'
+        shell: bash
+        run: sh ./dev setup "$DSH_TOOL_PROFILE"
+
+      - name: Prepare selected project profile for checks on Windows
+        if: runner.os == 'Windows' && env.DSH_RUN_CHECKS == 'yes'
+        shell: pwsh
+        run: .\dev.ps1 setup $env:DSH_TOOL_PROFILE
 
       - name: Run selected project checks on Unix
         if: runner.os != 'Windows' && env.DSH_RUN_CHECKS == 'yes'
