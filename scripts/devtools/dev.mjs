@@ -221,8 +221,8 @@ function check(profileName = 'test') {
   if (process.exitCode) return
   if (profileName === 'minimal' || profileName === 'python') runMinimalChecks()
   else must(run('pnpm', ['run', 'check:all']), 'full TypeScript/project checks')
-  if (profile.dependencyScopes.includes('cargo')) must(run('node', ['scripts/devtools/native-gates.mjs']), 'Rust native gates')
-  if (profile.dependencyScopes.includes('python')) must(run('node', ['scripts/devtools/python-gates.mjs']), 'Python SDK gates')
+  if (profile.dependencyScopes.includes('cargo')) must(run('node', ['scripts/devtools/native-checks.mjs']), 'Rust native checks')
+  if (profile.dependencyScopes.includes('python')) must(run('node', ['scripts/devtools/python-checks.mjs']), 'Python SDK checks')
 }
 
 function usage() {

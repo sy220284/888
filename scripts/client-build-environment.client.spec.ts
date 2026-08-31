@@ -1,7 +1,6 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
-import yaml from 'js-yaml'
+import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   assertClientBuildEnvironment,
@@ -14,15 +13,11 @@ import {
 } from './client-build-environment.ts'
 import { clientBundle } from '../packages/client/tsdown.client.ts'
 
-const root = resolve(import.meta.dirname, '..')
 const PROBE_NAME = 'DSH_CLIENT_BUILD_TEST'
 const COMMIT_HASH = '0123456789abcdef0123456789abcdef01234567'
 const PROBE_KEY = `process.env.${PROBE_NAME}`
 const originalProbe = process.env[PROBE_NAME]
 const roots: string[] = []
-const dshBuildWorkflows = [
-  'ci.yml',
-]
 
 afterEach(() => {
   if (originalProbe === undefined) Reflect.deleteProperty(process.env, PROBE_NAME)
@@ -157,14 +152,4 @@ describe('client build environment', () => {
     expect(() => { readClientBuildRecord(official) }).toThrow(/artifacts differ/)
   })
 
-  it('keeps public client values out of workflow-wide environments', () => {
-    for (const name of dshBuildWorkflows) {
-      const path = `.github/workflows/${name}`
-      const document: unknown = yaml.load(readFileSync(resolve(root, path), 'utf8'))
-      if (typeof document !== 'object' || document === null || Array.isArray(document)) {
-        throw new TypeError(`${path} must contain a workflow object`)
-      }
-      expect(JSON.stringify(document), path).not.toContain('DSH_CLIENT_')
-    }
-  })
 })

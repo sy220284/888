@@ -1,5 +1,7 @@
 # Development environment scripts
 
-`dev.mjs` is the post-bootstrap command router. `bootstrap.sh` and `bootstrap.ps1` are intentionally dependency-light and can install the pinned Node toolchain before Node is available. The root `dev` / `dev.ps1` entrypoints delegate here.
+English | [中文](README.zh.md)
 
-The bootstrap layer owns tool acquisition and checksum verification. Project dependency installation stays with pnpm, Cargo, and uv using committed lock files. Project quality checks stay with the existing gate runner plus the Rust gate scripts exposed from the root package manifest.
+`dev.mjs` is the shared command router after Node becomes available. `bootstrap.sh` and `bootstrap.ps1` stay dependency-light: they download and verify the pinned Node version when Node is unavailable, then enter the shared command layer.
+
+The bootstrap layer owns development-tool acquisition and digest verification. pnpm, Cargo, and uv continue to install project dependencies from committed lockfiles. `run-checks`, the Rust checks, and the Python checks provide explicitly requested project validation.
