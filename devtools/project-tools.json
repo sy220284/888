@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Portable project-development utilities built by GitHub Actions and distributed as workflow artifacts.",
+  "tools": {
+    "ripgrep": {
+      "version": "15.2.0",
+      "installer": "cargo",
+      "package": "ripgrep",
+      "binary": "rg",
+      "purpose": "Fast repository search for development, debugging, and test triage"
+    },
+    "fd": {
+      "version": "10.4.2",
+      "installer": "cargo",
+      "package": "fd-find",
+      "binary": "fd",
+      "purpose": "Fast file discovery for scripts and developer workflows"
+    },
+    "cargo-nextest": {
+      "version": "0.9.137",
+      "installer": "cargo",
+      "package": "cargo-nextest",
+      "binary": "cargo-nextest",
+      "purpose": "Fast and reliable Rust test execution"
+    },
+    "actionlint": {
+      "version": "1.7.12",
+      "installer": "go",
+      "module": "github.com/rhysd/actionlint/cmd/actionlint@v1.7.12",
+      "binary": "actionlint",
+      "purpose": "GitHub Actions workflow validation"
+    },
+    "shellcheck": {
+      "version": "0.11.0",
+      "installer": "workflow-validation",
+      "binary": "shellcheck",
+      "artifact": false,
+      "purpose": "Shell static analysis used by the project-tools workflow"
+    }
+  },
+  "artifacts": {
+    "tools": "dsh-project-tools-<os>-<arch>",
+    "dependencies": "dsh-project-dependencies-<profile>-<os>-<arch>"
+  },
+  "dependencyCaches": {
+    "npm": "pnpm fetch --frozen-lockfile",
+    "cargo": "cargo fetch --locked --manifest-path native/execution-core/Cargo.toml",
+    "python": "uv sync --frozen --project python/sdk --group test"
+  }
+}

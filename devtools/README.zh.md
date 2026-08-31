@@ -36,6 +36,35 @@ Windows PowerShell：
 - `python`：在 minimal 上增加 Python + uv + Ruff；用于 Python SDK。
 - `full`：native + python + 可选 PowerShell；用于全仓维护、格式化、测试和发布准备。
 
+## 项目工具工作流
+
+`.github/workflows/project-tools.yml` 提供独立的项目工具与依赖产物。格式化工具继续由 `devtools/manifest.json` 管理；高频开发/测试辅助工具放在 `devtools/project-tools.json`，避免把仅供开发者使用的工具塞进应用运行时依赖。
+
+当前工具包固定包含：
+
+- `rg`（ripgrep）：全仓高速搜索。
+- `fd`：高速文件发现。
+- `cargo-nextest`：Rust 测试执行器。
+- `actionlint`：GitHub Actions 工作流静态校验。
+- ShellCheck：在工作流中检查 Shell 脚本；不作为跨平台公开工具包的一部分。
+
+工作流支持 `test` / `full` 两种环境，产物按操作系统与架构拆分：
+
+- `dsh-project-tools-<os>-<arch>`：可直接解压到本地工具目录并加入 `PATH` 的开发工具包，附 `bundle.json` 与 `SHA256SUMS.txt`。
+- `dsh-project-dependencies-<profile>-<os>-<arch>`：可选的锁定依赖缓存，包含 pnpm、Cargo；`full` 额外包含 uv 缓存。
+
+分支上的项目工具定义变更会自动构建工具包；大体积依赖缓存只在手动运行工作流并选择 `include_dependencies=yes` 时生成，避免每次提交重复上传大产物。
+
+下载依赖缓存后可按需离线/弱网恢复：
+
+```bash
+pnpm install --offline --frozen-lockfile --store-dir /path/to/dependency-cache/pnpm
+CARGO_HOME=/path/to/dependency-cache/cargo cargo fetch --offline --locked --manifest-path native/execution-core/Cargo.toml
+UV_CACHE_DIR=/path/to/dependency-cache/uv uv sync --offline --frozen --project python/sdk --group test
+```
+
+Windows 对应使用 PowerShell 设置 `$env:CARGO_HOME` / `$env:UV_CACHE_DIR`，pnpm 参数保持一致。
+
 ## 格式化分工
 
 仓库按语言使用专用工具，不用单个格式化器强行接管所有源码：
@@ -60,6 +89,7 @@ Windows PowerShell：
 - Python 依赖：`python/sdk/uv.lock`
 - 组合关系：`devtools/profiles.json`
 - 聚合工具与格式化器版本：`devtools/manifest.json`
+- 项目开发/测试辅助工具版本：`devtools/project-tools.json`
 - 可再分发工具校验值：`devtools/checksums.json`
 
 `manifest.json` 是聚合视图，不允许独立漂移。开发工具声明检查会验证它与权威声明及下载校验策略保持一致。
@@ -77,4 +107,5 @@ shfmt 使用官方 GitHub Release 二进制并按平台校验固定 SHA-256；Ta
 - Rust 构建必须使用 `--locked`。
 - npm 工作区安装必须使用 `--frozen-lockfile`。
 - Python 项目安装必须使用 `uv sync --frozen`。
+- 项目工具包生成后写入 SHA-256 清单，下载后可独立复核。
 - 格式化工具固定版本，避免开发机之间产生格式差异。

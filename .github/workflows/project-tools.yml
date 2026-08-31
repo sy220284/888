@@ -1,0 +1,153 @@
+name: Project tools and dependency bundles
+
+on:
+  push:
+    branches:
+      - chore/complete-format-tooling
+    paths:
+      - '.github/workflows/project-tools.yml'
+      - 'devtools/project-tools.json'
+      - 'scripts/devtools/build-project-tools.mjs'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Development profile used to prepare dependencies
+        required: true
+        type: choice
+        options: [test, full]
+        default: test
+      include_dependencies:
+        description: Build lock-resolved pnpm/Cargo/uv dependency cache artifact
+        required: true
+        type: choice
+        options: ['yes', 'no']
+        default: 'yes'
+      run_checks:
+        description: Run the selected development profile checks after packaging
+        required: true
+        type: choice
+        options: ['yes', 'no']
+        default: 'no'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-tools-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: false
+
+env:
+  DSH_TOOL_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'test' }}
+  DSH_INCLUDE_DEPENDENCIES: ${{ github.event_name == 'workflow_dispatch' && inputs.include_dependencies || 'no' }}
+  DSH_RUN_CHECKS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_checks || 'no' }}
+
+jobs:
+  validate-tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+      - name: Install workflow and shell validators
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          mkdir -p "$RUNNER_TEMP/project-tools-bin"
+          GOBIN="$RUNNER_TEMP/project-tools-bin" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+      - name: Validate shell scripts
+        shell: bash
+        run: |
+          mapfile -t shell_files < <(git ls-files '*.sh')
+          if [ "${#shell_files[@]}" -gt 0 ]; then
+            shellcheck "${shell_files[@]}"
+          fi
+      - name: Validate GitHub Actions workflows
+        shell: bash
+        run: "$RUNNER_TEMP/project-tools-bin/actionlint"
+
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22.19.0'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+
+      - name: Prepare project profile on Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: sh ./dev setup "$DSH_TOOL_PROFILE"
+
+      - name: Prepare project profile on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\dev.ps1 setup $env:DSH_TOOL_PROFILE
+
+      - name: Build portable project utility bundle
+        run: node scripts/devtools/build-project-tools.mjs .artifacts/project-tools
+
+      - name: Prepare lock-resolved dependency caches on Unix
+        if: runner.os != 'Windows' && env.DSH_INCLUDE_DEPENDENCIES == 'yes'
+        shell: bash
+        run: |
+          mkdir -p .artifacts/dependency-cache/pnpm .artifacts/dependency-cache/cargo
+          pnpm fetch --frozen-lockfile --store-dir "$PWD/.artifacts/dependency-cache/pnpm"
+          CARGO_HOME="$PWD/.artifacts/dependency-cache/cargo" cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
+          if [ "$DSH_TOOL_PROFILE" = 'full' ]; then
+            mkdir -p .artifacts/dependency-cache/uv
+            UV_CACHE_DIR="$PWD/.artifacts/dependency-cache/uv" uv sync --frozen --project python/sdk --group test
+          fi
+          node scripts/devtools/checksums.mjs .artifacts/dependency-cache
+
+      - name: Prepare lock-resolved dependency caches on Windows
+        if: runner.os == 'Windows' && env.DSH_INCLUDE_DEPENDENCIES == 'yes'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path '.artifacts/dependency-cache/pnpm' | Out-Null
+          New-Item -ItemType Directory -Force -Path '.artifacts/dependency-cache/cargo' | Out-Null
+          pnpm fetch --frozen-lockfile --store-dir "$PWD/.artifacts/dependency-cache/pnpm"
+          $env:CARGO_HOME = "$PWD/.artifacts/dependency-cache/cargo"
+          cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
+          if ($env:DSH_TOOL_PROFILE -eq 'full') {
+            New-Item -ItemType Directory -Force -Path '.artifacts/dependency-cache/uv' | Out-Null
+            $env:UV_CACHE_DIR = "$PWD/.artifacts/dependency-cache/uv"
+            uv sync --frozen --project python/sdk --group test
+          }
+          node scripts/devtools/checksums.mjs .artifacts/dependency-cache
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-project-tools-${{ runner.os }}-${{ runner.arch }}
+          path: .artifacts/project-tools
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        if: env.DSH_INCLUDE_DEPENDENCIES == 'yes'
+        with:
+          name: dsh-project-dependencies-${{ env.DSH_TOOL_PROFILE }}-${{ runner.os }}-${{ runner.arch }}
+          path: .artifacts/dependency-cache
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Run selected project checks on Unix
+        if: runner.os != 'Windows' && env.DSH_RUN_CHECKS == 'yes'
+        shell: bash
+        run: sh ./dev check "$DSH_TOOL_PROFILE"
+
+      - name: Run selected project checks on Windows
+        if: runner.os == 'Windows' && env.DSH_RUN_CHECKS == 'yes'
+        shell: pwsh
+        run: .\dev.ps1 check $env:DSH_TOOL_PROFILE
