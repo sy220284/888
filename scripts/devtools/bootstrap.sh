@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+ROOT=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 CACHE="$ROOT/.devtools/cache"
 TOOLS="$ROOT/.devtools/toolchains"
 NODE_VERSION=22.19.0

@@ -8,6 +8,8 @@ on:
       - '.github/workflows/project-tools.yml'
       - 'devtools/project-tools.json'
       - 'scripts/devtools/build-project-tools.mjs'
+      - 'scripts/devtools/*.sh'
+      - 'dev'
   workflow_dispatch:
     inputs:
       profile:
@@ -49,6 +51,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
+          cache: false
       - name: Install workflow and shell validators
         shell: bash
         run: |
@@ -56,10 +59,10 @@ jobs:
           sudo apt-get install -y shellcheck
           mkdir -p "$RUNNER_TEMP/project-tools-bin"
           GOBIN="$RUNNER_TEMP/project-tools-bin" go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
-      - name: Validate shell scripts
+      - name: Validate development-tool shell entry points
         shell: bash
         run: |
-          mapfile -t shell_files < <(git ls-files '*.sh')
+          mapfile -t shell_files < <(git ls-files 'dev' 'scripts/devtools/*.sh')
           if [ "${#shell_files[@]}" -gt 0 ]; then
             shellcheck "${shell_files[@]}"
           fi
@@ -84,6 +87,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: stable
+          cache: false
 
       - name: Prepare project profile on Unix
         if: runner.os != 'Windows'
