@@ -47,17 +47,11 @@ for (const [name, tool] of Object.entries(config.tools)) {
   }
 }
 
-function walk(dir) {
-  return readdirSync(dir).flatMap(name => {
-    const path = resolve(dir, name)
-    return statSync(path).isDirectory() ? walk(path) : [path]
-  })
-}
-
-const files = walk(output).filter(path => basename(path) !== 'SHA256SUMS.txt' && basename(path) !== 'bundle.json')
-const sums = files
-  .sort()
-  .map(path => `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${relative(output, path).replaceAll('\\', '/')}`)
+// Cargo install writes bookkeeping files that are useful only to Cargo itself.
+// They are deliberately excluded from the portable artifact so every checksum
+// entry corresponds to a file that GitHub Actions actually delivers.
+rmSync(resolve(output, '.crates.toml'), { force: true })
+rmSync(resolve(output, '.crates2.json'), { force: true })
 
 const bundle = {
   schemaVersion: 1,
@@ -73,5 +67,18 @@ const bundle = {
 }
 
 writeFileSync(resolve(output, 'bundle.json'), `${JSON.stringify(bundle, null, 2)}\n`)
+
+function walk(dir) {
+  return readdirSync(dir).flatMap(name => {
+    const path = resolve(dir, name)
+    return statSync(path).isDirectory() ? walk(path) : [path]
+  })
+}
+
+const files = walk(output).filter(path => basename(path) !== 'SHA256SUMS.txt')
+const sums = files
+  .sort()
+  .map(path => `${createHash('sha256').update(readFileSync(path)).digest('hex')}  ${relative(output, path).replaceAll('\\', '/')}`)
+
 writeFileSync(resolve(output, 'SHA256SUMS.txt'), `${sums.join('\n')}\n`)
 console.log(`project tools bundle: ${output}`)
