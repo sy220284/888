@@ -115,7 +115,8 @@ function applyEvent(trace: WorkflowTrace, event: SessionEvent, fail: InvariantFa
       if (data.stopReason !== 'completed' && data.stopReason !== 'cancelled' && data.stopReason !== 'error') {
         fail(`tool-workflow/run-end stopReason ${String(data.stopReason)} is invalid`)
       }
-      const openMembers = [...run.members].filter(([, ended]) => !ended).map(([seq]) => seq)
+      const openMembers: number[] = []
+      for (const [seq, ended] of run.members) if (!ended) openMembers.push(seq)
       if (openMembers.length > 0) {
         fail(`tool-workflow/run-end leaves member seq ${openMembers.join(', ')} open in run ${runId}`)
       }

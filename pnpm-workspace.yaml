@@ -27,6 +27,9 @@ linkWorkspacePackages: true
 overrides:
   '@deepseek-ai/cosmokit': 'link:vendor/cosmokit'
   '@deepseek-ai/schemastery': 'link:vendor/schemastery'
+  'brace-expansion@^5.0.0': 5.0.9
+  'protobufjs@^7.0.0': 7.6.5
+  'undici@^7.0.0': 7.29.0
 
 peerDependencyRules:
   allowedVersions:

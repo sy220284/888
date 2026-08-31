@@ -35,6 +35,7 @@ export * from './budget.ts'
 export * from './permission.ts'
 export * from './resource-scheduler.ts'
 
+/** Runtime permission and budget configuration. */
 export interface Config {
   /** Optional deployment-wide hard ceilings. Omission means unbounded for that dimension. */
   readonly limits?: BudgetVector
@@ -46,6 +47,7 @@ export interface Config {
 
 /** Optional declaration hook for tools/plugins that can classify their own concrete execution resources. */
 export type ToolRequirementClassifier = (exec: Readonly<ToolExecution>) => readonly CapabilityRequirement[] | undefined
+/** Ordering options for a tool requirement classifier. */
 export interface ToolRequirementClassifierOptions { readonly priority?: number }
 interface RegisteredRequirementClassifier {
   readonly id: string
@@ -158,6 +160,9 @@ function usageAttemptBoundary(
  * Return only the positive provider-usage delta introduced by one persisted
  * sample. Usage is cumulative only inside one model attempt: retries reuse the
  * same turn/step but own a new step/snapshot boundary and must be billed again.
+ * @param events - session history containing earlier usage samples.
+ * @param event - newly persisted usage-bearing event.
+ * @returns newly introduced provider tokens.
  */
 export function usageTokenDelta(events: readonly SessionEvent[], event: SessionEvent): number {
   const sample = usageSample(event)
@@ -211,7 +216,11 @@ function requirementRisk(requirements: readonly CapabilityRequirement[]): number
   return requirements.reduce((sum, requirement) => sum + (requirement.risk ?? 0), 0)
 }
 
-/** Transitional first-party classifier. P3 registrations may override this without changing RuntimePolicy. */
+/**
+ * Transitional first-party classifier. P3 registrations may override this without changing RuntimePolicy.
+ * @param exec - tool execution being classified.
+ * @returns conservative capability requirements for the tool call.
+ */
 export function defaultToolRequirements(exec: Pick<ToolExecution, 'name' | 'arguments'>): CapabilityRequirement[] {
   const args = exec.arguments as Record<string, unknown> | undefined
   const stringArg = (...keys: string[]): string | undefined => {
@@ -293,7 +302,9 @@ export class RuntimePolicyService extends Service {
   static Config = Config
   static inject = ['tools', 'sandboxPolicy', 'permissionPresets', 'agentLoop', 'sessions']
 
+  /** Deployment-wide budget ceilings. */
   readonly limits: BudgetVector
+  /** Fair scheduler shared by runtime-policy consumers. */
   readonly resourceScheduler: ResourceScheduler = new ResourceScheduler()
   private readonly configuredPermissions: readonly CapabilityPermission[]
   private readonly defaultDecision: CapabilityDecision

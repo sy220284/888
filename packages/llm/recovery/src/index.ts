@@ -13,6 +13,7 @@ import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
 export const name = 'recovery'
 
+/** Failed model request offered to registered recovery handlers. */
 export interface RecoveryRequest {
   readonly agent: Agent
   readonly turn: number
@@ -25,6 +26,7 @@ export interface RecoveryRequest {
   readonly signal: AbortSignal
 }
 
+/** Durable retry decision returned by one recovery handler. */
 export interface RecoveryResolution {
   readonly strategy: string
   readonly action: 'retry'
@@ -32,7 +34,9 @@ export interface RecoveryResolution {
   readonly route?: Pick<LlmCallConfig, 'provider' | 'model'>
 }
 
+/** Recovery strategy invoked after downstream retry handling declines. */
 export type RecoveryHandler = (request: RecoveryRequest) => Promise<RecoveryResolution | undefined>
+/** Ordering options for a recovery handler. */
 export interface RecoveryHandlerOptions { readonly priority?: number }
 interface RegisteredHandler { readonly id: string; readonly priority: number; readonly order: number; readonly run: RecoveryHandler }
 
@@ -54,6 +58,7 @@ declare module '@deepseek-ai/dsh-session' {
   }
 }
 
+/** Empty recovery service configuration. */
 export type Config = Readonly<Record<string, never>>
 export const Config = z.object({}) as unknown as z<Config>
 

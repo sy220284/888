@@ -14,16 +14,19 @@ import type { RecoveryRequest, RecoveryResolution } from '@deepseek-ai/dsh-recov
 
 export const name = 'model-router'
 
+/** Provider and model pair used for one request route. */
 export interface ModelRoute {
   readonly provider: string
   readonly model: string
 }
 
+/** Ordered fallback routes for one source route. */
 export interface FallbackRuleConfig {
   readonly from: ModelRoute
   readonly to: readonly ModelRoute[]
 }
 
+/** Model-router fallback configuration. */
 export interface Config {
   readonly fallbacks?: readonly FallbackRuleConfig[]
   /** Stable failure codes that may leave the current route after local retry exhausts. */

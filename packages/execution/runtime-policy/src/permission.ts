@@ -4,22 +4,10 @@ import type {
   CapabilityPermissionSnapshot,
   CapabilityRequirement,
 } from './types.ts'
+import { selectorContains } from './selector.ts'
 
 const rank: Record<CapabilityDecision, number> = { deny: 0, ask: 1, allow: 2 }
 const sources: readonly CapabilityPermission['source'][] = ['sandbox', 'config', 'delegation', 'runtime']
-
-function selectorMatch(selector: string, value: string): boolean {
-  if (selector === '*') return true
-  if (selector.endsWith('/**')) {
-    const root = selector.slice(0, -3).replace(/\/$/, '')
-    return value === root || value.startsWith(`${root}/`)
-  }
-  if (selector.endsWith('.*')) {
-    const root = selector.slice(0, -2)
-    return value === root || value.startsWith(`${root}.`)
-  }
-  return selector === value
-}
 
 function specificity(rule: CapabilityPermission): number {
   const capability = rule.capability === '*' ? 0 : rule.capability.endsWith('.*') ? 1 : 2
@@ -41,8 +29,8 @@ function evaluateLayer(
   let decision: CapabilityDecision | undefined
   for (const rule of rules) {
     if (rule.source !== source || rule.resource.kind !== requirement.resource.kind) continue
-    if (!selectorMatch(rule.capability, requirement.capability)) continue
-    if (!selectorMatch(rule.resource.value, requirement.resource.value)) continue
+    if (!selectorContains(rule.capability, requirement.capability)) continue
+    if (!selectorContains(rule.resource.value, requirement.resource.value)) continue
     const score = specificity(rule)
     if (score > best) {
       best = score
@@ -73,6 +61,9 @@ function evaluateLocal(
  * only narrow the result. This keeps child policy monotonic without flattening
  * parent layers (flattening could let a specific allow override an independent
  * parent deny).
+ * @param snapshot - local permission state and optional parent ceiling.
+ * @param requirement - concrete capability request.
+ * @returns the strictest applicable decision.
  */
 export function evaluateCapabilityPermission(
   snapshot: CapabilityPermissionSnapshot,
@@ -90,12 +81,23 @@ export function evaluateCapabilityPermission(
   return decision
 }
 
-/** Monotonically narrow a parent decision with a child decision. */
+/**
+ * Monotonically narrow a parent decision with a child decision.
+ * @param parent - parent permission decision.
+ * @param child - child permission decision.
+ * @returns the stricter decision.
+ */
 export function narrowCapabilityDecision(parent: CapabilityDecision, child: CapabilityDecision): CapabilityDecision {
   return narrow(parent, child)
 }
 
-/** Apply child rules without permitting any requirement the parent would not permit. */
+/**
+ * Apply child rules without permitting any requirement the parent would not permit.
+ * @param parent - parent permission snapshot.
+ * @param child - child permission snapshot.
+ * @param requirement - concrete capability request.
+ * @returns the strictest parent or child decision.
+ */
 export function evaluateDelegatedPermission(
   parent: CapabilityPermissionSnapshot,
   child: CapabilityPermissionSnapshot,

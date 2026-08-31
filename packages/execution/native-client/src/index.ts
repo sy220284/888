@@ -15,6 +15,7 @@ import type {
   NativeProcessSpawnSpec,
 } from '@deepseek-ai/dsh-native-execution'
 
+/** Native execution sidecar launch configuration. */
 export interface Config { binaryPath?: string }
 interface ResolvedConfig { binaryPath: string }
 
@@ -197,6 +198,10 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
   }
 
   override hello(): Promise<NativeExecutionHello> { return this.ensureReady() }
+  /**
+   * Return the validated sidecar handshake, starting it once when necessary.
+   * @returns the cached or pending sidecar handshake.
+   */
   async ensureReady(): Promise<NativeExecutionHello> {
     this.ready ??= this.request<NativeExecutionHello>({ op: 'hello' }).then((hello) => {
       if (hello.protocol !== 1) throw new Error(`native execution protocol mismatch: expected 1, got ${hello.protocol}`)
@@ -217,6 +222,12 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     return handle
   }
 
+  /**
+   * Send one request frame and await its matching response.
+   * @param payload - protocol operation fields excluding the generated request id.
+   * @param signal - optional request-local cancellation signal.
+   * @returns the decoded response result.
+   */
   async request<T = Record<string, never>>(payload: Record<string, unknown>, signal?: AbortSignal): Promise<T> {
     if (this.failed !== undefined) throw this.failed
     signal?.throwIfAborted()
@@ -267,7 +278,15 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     else handle.onExit({ exitCode: frame.exit_code, signal: frame.signal })
   }
 
+  /**
+   * Remove a handle that failed before a process became live.
+   * @param processId - client-generated process identifier.
+   */
   release(processId: string): void { this.handles.delete(processId) }
+  /**
+   * Remove an exited handle after its process tree and output streams quiesce.
+   * @param handle - exited sidecar process handle.
+   */
   releaseWhenQuiescent(handle: SidecarHandle): void {
     void (async () => {
       try {
