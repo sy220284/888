@@ -1202,6 +1202,16 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     description: 'Runtime permission, budget, resource scheduling, and world-freeze service.',
     methods: [
       {
+        signature: 'readonly limits: BudgetVector',
+        description: 'Deployment-wide budget ceilings.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly resourceScheduler: ResourceScheduler = new ResourceScheduler()',
+        description: 'Fair scheduler shared by runtime-policy consumers.',
+        parameters: [],
+      },
+      {
         signature: 'registerToolRequirements( id: string, classify: ToolRequirementClassifier, options: ToolRequirementClassifierOptions = {}, ): () => void',
         description: 'Register a tool-owned requirement classifier. First non-undefined result wins.',
         parameters: [{ name: 'id', description: 'Stable classifier identifier.' }, { name: 'classify', description: 'Requirement classifier.' }, { name: 'options', description: 'Ordering options.' }],
@@ -4191,6 +4201,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ResolvedSubagentStartRequest',
     declaration: 'export interface ResolvedSubagentStartRequest extends SubagentStartRequest {\n    readonly descriptor: SubagentDescriptorData;\n}',
+  },
+  {
+    name: 'ResourceLease',
+    declaration: 'export interface ResourceLease {\n    release(): void;\n}',
+  },
+  {
+    name: 'ResourceScheduler',
+    declaration: 'export class ResourceScheduler {\n    get activeCount(): number;\n    get queuedCount(): number;\n    acquire(requirements: readonly CapabilityRequirement[], signal?: AbortSignal): Promise<ResourceLease>;\n    dispose(reason: unknown = new Error(\'resource scheduler disposed\')): void;\n}',
   },
   {
     name: 'RestoredSessionOptions',
