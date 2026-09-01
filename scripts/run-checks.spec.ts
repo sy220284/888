@@ -14,10 +14,14 @@ describe('local check groups', () => {
     }
   })
 
-  it('does not gate changes on bilingual translation maintenance', () => {
+  it('does not gate changes on bilingual or English-only documentation maintenance', () => {
     for (const mode of ['check-all', 'doc-sync'] as const) {
       expect(checksForMode(mode).map(check => check.script)).not.toEqual(
-        expect.arrayContaining(['verify-translation-pairing', 'verify-translation-prompt']),
+        expect.arrayContaining([
+          'verify-translation-pairing',
+          'verify-translation-prompt',
+          'verify-package-readme-model-experience',
+        ]),
       )
     }
   })
