@@ -1,0 +1,85 @@
+name: P2b Linux PTY verification (temporary)
+
+on:
+  push:
+    branches:
+      - tmp/p2b-linux-pty-verify
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply staged P2b source payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .tmp/p2b-files.tar.gz.b64 > /tmp/p2b-files.tar.gz
+          echo 'd619257e2d82b240b876f2351f3604b030ffdd43968cdb6df369196dd0197817  /tmp/p2b-files.tar.gz' | sha256sum -c -
+          tar -xzf /tmp/p2b-files.tar.gz -C .
+          git diff --check
+
+      - name: Set up Node 22.19.0
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.19.0
+
+      - name: Set up pnpm 11.7.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+          node --version
+          pnpm --version
+
+      - name: Install Rust 1.98.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
+          rustup override set 1.98.0
+          rustc --version
+          cargo --version
+
+      - name: Verify native execution formatting
+        shell: bash
+        run: cargo fmt --manifest-path native/execution-core/Cargo.toml -- --check
+
+      - name: Run native execution tests including real Linux PTY
+        shell: bash
+        run: cargo test --manifest-path native/execution-core/Cargo.toml --locked -- --nocapture
+
+      - name: Run native execution Clippy
+        shell: bash
+        run: cargo clippy --manifest-path native/execution-core/Cargo.toml --all-targets --locked -- -D warnings
+
+      - name: Install workspace dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify TypeScript integration
+        shell: bash
+        run: pnpm run typecheck
+
+      - name: Lint changed TypeScript surfaces
+        shell: bash
+        run: |
+          pnpm exec tsx scripts/run-oxlint.ts \
+            packages/execution/native-execution/src/index.ts \
+            packages/execution/native-execution/src/types.ts \
+            packages/execution/native-client/src/index.ts \
+            packages/subprocess/subprocess-native/src/index.ts
+
+      - name: Run subprocess contract regressions
+        shell: bash
+        run: |
+          pnpm exec vitest run \
+            packages/subprocess/subprocess/tests/service.spec.ts \
+            packages/subprocess/subprocess-local/tests/local.spec.ts \
+            packages/terminal/terminal-bash/tests/index.spec.ts
