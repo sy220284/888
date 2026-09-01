@@ -1,0 +1,39 @@
+name: Local Node and Cargo cache export (temporary)
+
+on:
+  push:
+    branches:
+      - tmp/local-main-export-20260901
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+      - name: Install and populate caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --global pnpm@11.7.0
+          pnpm install --frozen-lockfile
+          cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
+      - name: Pack local caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/local-deps
+          tar --zstd -cf /tmp/local-deps/node-modules.tar.zst $(find . -type d -name node_modules -prune -print)
+          tar --zstd -cf /tmp/local-deps/cargo-home.tar.zst -C "$HOME" .cargo/registry
+          sha256sum /tmp/local-deps/*.tar.zst > /tmp/local-deps/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 888-local-node-cargo-cache
+          path: /tmp/local-deps
+          if-no-files-found: error
+          retention-days: 1
