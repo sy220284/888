@@ -19,7 +19,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base64 -d .tmp/p2b-files.tar.gz.b64 > /tmp/p2b-files.tar.gz
+          cat .tmp/p2b-part-00 .tmp/p2b-part-01 .tmp/p2b-part-02 .tmp/p2b-part-03 .tmp/p2b-part-04 | base64 -d > /tmp/p2b-files.tar.gz
           echo 'd619257e2d82b240b876f2351f3604b030ffdd43968cdb6df369196dd0197817  /tmp/p2b-files.tar.gz' | sha256sum -c -
           tar -xzf /tmp/p2b-files.tar.gz -C .
           git diff --check
