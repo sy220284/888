@@ -1,0 +1,29 @@
+name: Export PR33 source temporary
+
+on:
+  push:
+    branches:
+      - tmp/export-pr33-source
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive source
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar --exclude=.git --exclude=node_modules --exclude=.github/workflows/export-pr33-source-temp.yml -czf /tmp/888-pr33-source.tar.gz .
+          sha256sum /tmp/888-pr33-source.tar.gz > /tmp/888-pr33-source.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 888-pr33-source
+          path: |
+            /tmp/888-pr33-source.tar.gz
+            /tmp/888-pr33-source.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
