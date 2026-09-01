@@ -20,10 +20,14 @@ jobs:
           echo '5215500640e696b833736c401591b9a00326a3fb10f59d5c3bb3014410ad56e9  /tmp/oxlint.tar.gz' | sha256sum -c -
           mkdir -p /tmp/oxlint-180
           tar -xzf /tmp/oxlint.tar.gz -C /tmp/oxlint-180
-          /tmp/oxlint-180/oxlint --version
+          find /tmp/oxlint-180 -maxdepth 2 -type f -print
+          bin="$(find /tmp/oxlint-180 -type f -perm -u+x | head -n 1)"
+          test -n "$bin"
+          "$bin" --version
+          cp "$bin" /tmp/oxlint
       - uses: actions/upload-artifact@v4
         with:
           name: oxlint-1.80.0-linux-x64
-          path: /tmp/oxlint-180/oxlint
+          path: /tmp/oxlint
           if-no-files-found: error
           retention-days: 1
