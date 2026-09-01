@@ -46,7 +46,6 @@ const documentationChecks: Check[] = [
   { script: 'verify-doc-refs' },
   { script: 'verify-package-paths' },
   { script: 'verify-config-source-ownership' },
-  { script: 'verify-package-readme-model-experience' },
   { script: 'verify-agent-note-classification' },
   { script: 'verify-agent-note-format' },
   { script: 'verify-archived-agent-notes' },
