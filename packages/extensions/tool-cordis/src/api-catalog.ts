@@ -1078,6 +1078,49 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'models',
+    summary: 'Provider/model fallback router (`ctx.models`).',
+    description: 'Provider/model fallback router (`ctx.models`).',
+    methods: [
+      {
+        signature: 'setFallbacks(from: ModelRoute, to: readonly ModelRoute[]): void',
+        description: 'Add or replace one fallback chain.',
+        parameters: [{ name: 'from', description: 'Source model route.' }, { name: 'to', description: 'Ordered fallback routes.' }],
+      },
+      {
+        signature: 'fallbacks(from: ModelRoute): readonly ModelRoute[]',
+        description: 'Return a detached configured chain for diagnostics.',
+        parameters: [{ name: 'from', description: 'Source model route.' }],
+        returns: 'Detached ordered fallback chain.',
+      },
+    ],
+  },
+  {
+    key: 'nativeExecution',
+    summary: 'Low-level native execution capability.',
+    description: 'Low-level native execution capability. It deliberately knows nothing about Session, Agent, tools, permissions, budgets, or shell semantics.',
+    methods: [
+      {
+        signature: 'abstract hello(): Promise<NativeExecutionHello>',
+        description: 'Read native execution host metadata.',
+        parameters: [],
+        returns: 'Native execution handshake metadata.',
+      },
+      {
+        signature: 'abstract resolveExecutable( command: string, env?: Readonly<Record<string, string>>, signal?: AbortSignal, ): Promise<string>',
+        description: 'Resolve one executable against an optional environment.',
+        parameters: [{ name: 'command', description: 'Executable name or path.' }, { name: 'env', description: 'Environment used for path resolution.' }, { name: 'signal', description: 'Optional cancellation signal.' }],
+        returns: 'Resolved executable path.',
+      },
+      {
+        signature: 'abstract spawn(spec: NativeProcessSpawnSpec): NativeProcessHandle',
+        description: 'Spawn one native process.',
+        parameters: [{ name: 'spec', description: 'Process spawn specification.' }],
+        returns: 'Live native process handle.',
+      },
+    ],
+  },
+  {
     key: 'permissionPresets',
     summary: 'Owns the deployment\'s permission presets and their write path.',
     description: 'Owns the deployment\'s permission presets and their write path. Requires a confining `ctx.shell` executor and `ctx.approval`; unmatched knob values are reported as CUSTOM_PRESET, not an error.',
@@ -1131,6 +1174,96 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Select whether plan mode should be active. Between turns the method appends the change immediately because no in-turn pre-step will run until another prompt starts a turn. The open-turn fold is the idle signal: agent status stays `running` through post-turn checkpointing, when no further in-turn pre-step runs. During an open turn the selection remains pending until the next accepted in-turn pre-step. Repeated selection of the current or already-pending state is a no-op.',
         parameters: [{ name: 'agent', description: 'The agent to switch.' }, { name: 'active', description: 'Whether plan mode should be active.' }],
         returns: 'what happened: `committed` (logged now), `queued` (awaiting the next accepted in-turn pre-step), `cancelled` (an opposite pending selection was cleared; the logged state already matches), or `noop` (already in that state).',
+      },
+    ],
+  },
+  {
+    key: 'recovery',
+    summary: 'Ordered model-request recovery strategy registry (`ctx.recovery`).',
+    description: 'Ordered model-request recovery strategy registry (`ctx.recovery`).',
+    methods: [
+      {
+        signature: 'register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void',
+        description: 'Register one recovery strategy.',
+        parameters: [{ name: 'id', description: 'Stable strategy identifier.' }, { name: 'run', description: 'Recovery handler.' }, { name: 'options', description: 'Ordering options.' }],
+        returns: 'Function that unregisters the strategy.',
+      },
+      {
+        signature: 'async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined>',
+        description: 'Resolve a failed request through registered strategies.',
+        parameters: [{ name: 'request', description: 'Failed request context.' }],
+        returns: 'First accepted recovery resolution, if any.',
+      },
+    ],
+  },
+  {
+    key: 'runtimePolicy',
+    summary: 'Runtime permission, budget, resource scheduling, and world-freeze service.',
+    description: 'Runtime permission, budget, resource scheduling, and world-freeze service.',
+    methods: [
+      {
+        signature: 'readonly limits: BudgetVector',
+        description: 'Deployment-wide budget ceilings.',
+        parameters: [],
+      },
+      {
+        signature: 'readonly resourceScheduler: ResourceScheduler = new ResourceScheduler()',
+        description: 'Fair scheduler shared by runtime-policy consumers.',
+        parameters: [],
+      },
+      {
+        signature: 'registerToolRequirements( id: string, classify: ToolRequirementClassifier, options: ToolRequirementClassifierOptions = {}, ): () => void',
+        description: 'Register a tool-owned requirement classifier. First non-undefined result wins.',
+        parameters: [{ name: 'id', description: 'Stable classifier identifier.' }, { name: 'classify', description: 'Requirement classifier.' }, { name: 'options', description: 'Ordering options.' }],
+        returns: 'Function that unregisters the classifier.',
+      },
+      {
+        signature: 'requirements(exec: ToolExecution): CapabilityRequirement[]',
+        description: 'Resolve requirements exactly once for a registry-minted execution. The same frozen snapshot is reused by approval, resource scheduling, budget, and effect auditing so a stateful classifier cannot make those stages drift.',
+        parameters: [{ name: 'exec', description: 'Registry-minted tool execution.' }],
+        returns: 'Detached normalized capability requirements.',
+      },
+      {
+        signature: 'permissionSnapshot(agent: Agent): CapabilityPermissionSnapshot',
+        description: 'Resolve the effective permission snapshot for an agent.',
+        parameters: [{ name: 'agent', description: 'Agent whose policy is resolved.' }],
+        returns: 'Effective immutable permission snapshot.',
+      },
+      {
+        signature: 'budgetLimits(session: Session): BudgetVector',
+        description: 'Resolve effective session-local budget limits.',
+        parameters: [{ name: 'session', description: 'Session whose delegation ceiling is applied.' }],
+        returns: 'Effective budget limits.',
+      },
+      {
+        signature: 'budgetSnapshot(session: Session): GlobalBudgetSnapshot',
+        description: 'Resolve the current global budget snapshot.',
+        parameters: [{ name: 'session', description: 'Session whose durable charges are folded.' }],
+        returns: 'Current limits, consumption, and remaining budget.',
+      },
+      {
+        signature: 'captureDelegation(parent: Agent): RuntimeDelegationSnapshot',
+        description: 'Capture the parent\'s exact permission ceiling and remaining budget before the child publication boundary. A later parent policy switch belongs to the parent\'s future and cannot widen an already delegated child.',
+        parameters: [{ name: 'parent', description: 'Parent agent at the delegation boundary.' }],
+        returns: 'Frozen child delegation ceiling.',
+      },
+      {
+        signature: 'worldSnapshot(agent: Agent): ExecutionWorldSnapshot',
+        description: 'Capture the execution world visible to an agent.',
+        parameters: [{ name: 'agent', description: 'Agent whose sandbox and capabilities are captured.' }],
+        returns: 'Execution world snapshot.',
+      },
+      {
+        signature: 'resolvedConfig(agent: Agent, header: EpochHeader): ResolvedRuntimeConfigSnapshot',
+        description: 'Capture the resolved runtime configuration for one epoch.',
+        parameters: [{ name: 'agent', description: 'Agent whose runtime configuration is captured.' }, { name: 'header', description: 'Durable epoch header.' }],
+        returns: 'Resolved runtime configuration snapshot.',
+      },
+      {
+        signature: 'freeze(agent: Agent, header: EpochHeader): RuntimeSnapshotRefs',
+        description: 'Persist or reuse all execution-domain freeze facts.',
+        parameters: [{ name: 'agent', description: 'Agent whose execution facts are frozen.' }, { name: 'header', description: 'Durable epoch header.' }],
+        returns: 'Exact sequence references for the frozen facts.',
       },
     ],
   },
@@ -2470,6 +2603,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'payload', description: '.status - the status just entered (the transition\'s destination). Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.' }],
   },
   {
+    name: 'agent/step-snapshot',
+    mode: 'waterfall',
+    signature: '\'agent/step-snapshot\'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; attempt: number; header: EpochHeader; signal: AbortSignal }, next: () => Promise<StepSnapshotRefs>): Promise<StepSnapshotRefs>',
+    summary: 'Extend the durable Step Snapshot refs after the request header/context are resolved and before model dispatch.',
+    description: 'Extend the durable Step Snapshot refs after the request header/context are resolved and before model dispatch. Core supplies the request refs; outer domains append their own canonical snapshot events and merge references through `next()`. This is an internal runtime signal, never a second persistence channel.',
+    parameters: [{ name: 'payload', description: '.signal - current turn cancellation signal. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.' }],
+  },
+  {
     name: 'agent/turn-stopping',
     mode: 'serial',
     signature: '\'agent/turn-stopping\'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; signal: AbortSignal }): Promise<void> | void',
@@ -2862,6 +3003,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface AgentHandle {\n    agent: Agent;\n    dispose(): Promise<void>;\n}',
   },
   {
+    name: 'AgentKind',
+    declaration: 'export type AgentKind = \'primary\' | \'subagent\' | \'fork-agent\' | \'team-member\' | \'background-session-agent\';',
+  },
+  {
     name: 'AgentOptions',
     declaration: 'export interface AgentOptions {\n    provider?: string;\n    model?: string;\n    maxTokens?: number;\n}',
   },
@@ -3018,8 +3163,40 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type Branded<B extends string> = string & {\n    readonly [BRAND]: B;\n};',
   },
   {
+    name: 'BudgetDimension',
+    declaration: 'export type BudgetDimension = \'tokens\' | \'costMicros\' | \'wallTimeMs\' | \'toolCalls\' | \'agentStarts\' | \'riskPoints\';',
+  },
+  {
+    name: 'BudgetVector',
+    declaration: 'export type BudgetVector = Partial<Record<BudgetDimension, number>>;',
+  },
+  {
     name: 'CancelOptions',
     declaration: 'export interface CancelOptions {\n    keepInbox?: boolean | undefined;\n}',
+  },
+  {
+    name: 'CapabilityAccess',
+    declaration: 'export type CapabilityAccess = \'read\' | \'write\' | \'execute\' | \'control\';',
+  },
+  {
+    name: 'CapabilityDecision',
+    declaration: 'export type CapabilityDecision = \'allow\' | \'ask\' | \'deny\';',
+  },
+  {
+    name: 'CapabilityPermission',
+    declaration: 'export interface CapabilityPermission {\n    readonly capability: string;\n    readonly resource: CapabilityResource;\n    readonly decision: CapabilityDecision;\n    readonly source: \'sandbox\' | \'config\' | \'delegation\' | \'runtime\';\n}',
+  },
+  {
+    name: 'CapabilityPermissionSnapshot',
+    declaration: 'export interface CapabilityPermissionSnapshot {\n    readonly defaultDecision: CapabilityDecision;\n    readonly rules: readonly CapabilityPermission[];\n    readonly ceiling?: CapabilityPermissionSnapshot;\n}',
+  },
+  {
+    name: 'CapabilityRequirement',
+    declaration: 'export interface CapabilityRequirement {\n    readonly capability: string;\n    readonly resource: CapabilityResource;\n    readonly access?: CapabilityAccess;\n    readonly risk?: number;\n    readonly effect?: boolean;\n}',
+  },
+  {
+    name: 'CapabilityResource',
+    declaration: 'export interface CapabilityResource {\n    readonly kind: \'file\' | \'process\' | \'network\' | \'browser\' | \'computer\' | \'tool\' | \'agent\' | \'custom\';\n    readonly value: string;\n}',
   },
   {
     name: 'ClientResponse',
@@ -3338,6 +3515,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface EpochHeader {\n    config: LlmCallConfig;\n    adapterDefaults?: LlmCallConfigAdapterDefaults;\n    system?: string;\n    tools?: ToolSchema[];\n}',
   },
   {
+    name: 'ExecutionWorldSnapshot',
+    declaration: 'export interface ExecutionWorldSnapshot {\n    readonly id: string;\n    readonly capabilities: readonly (\'fs\' | \'process\' | \'network\' | \'browser\' | \'computer\')[];\n    readonly filePolicy: {\n        readonly mode: \'read-only\' | \'workspace-write\' | \'danger-full-access\';\n        readonly workspaceRoot: string;\n    };\n}',
+  },
+  {
     name: 'FileDiff',
     declaration: 'export interface FileDiff {\n    path: string;\n    oldText: string | null;\n    newText: string;\n}',
   },
@@ -3412,6 +3593,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'GenericResultView',
     declaration: 'export interface GenericResultView {\n    card: \'generic\';\n    title?: string;\n    content?: ContentBlock[];\n}',
+  },
+  {
+    name: 'GlobalBudgetSnapshot',
+    declaration: 'export interface GlobalBudgetSnapshot {\n    readonly limits: BudgetVector;\n    readonly consumed: BudgetVector;\n    readonly remaining: BudgetVector;\n}',
   },
   {
     name: 'GoalActivation',
@@ -3798,6 +3983,42 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelModalityMap {\n    text: \'text\';\n    image: \'image\';\n}',
   },
   {
+    name: 'ModelRoute',
+    declaration: 'export interface ModelRoute {\n    readonly provider: string;\n    readonly model: string;\n}',
+  },
+  {
+    name: 'NativeExecutionCapabilities',
+    declaration: 'export interface NativeExecutionCapabilities {\n    readonly processTree: boolean;\n    readonly terminal: boolean;\n    readonly filesystem: boolean;\n    readonly networkPolicy: boolean;\n}',
+  },
+  {
+    name: 'NativeExecutionHello',
+    declaration: 'export interface NativeExecutionHello {\n    readonly protocol: number;\n    readonly platform: string;\n    readonly capabilities: NativeExecutionCapabilities;\n}',
+  },
+  {
+    name: 'NativeExecutionSignal',
+    declaration: 'export type NativeExecutionSignal = \'SIGINT\' | \'SIGTERM\' | \'SIGKILL\' | \'SIGTSTP\' | \'SIGHUP\';',
+  },
+  {
+    name: 'NativeInputMode',
+    declaration: 'export type NativeInputMode = \'ignore\' | \'pipe\' | {\n    readonly data: string | Uint8Array;\n};',
+  },
+  {
+    name: 'NativeOutputMode',
+    declaration: 'export type NativeOutputMode = \'pipe\' | \'ignore\';',
+  },
+  {
+    name: 'NativeProcessHandle',
+    declaration: 'export interface NativeProcessHandle {\n    readonly pid: number;\n    readonly stdin: Writable | undefined;\n    readonly stdout: Readable | undefined;\n    readonly stderr: Readable | undefined;\n    readonly done: Promise<NativeProcessOutcome>;\n    signalTree(signal: NativeExecutionSignal): Promise<void>;\n    treeAlive(): Promise<boolean>;\n}',
+  },
+  {
+    name: 'NativeProcessOutcome',
+    declaration: 'export interface NativeProcessOutcome {\n    readonly exitCode: number | null;\n    readonly signal: NodeJS.Signals | null;\n}',
+  },
+  {
+    name: 'NativeProcessSpawnSpec',
+    declaration: 'export interface NativeProcessSpawnSpec {\n    readonly argv: readonly string[];\n    readonly cwd: string;\n    readonly env?: Readonly<Record<string, string>>;\n    readonly stdin: NativeInputMode;\n    readonly stdout: NativeOutputMode;\n    readonly stderr: NativeOutputMode;\n}',
+  },
+  {
     name: 'ObjectJsonSchema',
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
   },
@@ -3910,6 +4131,22 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ReasoningEffortId = Branded<\'ReasoningEffortId\'>;',
   },
   {
+    name: 'RecoveryHandler',
+    declaration: 'export type RecoveryHandler = (request: RecoveryRequest) => Promise<RecoveryResolution | undefined>;',
+  },
+  {
+    name: 'RecoveryHandlerOptions',
+    declaration: 'export interface RecoveryHandlerOptions {\n    readonly priority?: number;\n}',
+  },
+  {
+    name: 'RecoveryRequest',
+    declaration: 'export interface RecoveryRequest {\n    readonly agent: Agent;\n    readonly turn: number;\n    readonly step: number;\n    readonly attempt: number;\n    readonly provider: string;\n    readonly model: string;\n    readonly failure: LlmFailure;\n    readonly retryPolicy: ResolvedRetryPolicy | undefined;\n    readonly signal: AbortSignal;\n}',
+  },
+  {
+    name: 'RecoveryResolution',
+    declaration: 'export interface RecoveryResolution {\n    readonly strategy: string;\n    readonly action: \'retry\';\n    readonly reason: string;\n    readonly route?: Pick<LlmCallConfig, \'provider\' | \'model\'>;\n}',
+  },
+  {
     name: 'RedactedSecret',
     declaration: 'export interface RedactedSecret {\n    path: string[];\n    set: boolean;\n}',
   },
@@ -3958,8 +4195,20 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ResolvedRetryPolicy = ResolvedNormalRetryPolicy | ResolvedAlwaysRetryPolicy;',
   },
   {
+    name: 'ResolvedRuntimeConfigSnapshot',
+    declaration: 'export interface ResolvedRuntimeConfigSnapshot {\n    readonly agentKind: AgentKind;\n    readonly provider: string;\n    readonly model: string;\n    readonly maxTokens?: number;\n    readonly maxParallelToolCalls: number;\n    readonly permissionPreset: string;\n}',
+  },
+  {
     name: 'ResolvedSubagentStartRequest',
     declaration: 'export interface ResolvedSubagentStartRequest extends SubagentStartRequest {\n    readonly descriptor: SubagentDescriptorData;\n}',
+  },
+  {
+    name: 'ResourceLease',
+    declaration: 'export interface ResourceLease {\n    release(): void;\n}',
+  },
+  {
+    name: 'ResourceScheduler',
+    declaration: 'export class ResourceScheduler {\n    get activeCount(): number;\n    get queuedCount(): number;\n    acquire(requirements: readonly CapabilityRequirement[], signal?: AbortSignal): Promise<ResourceLease>;\n    dispose(reason: unknown = new Error(\'resource scheduler disposed\')): void;\n}',
   },
   {
     name: 'RestoredSessionOptions',
@@ -3996,6 +4245,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'RunnerFailureRule',
     declaration: 'export interface RunnerFailureRule {\n    allowedExitCodes?: readonly number[];\n    fatalSignatures: readonly string[];\n    informationalLines?: readonly string[];\n}',
+  },
+  {
+    name: 'RuntimeDelegationSnapshot',
+    declaration: 'export interface RuntimeDelegationSnapshot {\n    readonly parentSession: SessionId;\n    readonly permissionCeiling: CapabilityPermissionSnapshot;\n    readonly budgetCeiling: BudgetVector;\n}',
+  },
+  {
+    name: 'RuntimeSnapshotRefs',
+    declaration: 'export interface RuntimeSnapshotRefs {\n    readonly permission: number;\n    readonly budget: number;\n    readonly world: number;\n    readonly config: number;\n    readonly delegation?: number;\n}',
   },
   {
     name: 'SandboxEnforcement',
@@ -4083,7 +4340,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'SessionEventMap',
-    declaration: 'export interface SessionEventMap {\n    \'turn/start\': {\n        turn: number;\n    };\n    \'turn/end\': {\n        turn: number;\n        reason: TurnEndReason;\n    };\n    \'step/start\': {\n        turn: number;\n        step: number;\n    };\n    \'step/end\': {\n        turn: number;\n        step: number;\n    };\n    \'user/message\': UserMessage;\n    \'assistant/chunk\': {\n        turn: number;\n        step: number;\n        chunk: StreamChunk;\n    };\n    \'assistant/message\': {\n        turn: number;\n        step: number;\n        message: AssistantMessage;\n        usage?: TokenUsage;\n        interrupted?: true;\n    };\n    \'tool/call\': {\n        turn: number;\n        step: number;\n        callId: CallId;\n        name: string;\n        arguments: string;\n    };\n    \'tool/result\': {\n        turn: number;\n        step: number;\n        message: ToolResultMessage;\n        error?: {\n            name: string;\n            code: string;\n        };\n        meta?: JsonValue;\n    };\n    \'todo/write\': {\n        todos: TodoItem[];\n    };\n    \'request/header\': {\n        header: EpochHeader;\n        reason: RequestHeaderReason;\n    };\n    \'request/context\': RequestContext;\n    \'session/end-seed\': Record<string, never>;\n}',
+    declaration: 'export interface SessionEventMap {\n    \'turn/start\': {\n        turn: number;\n    };\n    \'turn/end\': {\n        turn: number;\n        reason: TurnEndReason;\n    };\n    \'step/start\': {\n        turn: number;\n        step: number;\n    };\n    \'step/snapshot\': StepSnapshot;\n    \'step/end\': {\n        turn: number;\n        step: number;\n    };\n    \'user/message\': UserMessage;\n    \'assistant/chunk\': {\n        turn: number;\n        step: number;\n        chunk: StreamChunk;\n    };\n    \'assistant/message\': {\n        turn: number;\n        step: number;\n        message: AssistantMessage;\n        usage?: TokenUsage;\n        interrupted?: true;\n    };\n    \'tool/call\': {\n        turn: number;\n        step: number;\n        callId: CallId;\n        name: string;\n        arguments: string;\n    };\n    \'tool/result\': {\n        turn: number;\n        step: number;\n        message: ToolResultMessage;\n        error?: {\n            name: string;\n            code: string;\n        };\n        meta?: JsonValue;\n    };\n    \'todo/write\': {\n        todos: TodoItem[];\n    };\n    \'request/header\': {\n        header: EpochHeader;\n        reason: RequestHeaderReason;\n    };\n    \'request/context\': RequestContext;\n    \'session/end-seed\': Record<string, never>;\n}',
   },
   {
     name: 'SessionEventMetadataFilter',
@@ -4444,6 +4701,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SpillSource',
     declaration: 'export interface SpillSource {\n    toolName: string;\n    callId: CallId;\n    label: string;\n}',
+  },
+  {
+    name: 'StepSnapshot',
+    declaration: 'export interface StepSnapshot {\n    turn: number;\n    step: number;\n    attempt: number;\n    agentId: string;\n    surfaceSeqs: number[];\n    refs: StepSnapshotRefs;\n}',
+  },
+  {
+    name: 'StepSnapshotRefs',
+    declaration: 'export interface StepSnapshotRefs {\n    requestHeader: number;\n    requestContext: number;\n}',
   },
   {
     name: 'StorageBackend',
@@ -4816,6 +5081,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ToolProviderResult',
     declaration: 'export interface ToolProviderResult {\n    readonly schemas: readonly ToolSchema[];\n    readonly knownNames?: readonly string[];\n}',
+  },
+  {
+    name: 'ToolRequirementClassifier',
+    declaration: 'export type ToolRequirementClassifier = (exec: Readonly<ToolExecution>) => readonly CapabilityRequirement[] | undefined;',
+  },
+  {
+    name: 'ToolRequirementClassifierOptions',
+    declaration: 'export interface ToolRequirementClassifierOptions {\n    readonly priority?: number;\n}',
   },
   {
     name: 'ToolRestriction',

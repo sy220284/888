@@ -148,6 +148,49 @@ async function initialize(session: LocalPtySession, terminal: FakeTerminal): Pro
 }
 
 describe('LocalPtySession readiness and output', () => {
+
+  it('answers split terminal status queries before accepting later user input', async () => {
+    vi.useFakeTimers()
+    const terminal = new FakeTerminal()
+    const inspector = new FakeInspector()
+    const responseWrite = Promise.withResolvers<undefined>()
+    terminal.write = async (data: string) => {
+      terminal.writes.push(data)
+      if (data.includes('[1;1R')) await responseWrite.promise
+    }
+    const session = makeSession(terminal, inspector, config())
+    const initializing = session.initialize()
+
+    terminal.emitData('\x1b[6')
+    await Promise.resolve()
+    expect(terminal.writes).toEqual([])
+    terminal.emitData('nPS /workspace> ')
+    await Promise.resolve()
+    expect(terminal.writes).toEqual(['\x1b[1;1R'])
+
+    inspector.waiting = true
+    await vi.advanceTimersByTimeAsync(20)
+    await initializing
+    const operation = session.startSend({ text: 'Write-Output ready', submit: true })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(terminal.writes).toEqual(['\x1b[1;1R'])
+
+    responseWrite.resolve(undefined)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(terminal.writes).toEqual(['\x1b[1;1R', 'Write-Output ready\r'])
+    terminal.emitData('\x1b[5n\x1b[?6n')
+    await vi.advanceTimersByTimeAsync(0)
+    expect(terminal.writes).toEqual([
+      '\x1b[1;1R',
+      'Write-Output ready\r',
+      '\x1b[0n\x1b[?1;1R',
+    ])
+    terminal.emitData('\x1b]133;D;0\x07dsh> ')
+    await vi.advanceTimersByTimeAsync(10)
+    await operation.done
+  })
+
   it('lets queued terminal output run before the first post-write readiness poll', async () => {
     vi.useFakeTimers()
     const terminal = new FakeTerminal()

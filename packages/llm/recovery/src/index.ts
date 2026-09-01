@@ -13,6 +13,7 @@ import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
 export const name = 'recovery'
 
+/** Failed model request offered to registered recovery handlers. */
 export interface RecoveryRequest {
   readonly agent: Agent
   readonly turn: number
@@ -25,6 +26,7 @@ export interface RecoveryRequest {
   readonly signal: AbortSignal
 }
 
+/** Durable retry decision returned by one recovery handler. */
 export interface RecoveryResolution {
   readonly strategy: string
   readonly action: 'retry'
@@ -32,7 +34,9 @@ export interface RecoveryResolution {
   readonly route?: Pick<LlmCallConfig, 'provider' | 'model'>
 }
 
+/** Recovery strategy invoked after downstream retry handling declines. */
 export type RecoveryHandler = (request: RecoveryRequest) => Promise<RecoveryResolution | undefined>
+/** Ordering options for a recovery handler. */
 export interface RecoveryHandlerOptions { readonly priority?: number }
 interface RegisteredHandler { readonly id: string; readonly priority: number; readonly order: number; readonly run: RecoveryHandler }
 
@@ -54,9 +58,11 @@ declare module '@deepseek-ai/dsh-session' {
   }
 }
 
+/** Empty recovery service configuration. */
 export type Config = Readonly<Record<string, never>>
 export const Config = z.object({}) as unknown as z<Config>
 
+/** Ordered model-request recovery strategy registry (`ctx.recovery`). */
 export class RecoveryService extends Service {
   static inject = ['agents']
   static Config = Config
@@ -105,6 +111,13 @@ export class RecoveryService extends Service {
     }, { prepend: true })
   }
 
+  /**
+   * Register one recovery strategy.
+   * @param id Stable strategy identifier.
+   * @param run Recovery handler.
+   * @param options Ordering options.
+   * @returns Function that unregisters the strategy.
+   */
   register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void {
     if (id.trim().length === 0) throw new Error('recovery strategy id must be non-empty')
     if (this.handlers.some(handler => handler.id === id)) throw new Error(`recovery strategy "${id}" is already registered`)
@@ -120,6 +133,11 @@ export class RecoveryService extends Service {
     return () => void dispose()
   }
 
+  /**
+   * Resolve a failed request through registered strategies.
+   * @param request Failed request context.
+   * @returns First accepted recovery resolution, if any.
+   */
   async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined> {
     for (const handler of [...this.handlers]) {
       request.signal.throwIfAborted()
@@ -128,7 +146,7 @@ export class RecoveryService extends Service {
       if (resolution === undefined) continue
       if (resolution.strategy !== handler.id) throw new Error(`recovery strategy "${handler.id}" returned mismatched strategy "${resolution.strategy}"`)
       if (resolution.reason.trim().length === 0) throw new Error(`recovery strategy "${handler.id}" returned an empty reason`)
-      return Object.freeze({...resolution, ...resolution.route === undefined ? {} : { route: Object.freeze({ ...resolution.route }) }})
+      return Object.freeze({ ...resolution, ...resolution.route === undefined ? {} : { route: Object.freeze({ ...resolution.route }) } })
     }
     return undefined
   }

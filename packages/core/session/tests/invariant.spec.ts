@@ -95,6 +95,15 @@ describe('session-log invariants', () => {
       step: 1,
       attempt: 2,
       agentId: 'agent-1',
+      surfaceSeqs: [message.seq, message.seq],
+      refs: { requestHeader: header.seq, requestContext: context.seq },
+    })).toThrow(/must not contain duplicates/)
+
+    expect(() => session.append('step/snapshot', {
+      turn: 1,
+      step: 1,
+      attempt: 3,
+      agentId: 'agent-1',
       surfaceSeqs: [message.seq],
       refs: { requestHeader: header.seq - 1, requestContext: context.seq },
     })).toThrow(/requestHeader ref/)

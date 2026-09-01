@@ -87,7 +87,15 @@ function childEnvironment(spec: TerminalBackendSpawnSpec, dialect: ShellDialect)
  * input are unreliable under PSReadLine.
  */
 export const PWSH_PROMPT_SETUP =
-  "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); '" + CONTROLLED_PROMPT + "' }"
+  "function prompt { [Console]::Write([char]27 + ']133;D;' + [int]$LASTEXITCODE + [char]7); ('dsh' + '> ') }"
+
+const PWSH_STARTUP_READY = '__DSH_PWSH_STARTUP_READY__'
+const PWSH_STARTUP_SETUP = ENCODING_PREAMBLE + PWSH_PROMPT_SETUP
+  + "; [Console]::WriteLine(('__DSH_PWSH_STARTUP_' + 'READY__'))"
+
+function textEndsWithControlledPrompt(text: string): boolean {
+  return text.trimEnd().endsWith(CONTROLLED_PROMPT.trimEnd())
+}
 
 function spawnArgv(ctx: Context, config: ResolvedConfig, policy: SandboxExecutionPolicy): string[] {
   const argv = [config.shellPath, ...config.shellArgs]
@@ -109,36 +117,38 @@ async function startupSession(
   signal?: AbortSignal,
 ): Promise<void> {
   const start = async (): Promise<void> => {
-    if (dialect === 'bash') {
-      await session.initialize(signal)
-      return
-    }
-    // pwsh cannot install its prompt from the environment: write the prompt
-    // function through the session and wait for the first marker prompt,
-    // which is also the readiness contract of the bash initialize path. The
-    // first send also pins UTF-8 output (the shared pwsh-local preamble)
-    // before anything runs: the session decode path treats PTY bytes as
-    // UTF-8, and an un-pinned console writes its host code page for
-    // non-ASCII output. The banner-to-prompt gap can outlast the silence
-    // bound, so the wait loops over follow-up sends until the controlled
-    // prompt is actually visible (in the viewport or the retained scrollback
-    // when it landed between sends), bounded by the send deadline.
-    let viewport = ''
+    // First let the unmodified interactive host reach its native prompt. A
+    // bootstrap written before that boundary races PSReadLine initialization
+    // on loaded CI machines; using `-Command` at process launch avoids the
+    // race but changes the host's stdin mode. Once initialize() proves the
+    // ordinary host is ready, install the shared UTF-8/prompt protocol through
+    // that known-good interactive input path.
+    await session.initialize(signal)
+    if (dialect === 'bash') return
+
+    let startupReady = false
+    let first = true
     for (;;) {
-      const first = viewport.length === 0
       const operation = session.startSend({
-        text: first ? ENCODING_PREAMBLE + PWSH_PROMPT_SETUP : '',
+        text: first ? PWSH_STARTUP_SETUP : '',
         submit: first,
         ...signal !== undefined ? { signal } : {},
       })
+      first = false
       const result = await operation.done
+      const scrollback = session.read({ offset: 0, count: 20 }).text
       if (result.waitReason === 'session_exit') throw new Error('PTY shell exited during startup')
       if (result.waitReason === 'timeout') throw new Error('PTY shell did not reach readiness before startup timeout')
-      viewport = result.viewport
-      const scrollback = session.read({ offset: 0, count: 20 }).text
-      if (viewport.includes(CONTROLLED_PROMPT) || scrollback.includes(CONTROLLED_PROMPT)) break
+      startupReady ||= result.viewport.includes(PWSH_STARTUP_READY)
+        || scrollback.includes(PWSH_STARTUP_READY)
+      if (startupReady && (result.waitReason === 'stdin_read'
+        || textEndsWithControlledPrompt(result.viewport)
+        || textEndsWithControlledPrompt(scrollback))) break
     }
-    session.motd = viewport
+    // The backend owns this exact printable prompt. Publishing only that
+    // stable contract keeps PSReadLine's echoed bootstrap out of consumers'
+    // prompt discovery and MOTD.
+    session.motd = CONTROLLED_PROMPT
   }
   if (signal === undefined) {
     await start()

@@ -52,10 +52,6 @@
       "versionPolicy": "system-or-project-compatible",
       "optional": true,
       "requiredBy": ["full"]
-    },
-    "psscriptanalyzer": {
-      "version": "1.25.0",
-      "requiredBy": ["full"]
     }
   },
   "dependencyLocks": {
