@@ -1,0 +1,34 @@
+name: Verify baseline temporary
+
+on:
+  push:
+    branches:
+      - tmp/export-pr33-source
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+      - name: Install pnpm
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+          pnpm --version
+      - name: Install locked dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+      - name: Oxlint executable contract
+        shell: bash
+        run: pnpm exec vitest run scripts/oxlint-contract.spec.ts --reporter=verbose
+      - name: Claude Code real fixture
+        shell: bash
+        run: pnpm exec vitest run packages/subagent/subagent-claude-code/tests/real-product.spec.ts --reporter=verbose
