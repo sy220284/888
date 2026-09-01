@@ -27,12 +27,15 @@ jobs:
         run: |
           rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
           rustup override set 1.98.0
-      - name: Prepare formatting tools
+      - name: Prepare all formatting tools
         shell: bash
-        run: sh ./dev setup test
+        run: sh ./dev setup full
       - name: Format tracked repository files
         shell: bash
         run: sh ./dev format --write
+      - name: Verify formatter is idempotent
+        shell: bash
+        run: sh ./dev format --check
       - name: Commit formatted baseline
         shell: bash
         run: |
