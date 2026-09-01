@@ -1,0 +1,27 @@
+name: Local main source export (temporary)
+
+on:
+  push:
+    branches:
+      - tmp/local-main-export-20260901
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack source tree
+        run: |
+          tar --exclude=.git --exclude=.github/workflows/local-main-export-temp.yml -czf /tmp/888-main-source.tar.gz .
+          sha256sum /tmp/888-main-source.tar.gz > /tmp/888-main-source.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 888-main-source
+          path: |
+            /tmp/888-main-source.tar.gz
+            /tmp/888-main-source.tar.gz.sha256
+          if-no-files-found: error
+          retention-days: 1
