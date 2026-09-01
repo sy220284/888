@@ -17,14 +17,14 @@
  * backend-defined temp area; `danger-full-access` bypasses confinement. Network
  * and process visibility are outside this vocabulary.
  */
-type SandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access'
+type SandboxMode = "read-only" | "workspace-write" | "danger-full-access";
 ```
 
 只有前两种模式可以发送给提供方。`danger-full-access` 的消费方直接 spawn 原始 argv，不调用 `ctx.sandbox`。
 
 ```ts type-equiv
 /** A confining (non-`danger-full-access`) mode — the modes a {@link SandboxPolicy} can carry. */
-type ConfinedSandboxMode = Exclude<SandboxMode, 'danger-full-access'>
+type ConfinedSandboxMode = Exclude<SandboxMode, "danger-full-access">;
 ```
 
 强制执行完整性是后端报告的事实。`full` 表示后端管控了该模式承诺的所有文件效果；`partial` 表示活跃后端或较旧的内核 ABI 仅管控其中一个子集，因此要求绝对保证的消费方必须拒绝或向上暴露这一区别。当前的部分强制执行情形包括较旧的 Landlock ABI，以及 Windows ACL runner 的 Everyone 与硬链接边界。
@@ -35,7 +35,7 @@ type ConfinedSandboxMode = Exclude<SandboxMode, 'danger-full-access'>
  * older kernel ABI cannot govern every promised file effect; callers requiring
  * an absolute boundary must not treat it as `full`.
  */
-type SandboxEnforcement = 'full' | 'partial'
+type SandboxEnforcement = "full" | "partial";
 ```
 
 ## 逐调用策略
@@ -50,9 +50,9 @@ type SandboxEnforcement = 'full' | 'partial'
  */
 interface SandboxExecutionPolicy {
   /** The file-effect mode this execution runs under. */
-  mode: SandboxMode
+  mode: SandboxMode;
   /** Absolute root directory `workspace-write` may write under. */
-  workspaceRoot: string
+  workspaceRoot: string;
   /**
    * Opaque identity of the calling session (the branded `dsh-session`
    * SessionId). Backends key per-session state off it (e.g. windows-acl gives
@@ -60,7 +60,7 @@ interface SandboxExecutionPolicy {
    * while the workspace SID and standing grant remain per-workspace); absent
    * for agentless calls, which fall back to per-call backend state.
    */
-  sessionId?: SessionId
+  sessionId?: SessionId;
 }
 ```
 
@@ -70,9 +70,9 @@ interface SandboxExecutionPolicy {
 /** Inputs that select the sandbox policy for one capability call. */
 interface SandboxPolicyRequest {
   /** Calling session; its immutable cwd becomes the workspace boundary. */
-  session?: Session
+  session?: Session;
   /** Explicit approved mode override, which outranks session policy. */
-  mode?: SandboxMode
+  mode?: SandboxMode;
 }
 ```
 
@@ -89,7 +89,7 @@ interface SandboxPolicyRequest {
  */
 interface SandboxPolicy extends SandboxExecutionPolicy {
   /** The file-effect mode this execution runs under. */
-  mode: ConfinedSandboxMode
+  mode: ConfinedSandboxMode;
 }
 ```
 
@@ -109,11 +109,11 @@ interface SandboxPolicy extends SandboxExecutionPolicy {
  */
 interface RunnerFailureRule {
   /** Nonzero process exit codes on which this rule may match; omitted permits any nonzero exit. */
-  allowedExitCodes?: readonly number[]
+  allowedExitCodes?: readonly number[];
   /** Non-empty substrings identifying a fatal runner diagnostic on one stderr line. */
-  fatalSignatures: readonly string[]
+  fatalSignatures: readonly string[];
   /** Benign stderr lines excluded by exact full-line equality before fatal matching. */
-  informationalLines?: readonly string[]
+  informationalLines?: readonly string[];
 }
 ```
 
@@ -127,9 +127,9 @@ interface RunnerFailureRule {
  */
 interface ConfinedArgv {
   /** The wrapped argv (runner, profile, separator, then the caller's argv). */
-  argv: string[]
+  argv: string[];
   /** How completely the selected backend enforces the policy's file effects. */
-  enforcement: SandboxEnforcement
+  enforcement: SandboxEnforcement;
   /**
    * The selected backend's denial DIALECT: the case-insensitive stderr
    * substrings a file effect denied by THIS backend produces (EROFS text
@@ -138,14 +138,14 @@ interface ConfinedArgv {
    * matches against exactly these rather than a cross-backend union — the
    * union claims denials a given backend never produces.
    */
-  denialSignatures: readonly string[]
+  denialSignatures: readonly string[];
   /**
    * Structured runner-failure evidence rules. Consumers require a matching
    * fatal stderr line (after informational exclusions) and any rule-specific
    * exit-code gate before checking denial signatures: runner failure means the
    * command never ran, while denial means confinement worked and blocked it.
    */
-  runnerFailureRules: readonly RunnerFailureRule[]
+  runnerFailureRules: readonly RunnerFailureRule[];
 }
 ```
 

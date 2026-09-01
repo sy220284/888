@@ -33,9 +33,9 @@ The vm sandbox isolates globals but is not a security boundary: Node globals are
 
 ## Config
 
-| Field | Default | Meaning |
-|---|---|---|
-| `vmTimeoutMs` | `5000` | Milliseconds the synchronous portion of a host half may run in the vm before evaluation is aborted |
+| Field         | Default | Meaning                                                                                            |
+| ------------- | ------- | -------------------------------------------------------------------------------------------------- |
+| `vmTimeoutMs` | `5000`  | Milliseconds the synchronous portion of a host half may run in the vm before evaluation is aborted |
 
 One field is all there is: a run request waits for a person, so the round trip has no deadline of its own.
 

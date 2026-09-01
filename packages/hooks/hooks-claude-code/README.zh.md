@@ -9,14 +9,14 @@
 ## 配置
 
 ```ts
-import type { Config } from '@deepseek-ai/dsh-hooks-claude-code'
+import type { Config } from "@deepseek-ai/dsh-hooks-claude-code";
 const config: Config = {
-  configPath: '/path/to/hooks.json', // required: a hooks.json or a settings file with a `hooks` key
-  pluginRoot: '/path/to/plugin',     // optional: replaces ${CLAUDE_PLUGIN_ROOT} in command strings
-  projectDir: '/path/to/project',    // optional: replaces ${CLAUDE_PROJECT_DIR} AND sets the hook env var; defaults to the session cwd when omitted
-  defaultTimeoutMs: 600_000,         // optional: per-hook timeout when a hook sets none (CC default)
-  stderrSummaryMaxChars: 500,        // optional: char cap on the hook/result event's persisted stderr summary
-}
+  configPath: "/path/to/hooks.json", // required: a hooks.json or a settings file with a `hooks` key
+  pluginRoot: "/path/to/plugin", // optional: replaces ${CLAUDE_PLUGIN_ROOT} in command strings
+  projectDir: "/path/to/project", // optional: replaces ${CLAUDE_PROJECT_DIR} AND sets the hook env var; defaults to the session cwd when omitted
+  defaultTimeoutMs: 600_000, // optional: per-hook timeout when a hook sets none (CC default)
+  stderrSummaryMaxChars: 500, // optional: char cap on the hook/result event's persisted stderr summary
+};
 ```
 
 在 `cordis.yml` 中：
@@ -34,15 +34,15 @@ hook **本身**会在 agent 的会话工作区中运行：对 agent scope 点，
 
 ## Hook 点 → 类型化 Decision
 
-| CC hook | Harness 点 | 映射 |
-|---|---|---|
-| `SessionStart` | `agent/session-start`（emit） | additionalContext → `agent.inject()` 到新会话（无法阻塞） |
+| CC hook            | Harness 点                                  | 映射                                                                                                                                                                 |
+| ------------------ | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SessionStart`     | `agent/session-start`（emit）               | additionalContext → `agent.inject()` 到新会话（无法阻塞）                                                                                                            |
 | `UserPromptSubmit` | `agent/pre-step`（waterfall（瀑布式事件）） | `deny` → `PreStepDecision.reject`；仅 additionalContext → 通过 `next()` 委托，再向下游 `enter` 决策追加一条单独标记来源的消息（后续外层 listener 仍可 reject／改写） |
-| `PreToolUse` | `tools/pre-execute`（waterfall） | `deny` → `PreToolDecision.deny`；`ask` → `PreToolDecision.ask` |
-| `PostToolUse` | `tools/post-execute`（waterfall） | `deny` → 带反馈的 `block`；仅 additionalContext → 通过 `next()` 委托，再将一个单独标记源的上下文前置到下游决策；Code Mode 将子调用上下文延迟到外层 `run_code` 结果 |
-| `Stop` | `agent/turn-stopping`（serial） | 阻塞 Stop hook 通过 `steer()` 送入其原因，强制再执行一步 |
-| `SubagentStart` | `subagent/start`（emit） | additionalContext → `agent.inject()` 到仍在运行的同进程 child；远程 child 没有本地注入目标 |
-| `SubagentStop` | `subagent/end`（emit） | 只观测 |
+| `PreToolUse`       | `tools/pre-execute`（waterfall）            | `deny` → `PreToolDecision.deny`；`ask` → `PreToolDecision.ask`                                                                                                       |
+| `PostToolUse`      | `tools/post-execute`（waterfall）           | `deny` → 带反馈的 `block`；仅 additionalContext → 通过 `next()` 委托，再将一个单独标记源的上下文前置到下游决策；Code Mode 将子调用上下文延迟到外层 `run_code` 结果   |
+| `Stop`             | `agent/turn-stopping`（serial）             | 阻塞 Stop hook 通过 `steer()` 送入其原因，强制再执行一步                                                                                                             |
+| `SubagentStart`    | `subagent/start`（emit）                    | additionalContext → `agent.inject()` 到仍在运行的同进程 child；远程 child 没有本地注入目标                                                                           |
+| `SubagentStop`     | `subagent/end`（emit）                      | 只观测                                                                                                                                                               |
 
 三个 emit 点都以分离方式运行：没有扩展点会等待 `SessionStart`／`SubagentStart`／`SubagentStop` hook。每条运行链都会被跟踪；对桥接执行 dispose（资源释放）时，会中止仍在运行的 hook 进程，并在 dispose 完成前排空 continuation（`createDetachedRuns`，位于 `dsh-hook-protocol`）。
 

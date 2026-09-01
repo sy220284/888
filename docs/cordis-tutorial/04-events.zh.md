@@ -9,35 +9,35 @@
 创建 `stats.ts`，将它放在 `tmp/cordis-tutorial` 中。它是一项负责计数并在每次变化时发出通知的服务：
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    stats: StatsService
+    stats: StatsService;
   }
   interface Events {
-    'stats/report'(name: string, count: number): void
+    "stats/report"(name: string, count: number): void;
   }
 }
 
 export class StatsService extends Service {
-  private counts = new Map<string, number>()
+  private counts = new Map<string, number>();
 
   constructor(ctx: Context) {
-    super(ctx, 'stats')
+    super(ctx, "stats");
   }
 
   bump(name: string) {
-    const next = (this.counts.get(name) ?? 0) + 1
-    this.counts.set(name, next)
-    this.ctx.emit('stats/report', name, next)
+    const next = (this.counts.get(name) ?? 0) + 1;
+    this.counts.set(name, next);
+    this.ctx.emit("stats/report", name, next);
   }
 }
 
-export const name = 'stats'
+export const name = "stats";
 
 export function apply(ctx: Context) {
-  ctx.plugin(StatsService)
+  ctx.plugin(StatsService);
 }
 ```
 
@@ -46,27 +46,27 @@ export function apply(ctx: Context) {
 创建 `reporter.ts`：
 
 ```ts ignore-check
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from './stats.ts'
+import type { Context } from "@deepseek-ai/cordis";
+import type {} from "./stats.ts";
 
-export const name = 'reporter'
-export const inject = ['stats']
+export const name = "reporter";
+export const inject = ["stats"];
 
 export function apply(ctx: Context) {
-  ctx.on('stats/report', (name, count) => {
-    console.log(`[stats] ${name} -> ${count}`)
-  })
-  ctx.stats.bump('tool_call')
-  ctx.stats.bump('tool_call')
-  ctx.stats.bump('prompt')
+  ctx.on("stats/report", (name, count) => {
+    console.log(`[stats] ${name} -> ${count}`);
+  });
+  ctx.stats.bump("tool_call");
+  ctx.stats.bump("tool_call");
+  ctx.stats.bump("prompt");
 }
 ```
 
 `import type {} from './stats.ts'` 行不会在运行时导入任何内容；它的作用是让 TypeScript 看到声明合并。组合并运行：
 
 ```yaml
-- name: './stats.ts'
-- name: './reporter.ts'
+- name: "./stats.ts"
+- name: "./reporter.ts"
 ```
 
 ```
@@ -81,13 +81,13 @@ export function apply(ctx: Context) {
 
 `emit` 是 5 种分发模式之一。事件采用哪种模式是其约定的一部分，决定了监听器能否返回值、能否并发运行，以及能否彼此短路：
 
-| 模式 | 调用 | 语义 |
-|---|---|---|
-| emit | `ctx.emit(name, ...args)` | 同步广播；不会等待或收集返回的 promise 与值。 |
-| parallel | `await ctx.parallel(name, ...args)` | 所有监听器并发运行，并一同等待。 |
-| serial | `await ctx.serial(name, ...args)` | 监听器按顺序运行并等待；第一个非 `null`/`false`/`undefined` 返回值胜出，并停止后续监听器。 |
-| bail | `ctx.bail(name, ...args)` | serial 的同步版本。 |
-| waterfall（瀑布式事件） | `ctx.waterfall(name, ...args, next)` | 环绕中间件，见下文。 |
+| 模式                    | 调用                                 | 语义                                                                                       |
+| ----------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------ |
+| emit                    | `ctx.emit(name, ...args)`            | 同步广播；不会等待或收集返回的 promise 与值。                                              |
+| parallel                | `await ctx.parallel(name, ...args)`  | 所有监听器并发运行，并一同等待。                                                           |
+| serial                  | `await ctx.serial(name, ...args)`    | 监听器按顺序运行并等待；第一个非 `null`/`false`/`undefined` 返回值胜出，并停止后续监听器。 |
+| bail                    | `ctx.bail(name, ...args)`            | serial 的同步版本。                                                                        |
+| waterfall（瀑布式事件） | `ctx.waterfall(name, ...args, next)` | 环绕中间件，见下文。                                                                       |
 
 每个 harness 事件都会在其所属[子系统页面](../subsystems/core.zh.md)自动生成的参考文档中记录其模式。
 
@@ -96,33 +96,33 @@ export function apply(ctx: Context) {
 waterfall 是实现拦截的模式。每个监听器都会收到参数和一个 `next()` continuation；它可以转换 `next()` 的返回值，也可以不调用 `next()` 就直接返回，从而短路链条的其余部分。Cordis 文档把后一种行为称为否决。创建 `waterfall-demo.ts`：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Events {
-    'demo/transform'(input: string, next: () => Promise<string>): Promise<string>
+    "demo/transform"(input: string, next: () => Promise<string>): Promise<string>;
   }
 }
 
-export const name = 'waterfall-demo'
+export const name = "waterfall-demo";
 
 export function apply(ctx: Context) {
   // Listener 1: wrap the downstream result.
-  ctx.on('demo/transform', async (input, next) => {
-    const downstream = await next()
-    return downstream.toUpperCase()
-  })
+  ctx.on("demo/transform", async (input, next) => {
+    const downstream = await next();
+    return downstream.toUpperCase();
+  });
 
   // Listener 2: short-circuit when it owns the decision.
-  ctx.on('demo/transform', async (input, next) => {
-    if (input.includes('blocked')) return '** blocked **'
-    return next()
-  })
+  ctx.on("demo/transform", async (input, next) => {
+    if (input.includes("blocked")) return "** blocked **";
+    return next();
+  });
 
   void (async () => {
-    console.log(await ctx.waterfall('demo/transform', 'hello', async () => 'hello'))
-    console.log(await ctx.waterfall('demo/transform', 'blocked words', async () => 'blocked words'))
-  })()
+    console.log(await ctx.waterfall("demo/transform", "hello", async () => "hello"));
+    console.log(await ctx.waterfall("demo/transform", "blocked words", async () => "blocked words"));
+  })();
 }
 ```
 

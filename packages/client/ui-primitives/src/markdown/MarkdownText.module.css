@@ -166,7 +166,7 @@
   overflow-y: hidden;
 }
 
-.markdown input[type='checkbox'] {
+.markdown input[type="checkbox"] {
   margin: 0 8px 0 0;
   accent-color: var(--dsw-alias-label-secondary);
 }

@@ -20,10 +20,10 @@ fork 声明 `{ outputSchema: true, depthLimit: true, toolFilter: true, persona: 
 
 ## 配置
 
-| 键 | 含义 |
-|---|---|
-| `providerName` | `ctx.subagents` 上的注册表名称（默认 `fork`）。 |
-运行生命周期、模型继承与深度跟踪均为共享行为，见 [`dsh-subagent-spawn-in-process`](../subagent-spawn-in-process/README.zh.md)。
+| 键                                                                                                                              | 含义                                            |
+| ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `providerName`                                                                                                                  | `ctx.subagents` 上的注册表名称（默认 `fork`）。 |
+| 运行生命周期、模型继承与深度跟踪均为共享行为，见 [`dsh-subagent-spawn-in-process`](../subagent-spawn-in-process/README.zh.md)。 |
 
 ## 模型体验
 

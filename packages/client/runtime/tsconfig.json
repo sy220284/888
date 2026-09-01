@@ -4,9 +4,7 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../../attachment/attachment"
@@ -57,7 +55,5 @@
       "path": "../../api/remotes/tsconfig.client.json"
     }
   ],
-  "exclude": [
-    "**/*.legacy.*"
-  ]
+  "exclude": ["**/*.legacy.*"]
 }

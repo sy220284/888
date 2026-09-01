@@ -8,15 +8,15 @@
 
 ## 配置
 
-| 键 | 含义 |
-|---|---|
+| 键             | 含义                                                     |
+| -------------- | -------------------------------------------------------- |
 | `maxNoteBytes` | 必填正 safe integer：一条可选备注的最大 UTF-8 字节长度。 |
 
 备注必须包含至少一个非空白字符，但通过校验的文本按原样存储，不会 trim。省略 `note` 表示目标值不含备注，因此 version 匹配的实质 `put` 会清除已有备注。备注校验早于 Session 查找，因此即使 Session 不存在，也可能在不访问持久化的情况下返回 `note-blank` 或 `note-too-large`。
 
 ```yaml
 - id: message-feedback
-  name: '@deepseek-ai/dsh-message-feedback'
+  name: "@deepseek-ai/dsh-message-feedback"
   config:
     maxNoteBytes: 8192
 ```
@@ -39,11 +39,11 @@ message feedback 不是 Session 日志内容或 Session 投影。它不发出 `f
 
 `TypertRemoteService` 与 `@Remote` 将 `MessageFeedbackService` 的同三个方法发布出去；Host endpoint 名称为 `messageFeedback.list`、`messageFeedback.put` 与 `messageFeedback.delete`。每个方法都返回判别式业务 union：`{ ok: true, value }` 或 `{ ok: false, error }`。存储、损坏或缺少 durability listener 等操作故障会产生 reject，不会被误标为业务错误。
 
-| 方法 | 请求 | 成功 `value` | 拒绝的 `error.code` |
-|---|---|---|---|
-| `list` | `MessageFeedbackListRequest { sessionId }` | `MessageFeedbackListValue { items }` | `session-not-found` |
-| `put` | `MessageFeedbackPutRequest { sessionId, messageId, rating, note?, ifVersion }` | 已提交的 `MessageFeedbackItem` | `session-not-found`、`target-not-found`、`version-conflict`、`note-blank`、`note-too-large` |
-| `delete` | `MessageFeedbackDeleteRequest { sessionId, messageId, ifVersion }` | `MessageFeedbackDeleteValue { absent: true }` | `session-not-found`、`version-conflict` |
+| 方法     | 请求                                                                           | 成功 `value`                                  | 拒绝的 `error.code`                                                                         |
+| -------- | ------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `list`   | `MessageFeedbackListRequest { sessionId }`                                     | `MessageFeedbackListValue { items }`          | `session-not-found`                                                                         |
+| `put`    | `MessageFeedbackPutRequest { sessionId, messageId, rating, note?, ifVersion }` | 已提交的 `MessageFeedbackItem`                | `session-not-found`、`target-not-found`、`version-conflict`、`note-blank`、`note-too-large` |
+| `delete` | `MessageFeedbackDeleteRequest { sessionId, messageId, ifVersion }`             | `MessageFeedbackDeleteValue { absent: true }` | `session-not-found`、`version-conflict`                                                     |
 
 `MessageFeedbackVersionConflict` 返回权威 `current` 条目；条目不存在时为 `null`。调用方无需额外执行 `list`，即可协调当前 rating、note 与 version。`MessageFeedbackNoteTooLarge` 同时返回 `maxBytes` 与 `actualBytes`。客户端 Remote 聚合尚未挂载生成的客户端 contribution；Host 调用方无需该客户端组装即可使用 service/Remote 契约。
 

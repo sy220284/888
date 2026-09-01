@@ -18,14 +18,14 @@
 
 除成对的路由覆盖项外，每个字段都必填；库不提供默认值。
 
-| 键 | 约定 |
-|---|---|
-| `targetWords` | 非 CJK 标题的正整数目标词数。 |
-| `targetCjkCharacters` | 中文、日文或韩文标题的正整数目标字符数。 |
-| `maxInputBytes` | 最终 JSON 封装用户提示词的正整数 UTF-8 字节上限。 |
-| `maxOutputTokens` | 辅助生成的正整数 token 上限。 |
-| `timeoutMs` | 运行时定时器限制内的正数端到端时限。 |
-| `provider`, `model` | 可选显式路由；二者同时提供或同时省略。 |
+| 键                    | 约定                                              |
+| --------------------- | ------------------------------------------------- |
+| `targetWords`         | 非 CJK 标题的正整数目标词数。                     |
+| `targetCjkCharacters` | 中文、日文或韩文标题的正整数目标字符数。          |
+| `maxInputBytes`       | 最终 JSON 封装用户提示词的正整数 UTF-8 字节上限。 |
+| `maxOutputTokens`     | 辅助生成的正整数 token 上限。                     |
+| `timeoutMs`           | 运行时定时器限制内的正数端到端时限。              |
+| `provider`, `model`   | 可选显式路由；二者同时提供或同时省略。            |
 
 ## 模型体验
 

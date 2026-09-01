@@ -12,15 +12,15 @@ Schedule owns durable reminders that return to the original live Session as ordi
 /** Durable one-shot reminder created from a positive delay. */
 interface AfterScheduleRecord {
   /** Session-local stable identity. */
-  readonly id: ScheduleId
+  readonly id: ScheduleId;
   /** Rule discriminator for a delayed one-shot reminder. */
-  readonly kind: 'after'
+  readonly kind: "after";
   /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
+  readonly prompt: string;
   /** Positive safe-integer delay accepted at creation. */
-  readonly afterSeconds: number
+  readonly afterSeconds: number;
   /** Four-digit-year RFC 3339 UTC target. */
-  readonly scheduledAt: string
+  readonly scheduledAt: string;
 }
 ```
 
@@ -28,13 +28,13 @@ interface AfterScheduleRecord {
 /** Durable one-shot reminder created from an absolute instant. */
 interface AtScheduleRecord {
   /** Session-local stable identity. */
-  readonly id: ScheduleId
+  readonly id: ScheduleId;
   /** Rule discriminator for an absolute one-shot reminder. */
-  readonly kind: 'at'
+  readonly kind: "at";
   /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
+  readonly prompt: string;
   /** Four-digit-year RFC 3339 UTC target. */
-  readonly scheduledAt: string
+  readonly scheduledAt: string;
 }
 ```
 
@@ -42,26 +42,26 @@ interface AtScheduleRecord {
 /** Durable fixed-rate reminder whose next target remains creation-anchor-aligned. */
 interface EveryScheduleRecord {
   /** Session-local stable identity. */
-  readonly id: ScheduleId
+  readonly id: ScheduleId;
   /** Rule discriminator for a fixed-rate recurring reminder. */
-  readonly kind: 'every'
+  readonly kind: "every";
   /** Trimmed reminder content supplied at creation. */
-  readonly prompt: string
+  readonly prompt: string;
   /** Fixed safe-integer interval, never below five minutes. */
-  readonly everySeconds: number
+  readonly everySeconds: number;
   /** Earliest anchor-aligned occurrence not yet dispatched. */
-  readonly scheduledAt: string
+  readonly scheduledAt: string;
 }
 ```
 
 ```ts type-equiv
 /** One-shot record variants that terminate on an id-only dispatch. */
-type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord
+type OneShotScheduleRecord = AfterScheduleRecord | AtScheduleRecord;
 ```
 
 ```ts type-equiv
 /** The v1 durable reminder record union. */
-type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord
+type ScheduleRecord = OneShotScheduleRecord | EveryScheduleRecord;
 ```
 
 ## Absolute-time input
@@ -72,17 +72,17 @@ The `at` selector is either a strict offset-bearing RFC 3339 string or an exact 
 /** Structured local-calendar input accepted by `schedule_create`. */
 interface LocalAtInput {
   /** Four-digit ISO calendar date. */
-  readonly date: string
+  readonly date: string;
   /** Local wall-clock time with optional one-to-three digit milliseconds. */
-  readonly time: string
+  readonly time: string;
   /** Explicit UTC or IANA Area/Location zone. */
-  readonly time_zone: string
+  readonly time_zone: string;
 }
 ```
 
 ```ts type-equiv
 /** Absolute selector accepted by `schedule_create`. */
-type AtInput = string | LocalAtInput
+type AtInput = string | LocalAtInput;
 ```
 
 The official Web overlay samples the browser's IANA zone for every prompt. Time-context tells the model to interpret otherwise-unqualified natural-language dates and times in that request-local zone when the open turn has one unambiguous browser zone; mixed or missing provenance tells the model to ask. That guidance is not a durable Session default: the model must still pass an offset in the string form or `time_zone` in the local form, and Schedule never reads browser, Session, process, or model context.
@@ -104,49 +104,49 @@ The version-1 `schedule/change` Session event is the only durable Schedule autho
 ```ts type-equiv
 /** Creates one durable reminder record. */
 interface ScheduleCreateChange {
-  readonly version: 1
-  readonly operation: 'create'
-  readonly schedule: ScheduleRecord
+  readonly version: 1;
+  readonly operation: "create";
+  readonly schedule: ScheduleRecord;
 }
 ```
 
 ```ts type-equiv
 /** Deletes one currently active reminder. */
 interface ScheduleDeleteChange {
-  readonly version: 1
-  readonly operation: 'delete'
-  readonly id: ScheduleId
+  readonly version: 1;
+  readonly operation: "delete";
+  readonly id: ScheduleId;
 }
 ```
 
 ```ts type-equiv
 /** Records that one active one-shot reminder entered the durable dispatch history. */
 interface OneShotScheduleDispatchChange {
-  readonly version: 1
-  readonly operation: 'dispatch'
-  readonly id: ScheduleId
+  readonly version: 1;
+  readonly operation: "dispatch";
+  readonly id: ScheduleId;
 }
 ```
 
 ```ts type-equiv
 /** Records one fixed-rate decision and advances directly past missed occurrences. */
 interface EveryScheduleDispatchChange {
-  readonly version: 1
-  readonly operation: 'dispatch'
-  readonly id: ScheduleId
+  readonly version: 1;
+  readonly operation: "dispatch";
+  readonly id: ScheduleId;
   /** Wall-clock decision time used to select the latest due occurrence. */
-  readonly acceptedAt: string
+  readonly acceptedAt: string;
 }
 ```
 
 ```ts type-equiv
 /** Durable dispatch shapes supported by the current rule set. */
-type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispatchChange
+type ScheduleDispatchChange = OneShotScheduleDispatchChange | EveryScheduleDispatchChange;
 ```
 
 ```ts type-equiv
 /** Strict version-1 durable Schedule mutation union. */
-type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange
+type ScheduleChange = ScheduleCreateChange | ScheduleDeleteChange | ScheduleDispatchChange;
 ```
 
 The strict decoder and fold reject unknown versions, extra fields, reused ids, mismatched one-shot or Every dispatch shapes, and delete or dispatch transitions against inactive records. A normal Session folds its complete event stream. A fork folds only events at or after `SessionHeader.seedLength`, so it retains history without adopting the parent Session's active reminders. The `schedule/change` declaration and source location are also indexed in the [persistence catalog](../persistence-catalog.md#schedulechange--log-only).
@@ -157,22 +157,22 @@ Tool values combine the durable record with delivery state derived from the curr
 
 ```ts type-equiv
 /** Current delivery timing derived from the durable record and wall clock. */
-type ScheduleState = 'scheduled' | 'overdue'
+type ScheduleState = "scheduled" | "overdue";
 ```
 
 ```ts type-equiv
 /** Fixed v1 delivery boundary: the original session must be live. */
-type ScheduleDeliveryMode = 'session-local'
+type ScheduleDeliveryMode = "session-local";
 ```
 
 ```ts type-equiv
 /** Complete model-facing view of one active reminder. */
 type ScheduleView = ScheduleRecord & {
   /** Whether the target remains in the future. */
-  readonly state: ScheduleState
+  readonly state: ScheduleState;
   /** Reminder delivery never leaves the owning session. */
-  readonly deliveryMode: ScheduleDeliveryMode
-}
+  readonly deliveryMode: ScheduleDeliveryMode;
+};
 ```
 
 The generated [tool catalog](../tool-catalog.md#deepseek-aidsh-schedule) owns the argument and result schemas for `schedule_create`, `schedule_list`, and `schedule_delete`. Management calls serialize with due work in one Agent-scoped queue. Every read or decision first waits for the shared Session persistence barrier; create and an actual delete wait again after appending. A barrier failure reports `persistence_uncertain` instead of guessing whether an eager write committed. The other stable error codes are `invalid_prompt`, `invalid_selector`, `invalid_rule`, `invalid_time_zone`, `not_future`, `time_out_of_range`, `frequency_too_high`, `corrupt_schedule_log`, and `internal_error`.

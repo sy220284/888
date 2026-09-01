@@ -12,7 +12,7 @@
 
 ```ts type-equiv
 /** Nominal reference to one credential: a POSIX-style environment-variable name. */
-type CredentialRef = Branded<'CredentialRef'>
+type CredentialRef = Branded<"CredentialRef">;
 ```
 
 ## 解析
@@ -23,9 +23,9 @@ type CredentialRef = Branded<'CredentialRef'>
 /** One resolved credential value and the source layer that supplied it. */
 interface ResolvedCredential {
   /** The non-empty secret value. */
-  value: string
+  value: string;
   /** Provider-defined source layer id (the local provider uses `env`, `file`, `project-env`, and `user-env`). */
-  source: string
+  source: string;
 }
 ```
 
@@ -37,11 +37,11 @@ interface ResolvedCredential {
 /** Source and writability facts for one reference, safe for configuration UIs — never the value. */
 interface CredentialInfo {
   /** Whether {@link CredentialProvider.resolve} would currently return a value. */
-  configured: boolean
+  configured: boolean;
   /** Source layer currently supplying the value; absent while unconfigured. */
-  source?: string
+  source?: string;
   /** Whether {@link CredentialProvider.set} would currently succeed for this reference. */
-  writable: boolean
+  writable: boolean;
 }
 ```
 

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.31.0"]
+requires = [ "hatchling==1.31.0" ]
 build-backend = "hatchling.build"
 
 [project]
@@ -9,11 +9,8 @@ description = "Python SDK for DeepSeek Harness"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "DeepSeek" }]
-dependencies = [
-  "pydantic>=2.12,<3",
-  "deepseek-harness-runtime-bin==0.0.0.dev0",
-]
+authors = [ { name = "DeepSeek" } ]
+dependencies = [ "pydantic>=2.12,<3", "deepseek-harness-runtime-bin==0.0.0.dev0" ]
 
 [project.urls]
 Homepage = "https://github.com/deepseek-ai/deepseek-harness"
@@ -22,14 +19,14 @@ Issues = "https://github.com/deepseek-ai/deepseek-harness/issues"
 Source = "https://github.com/deepseek-ai/deepseek-harness"
 
 [dependency-groups]
-test = ["pytest>=8.0"]
+test = [ "pytest>=8.0" ]
 
 [tool.pytest.ini_options]
 addopts = "-q"
-testpaths = ["tests"]
+testpaths = [ "tests" ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/deepseek_harness"]
+packages = [ "src/deepseek_harness" ]
 
 # Editable installs see runtime executables injected after installation instead
 # of freezing a wheel snapshot.

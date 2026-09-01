@@ -24,19 +24,19 @@
 
 ### 配置
 
-| 字段 | 默认值 | 含义 |
-|---|---|---|
-| `collectCacheMaxEntries` | `128` | 内存中保留的最大已完成 cwd/提供方目录数。 |
+| 字段                     | 默认值 | 含义                                      |
+| ------------------------ | ------ | ----------------------------------------- |
+| `collectCacheMaxEntries` | `128`  | 内存中保留的最大已完成 cwd/提供方目录数。 |
 
 ### 调用策略
 
 `SkillSummary.invocation` 是一个必填的类型化策略对象，其正向布尔字段 `modelInvocable` 和 `userInvocable` 分别描述两个接口。提供方会在每个候选项和定义中返回这一已解析形状；只有 `SkillRegistration` 输入可以省略它，此时 `register()` 会补入 `{ modelInvocable: true, userInvocable: true }`。注册表保留全部四种组合，使一次发现结果可以同时服务面向模型的工具、面向用户的命令和受信内部调用方，而不会混淆各自的目录。
 
-| 策略 | 模型 | 用户 |
-|---|---|---|
-| `{ modelInvocable: true, userInvocable: true }` | 包含 | 包含 |
-| `{ modelInvocable: true, userInvocable: false }` | 包含 | 排除 |
-| `{ modelInvocable: false, userInvocable: true }` | 排除 | 包含 |
+| 策略                                              | 模型 | 用户 |
+| ------------------------------------------------- | ---- | ---- |
+| `{ modelInvocable: true, userInvocable: true }`   | 包含 | 包含 |
+| `{ modelInvocable: true, userInvocable: false }`  | 包含 | 排除 |
+| `{ modelInvocable: false, userInvocable: true }`  | 排除 | 包含 |
 | `{ modelInvocable: false, userInvocable: false }` | 排除 | 排除 |
 
 ### 共享的面向模型渲染

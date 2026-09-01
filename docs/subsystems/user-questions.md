@@ -14,9 +14,9 @@ Source: [`packages/interaction/user-questions/src/index.ts`](../../packages/inte
 /** One selectable answer offered to the user. */
 interface AskUserQuestionOption {
   /** User-facing label. */
-  label: string
+  label: string;
   /** Optional extra context rendered by capable UIs. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -34,14 +34,14 @@ interface AskUserQuestionOption {
  */
 type AskUserQuestionIntent = {
   /** A plan submitted for review: `detail` is the plan markdown `ask()` requires, and the decision approves or declines it. */
-  kind: 'plan-review'
+  kind: "plan-review";
   /**
    * The option label that approves the plan; every other option declines it.
    * Named rather than positional so no UI infers the verdict from option order.
    * An `approve` naming no option of its own question is rejected at `ask()`.
    */
-  approve: string
-}
+  approve: string;
+};
 ```
 
 ## Question item
@@ -52,19 +52,19 @@ type AskUserQuestionIntent = {
 /** One question in a user-questions request. */
 interface AskUserQuestionItem {
   /** Stable caller-provided question id, echoed in the answer. */
-  id: string
+  id: string;
   /** The question to display. */
-  question: string
+  question: string;
   /** Optional supporting detail rendered with the question but kept out of option labels. */
-  detail?: string
+  detail?: string;
   /** Optional short heading/group label. */
-  header?: string
+  header?: string;
   /** Optional choices the UI can render as a menu. */
-  options?: AskUserQuestionOption[]
+  options?: AskUserQuestionOption[];
   /** Whether more than one option may be selected. Defaults to single-select. */
-  multiSelect?: boolean
+  multiSelect?: boolean;
   /** Optional presentation intent for capable UIs; absent asks for the generic option list. */
-  intent?: AskUserQuestionIntent
+  intent?: AskUserQuestionIntent;
 }
 ```
 
@@ -76,11 +76,11 @@ interface AskUserQuestionItem {
 /** Request for a human answer. */
 interface AskUserQuestionRequest {
   /** Questions to display. */
-  questions: AskUserQuestionItem[]
+  questions: AskUserQuestionItem[];
   /** Exact live calling agent, when the request came from an agent tool call. */
-  agent?: Agent
+  agent?: Agent;
   /** Abort signal for the owning tool/step. */
-  signal?: AbortSignal
+  signal?: AbortSignal;
 }
 ```
 
@@ -92,11 +92,11 @@ Providers return one answer item per question id. `selected` contains selected o
 /** Answer to one question. */
 interface AskUserQuestionAnswerItem {
   /** The answered question id. */
-  id: string
+  id: string;
   /** Selected option labels. May accompany custom text for a multi-select question. */
-  selected: string[]
+  selected: string[];
   /** Optional free-text "Other" answer. */
-  custom?: string
+  custom?: string;
 }
 ```
 
@@ -104,7 +104,7 @@ interface AskUserQuestionAnswerItem {
 /** The human's answer. */
 interface AskUserQuestionAnswer {
   /** Structured answers keyed by question id. */
-  answers: AskUserQuestionAnswerItem[]
+  answers: AskUserQuestionAnswerItem[];
 }
 ```
 
@@ -115,7 +115,7 @@ Only one provider may be active in a context. Provider registration is effect-bo
 ```ts type-equiv
 /** UI-side provider for user questions. */
 interface UserQuestionProvider {
-  ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>
+  ask(request: AskUserQuestionRequest): Promise<AskUserQuestionAnswer>;
 }
 ```
 
@@ -127,8 +127,8 @@ interface UserQuestionProvider {
 /** Stable error taxonomy for user-questions failures. */
 class UserQuestionError extends HarnessError {
   constructor(message: string, code: string, options?: ErrorOptions) {
-    super(message, code, options)
-    this.name = 'UserQuestionError'
+    super(message, code, options);
+    this.name = "UserQuestionError";
   }
 }
 ```

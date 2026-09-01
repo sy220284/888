@@ -8,15 +8,15 @@ Public request, value, version, and failure types are exported from the package 
 
 ## Configuration
 
-| key | meaning |
-|---|---|
+| key            | meaning                                                                         |
+| -------------- | ------------------------------------------------------------------------------- |
 | `maxNoteBytes` | Required positive safe integer: maximum UTF-8 byte length of one optional note. |
 
 Notes must contain at least one non-whitespace character, but accepted text is stored verbatim rather than trimmed. Omitting `note` means the desired value has no note, so a version-matched material `put` clears an existing note. Note validation precedes Session lookup and can therefore return `note-blank` or `note-too-large` for a missing Session without touching persistence.
 
 ```yaml
 - id: message-feedback
-  name: '@deepseek-ai/dsh-message-feedback'
+  name: "@deepseek-ai/dsh-message-feedback"
   config:
     maxNoteBytes: 8192
 ```
@@ -39,11 +39,11 @@ Message feedback is not Session-log content or a Session projection. It emits no
 
 The same three `MessageFeedbackService` methods are published by `TypertRemoteService` and `@Remote`; the Host endpoint names are `messageFeedback.list`, `messageFeedback.put`, and `messageFeedback.delete`. Every method returns a discriminated business union: `{ ok: true, value }` or `{ ok: false, error }`. Operational storage, corruption, or missing-durability-listener failures reject instead of being mislabeled as business errors.
 
-| Method | Request | Success `value` | Rejected `error.code` |
-|---|---|---|---|
-| `list` | `MessageFeedbackListRequest { sessionId }` | `MessageFeedbackListValue { items }` | `session-not-found` |
-| `put` | `MessageFeedbackPutRequest { sessionId, messageId, rating, note?, ifVersion }` | committed `MessageFeedbackItem` | `session-not-found`, `target-not-found`, `version-conflict`, `note-blank`, `note-too-large` |
-| `delete` | `MessageFeedbackDeleteRequest { sessionId, messageId, ifVersion }` | `MessageFeedbackDeleteValue { absent: true }` | `session-not-found`, `version-conflict` |
+| Method   | Request                                                                        | Success `value`                               | Rejected `error.code`                                                                       |
+| -------- | ------------------------------------------------------------------------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `list`   | `MessageFeedbackListRequest { sessionId }`                                     | `MessageFeedbackListValue { items }`          | `session-not-found`                                                                         |
+| `put`    | `MessageFeedbackPutRequest { sessionId, messageId, rating, note?, ifVersion }` | committed `MessageFeedbackItem`               | `session-not-found`, `target-not-found`, `version-conflict`, `note-blank`, `note-too-large` |
+| `delete` | `MessageFeedbackDeleteRequest { sessionId, messageId, ifVersion }`             | `MessageFeedbackDeleteValue { absent: true }` | `session-not-found`, `version-conflict`                                                     |
 
 `MessageFeedbackVersionConflict` returns the authoritative `current` item, or `null` when no item exists. This lets a caller reconcile the current rating, note, and version without a second `list` request. `MessageFeedbackNoteTooLarge` returns both `maxBytes` and `actualBytes`. The Client Remote aggregate does not mount the generated client contribution yet; Host callers can use the service/Remote contract without that client assembly.
 

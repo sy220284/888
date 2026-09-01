@@ -12,11 +12,11 @@
 /** Runtime invariant selection configured on the service plugin. */
 interface Config {
   /** Global switch; defaults to `true`. */
-  readonly enabled?: boolean
+  readonly enabled?: boolean;
   /** Case-sensitive JavaScript regex sources that admit package names; empty admits all. */
-  readonly package_allowlist?: string[]
+  readonly package_allowlist?: string[];
   /** Case-sensitive JavaScript regex sources that exclude package names after allowlist matching. */
-  readonly package_blocklist?: string[]
+  readonly package_blocklist?: string[];
 }
 ```
 
@@ -30,7 +30,7 @@ interface Config {
  * @param message - violated package contract without the standard prefix.
  * @returns never because reporting a violation throws.
  */
-type InvariantFailure = (message: string) => never
+type InvariantFailure = (message: string) => never;
 ```
 
 ```ts type-equiv
@@ -42,9 +42,9 @@ interface InvariantInstaller {
    * @param fail - reporter bound to the registering package name.
    * @returns nothing, or a promise settling after asynchronous checks finish.
    */
-  (ctx: Context, fail: InvariantFailure): void | Promise<void>
+  (ctx: Context, fail: InvariantFailure): void | Promise<void>;
   /** Services the child installer fiber may access. */
-  readonly inject?: Inject
+  readonly inject?: Inject;
 }
 ```
 

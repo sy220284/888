@@ -16,14 +16,14 @@ After route and input validation, the helper appends a log-only `session/title-l
 
 Every field is required except the paired route override; there are no library defaults.
 
-| Key | Contract |
-|---|---|
-| `targetWords` | Positive target word count for non-CJK titles. |
+| Key                   | Contract                                                                 |
+| --------------------- | ------------------------------------------------------------------------ |
+| `targetWords`         | Positive target word count for non-CJK titles.                           |
 | `targetCjkCharacters` | Positive target character count for Chinese, Japanese, or Korean titles. |
-| `maxInputBytes` | Positive UTF-8 byte ceiling for the final JSON-framed user prompt. |
-| `maxOutputTokens` | Positive auxiliary generation token cap. |
-| `timeoutMs` | Positive end-to-end deadline within the runtime timer limit. |
-| `provider`, `model` | Optional explicit route; both or neither. |
+| `maxInputBytes`       | Positive UTF-8 byte ceiling for the final JSON-framed user prompt.       |
+| `maxOutputTokens`     | Positive auxiliary generation token cap.                                 |
+| `timeoutMs`           | Positive end-to-end deadline within the runtime timer limit.             |
+| `provider`, `model`   | Optional explicit route; both or neither.                                |
 
 ## Model Experience
 

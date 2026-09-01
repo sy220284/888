@@ -6,10 +6,10 @@ Web Session 日志下载控制，使用 `dsh-host-apiproxy` 拥有的 Host 流�
 
 ## 命令约定
 
-| 输入 | 结果 |
-|---|---|
-| `/export` | 记录一组用户命令生命周期；提交命令的浏览器收到本地执行确认后，下载 `GET /api/session.export?sessionId=<id>&includeDescendants=true`。 |
-| `/export <path>` | 返回错误。浏览器下载通过浏览器的普通下载行为选择目标位置。 |
+| 输入             | 结果                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `/export`        | 记录一组用户命令生命周期；提交命令的浏览器收到本地执行确认后，下载 `GET /api/session.export?sessionId=<id>&includeDescendants=true`。 |
+| `/export <path>` | 返回错误。浏览器下载通过浏览器的普通下载行为选择目标位置。                                                                            |
 
 该命令只由 Web bundle 挂载。只有 `/export` 返回成功时，本地 `command/executed` 确认才会在提交命令的浏览器中触发斜杠下载；其他标签页仍会渲染持久命令行，但不会重复执行浏览器副作用。Header 按钮直接调用同一个控制器。两种入口都会先发出 `HEAD` 预检，再把 GET URL 交给浏览器下载管理器，JavaScript 不会缓冲 ZIP；它们共用并发折叠、插件释放时取消预检、准备阶段错误处理、浏览器保存行为和同一个 Modal。
 
@@ -21,7 +21,7 @@ Host 下载端点会在 `readRaw` 前 flush 活动的根 Session，因此斜杠�
 
 ```yaml
 - id: session-log-download
-  name: '@deepseek-ai/dsh-session-log-export'
+  name: "@deepseek-ai/dsh-session-log-export"
 ```
 
 Web bundle 将本包与 `dsh-host-apiproxy`、`dsh-commands`、`dsh-client-ui-commands` 和 `dsh-client-ui-conversation` 一起挂载。本包把按钮和弹窗贡献到最右侧的 `conversation.session.header.utilities` 列表，与标题旁 `conversation.session.header.actions` 中的模式、Subagent 和 Task 配置项相互独立；Trajectory 不包含导出入口。

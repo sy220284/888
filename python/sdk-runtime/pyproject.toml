@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling==1.30.1"]
+requires = [ "hatchling==1.30.1" ]
 build-backend = "hatchling.build"
 
 [project]
@@ -9,7 +9,7 @@ description = "Pinned DeepSeek Harness runtime for the Python SDK"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
-authors = [{ name = "DeepSeek" }]
+authors = [ { name = "DeepSeek" } ]
 
 [project.urls]
 Homepage = "https://github.com/deepseek-ai/deepseek-harness"
@@ -20,11 +20,11 @@ Source = "https://github.com/deepseek-ai/deepseek-harness"
 # Include the injected executable and default config; exclude the dev-only node
 # closure from wheels and sdists.
 [tool.hatch.build]
-artifacts = ["src/deepseek_harness_runtime/runtime/dsh-jsonrpc-agent-*"]
-exclude = ["src/deepseek_harness_runtime/runtime/node"]
+artifacts = [ "src/deepseek_harness_runtime/runtime/dsh-jsonrpc-agent-*" ]
+exclude = [ "src/deepseek_harness_runtime/runtime/node" ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/deepseek_harness_runtime"]
+packages = [ "src/deepseek_harness_runtime" ]
 
 [tool.hatch.build.targets.wheel.hooks.custom]
 

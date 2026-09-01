@@ -24,12 +24,12 @@ The pending call is a `generic` card titled `ralph`; the immutable objective is 
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---|---|
-| `subagentProvider` | `spawn` | Fresh structured-output provider used for every round. |
-| `maxRounds` | `256` | Default and deployment ceiling for one Ralph run. |
-| `maxHandoffChars` | `16384` | Maximum serialized characters in one round report. |
-| `maxResultChars` | `16384` | Maximum characters in the complete successful parent result. |
+| Key                | Default | Meaning                                                      |
+| ------------------ | ------- | ------------------------------------------------------------ |
+| `subagentProvider` | `spawn` | Fresh structured-output provider used for every round.       |
+| `maxRounds`        | `256`   | Default and deployment ceiling for one Ralph run.            |
+| `maxHandoffChars`  | `16384` | Maximum serialized characters in one round report.           |
+| `maxResultChars`   | `16384` | Maximum characters in the complete successful parent result. |
 
 All config values are normalized and validated when the plugin applies, including direct application outside Loader schema normalization. Provider capabilities are resolved immediately before each call because provider registration can change under plugin lifecycle and HMR.
 

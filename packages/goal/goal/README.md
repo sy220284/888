@@ -8,7 +8,7 @@ Event-sourced same-session goal state. The service retains one current completio
 
 ```yaml
 - id: goal
-  name: '@deepseek-ai/dsh-goal'
+  name: "@deepseek-ai/dsh-goal"
   config:
     defaultMaxGoalRounds: 256
 ```

@@ -6,10 +6,10 @@ The **model-facing filesystem discovery tools**—`glob`, `grep`—are backed by
 
 ```ts ignore-check
 // A deployment chooses how over-cap glob pages are selected.
-await ctx.plugin(LocalSubprocessRuntime)                     // @deepseek-ai/dsh-subprocess-local
-await ctx.plugin(ToolFsSearch, { sampleOverCapGlobResults: false })
+await ctx.plugin(LocalSubprocessRuntime); // @deepseek-ai/dsh-subprocess-local
+await ctx.plugin(ToolFsSearch, { sampleOverCapGlobResults: false });
 // Optional: a spill backend makes capped results fully recoverable.
-await ctx.plugin(LocalSpillStore)                           // @deepseek-ai/dsh-spill-local
+await ctx.plugin(LocalSpillStore); // @deepseek-ai/dsh-spill-local
 ```
 
 Why spawn-backed: local workspace discovery is naturally a process-backed `rg` workflow, and putting search on `ctx.fs` would force every filesystem backend to grow a search API. The subprocess seam owns spawn execution, process-tree termination, environment scrubbing, and bounded output capture; this package owns schemas, argument validation, argv construction, parsing, retention, formatted-result spill, and timeout declaration. The tools never expose a background job — the call returns only after `rg` exits, is terminated by the cooperative timeout, is aborted, or fails.
@@ -22,23 +22,23 @@ Node deployments receive the `@vscode/ripgrep` platform package on supported mac
 
 `sampleOverCapGlobResults` is required and has no fallback; deployments choose the over-cap ordering contract explicitly. The remaining keys are optional search caps with the defaults below.
 
-| Key | Default | Meaning |
-|---|---|---|
+| Key                        | Default         | Meaning                                                                                                                                                                                                          |
+| -------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sampleOverCapGlobResults` | none (required) | `true` samples an over-cap `glob` page across top-level entries; `false` keeps the modification-time-ordered head. When formatted spill succeeds, both modes preserve the complete sorted list in that artifact. |
-| `globMaxResults` | `100` | Max paths one `glob` call shows inline (matches Claude Code's `GlobTool` limit). A result within the cap remains complete and modification-time ordered. |
-| `grepMaxMatches` | `250` | Max flat matches one `grep` call retains inline (matches Claude Code's `GrepTool` `head_limit`); later matches go to the formatted spill artifact. |
-| `grepMaxLineBytes` | `2000` | Byte cap per matched-line preview; the cut preserves UTF-8 boundaries and is marked `(line truncated)`. |
-| `rawOutputMaxBytes` | `20000000` | Max complete raw `rg` stdout a search will parse (matches Claude Code's ripgrep raw buffer); larger raw output fails with `SEARCH_RAW_OUTPUT_OVERFLOW`. |
-| `timeoutMs` | `30000` | Cooperative tool-call budget attached to both tool definitions, enforced by `@deepseek-ai/dsh-tool-call-timeout-policy` through `exec.signal`; the subprocess seam's terminate escalation is the hard kill. |
-| `graceMs` | `3000` | Positive terminate-escalation grace the subprocess seam grants past `timeoutMs` before the search fails as `SEARCH_ABORTED`; it cannot exceed [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md). |
-| `stderrMaxBytes` | `65536` | Diagnostic-tail budget for `rg` stderr, captured through the subprocess seam's collect disposition; a lossy read keeps only the tail (marked `[stderr truncated]`). |
+| `globMaxResults`           | `100`           | Max paths one `glob` call shows inline (matches Claude Code's `GlobTool` limit). A result within the cap remains complete and modification-time ordered.                                                         |
+| `grepMaxMatches`           | `250`           | Max flat matches one `grep` call retains inline (matches Claude Code's `GrepTool` `head_limit`); later matches go to the formatted spill artifact.                                                               |
+| `grepMaxLineBytes`         | `2000`          | Byte cap per matched-line preview; the cut preserves UTF-8 boundaries and is marked `(line truncated)`.                                                                                                          |
+| `rawOutputMaxBytes`        | `20000000`      | Max complete raw `rg` stdout a search will parse (matches Claude Code's ripgrep raw buffer); larger raw output fails with `SEARCH_RAW_OUTPUT_OVERFLOW`.                                                          |
+| `timeoutMs`                | `30000`         | Cooperative tool-call budget attached to both tool definitions, enforced by `@deepseek-ai/dsh-tool-call-timeout-policy` through `exec.signal`; the subprocess seam's terminate escalation is the hard kill.      |
+| `graceMs`                  | `3000`          | Positive terminate-escalation grace the subprocess seam grants past `timeoutMs` before the search fails as `SEARCH_ABORTED`; it cannot exceed [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md).              |
+| `stderrMaxBytes`           | `65536`         | Diagnostic-tail budget for `rg` stderr, captured through the subprocess seam's collect disposition; a lossy read keeps only the tail (marked `[stderr truncated]`).                                              |
 
 ## Tools
 
-| Tool | Arguments | Behavior |
-|---|---|---|
-| `glob` | `pattern`, `path?` | `rg --files --glob <pattern> --sort=modified --no-ignore --hidden` plus VCS metadata excludes (`.git`, `.svn`, `.hg`, `.bzr`, `.jj`, `.sl`). `path` is an optional **directory** search root; omitted means the resolved workdir. Returns one FILE path per line; `rg --files` never emits directory entries. The pattern keeps ripgrep semantics: without a `/` it matches the basename at any depth, so `*` matches the whole tree. Complete results stay modification-time ordered; over-cap presentation follows `sampleOverCapGlobResults`. |
-| `grep` | `pattern`, `path?`, `include?` | Line-oriented `rg --json` parse (no colon-splitting ambiguity). `pattern` is a ripgrep regex; `path` is an optional **file or directory** target; `include` is ONE positive glob filter — a comma-separated list or a negated (`!…`) value is rejected up front (brace alternation like `*.{ts,tsx}` is fine). Returns matches grouped by file as `Line N: <preview>`. |
+| Tool   | Arguments                      | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------ | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `glob` | `pattern`, `path?`             | `rg --files --glob <pattern> --sort=modified --no-ignore --hidden` plus VCS metadata excludes (`.git`, `.svn`, `.hg`, `.bzr`, `.jj`, `.sl`). `path` is an optional **directory** search root; omitted means the resolved workdir. Returns one FILE path per line; `rg --files` never emits directory entries. The pattern keeps ripgrep semantics: without a `/` it matches the basename at any depth, so `*` matches the whole tree. Complete results stay modification-time ordered; over-cap presentation follows `sampleOverCapGlobResults`. |
+| `grep` | `pattern`, `path?`, `include?` | Line-oriented `rg --json` parse (no colon-splitting ambiguity). `pattern` is a ripgrep regex; `path` is an optional **file or directory** target; `include` is ONE positive glob filter — a comma-separated list or a negated (`!…`) value is rejected up front (brace alternation like `*.{ts,tsx}` is fine). Returns matches grouped by file as `Line N: <preview>`.                                                                                                                                                                           |
 
 Routine budgets stay out of the model-facing schema (no `head_limit`/`offset`/`case_insensitive`/output modes): a model that needs surrounding context reads the matched file with `read`; one that needs later results follows the returned spill locator's retrieval hint.
 

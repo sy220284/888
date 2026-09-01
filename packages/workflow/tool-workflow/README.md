@@ -22,10 +22,10 @@ Decided up front (per the [render-intent Agent Note](../../../.agents/notes/impl
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---|---|
-| `toolName` | `workflow` | The model-facing tool name to register. |
-| `maxResultChars` | `50000` | Rendered-result ceiling; longer JSON is truncated with a notice. |
+| Key              | Default    | Meaning                                                          |
+| ---------------- | ---------- | ---------------------------------------------------------------- |
+| `toolName`       | `workflow` | The model-facing tool name to register.                          |
+| `maxResultChars` | `50000`    | Rendered-result ceiling; longer JSON is truncated with a notice. |
 
 ## Model Experience
 

@@ -46,10 +46,10 @@ hello-plugin/
 创建 `hello-plugin/index.js`，写入插件入口：
 
 ```js
-export const name = 'hello-plugin'
+export const name = "hello-plugin";
 
 export function apply() {
-  console.log('[hello-plugin] plugin loaded!')
+  console.log("[hello-plugin] plugin loaded!");
 }
 ```
 
@@ -91,10 +91,7 @@ dsh plugin --profile demo add ./hello-plugin
   },
   "dsh": {
     "profile": {
-      "bundles": [
-        "@deepseek-ai/dsh-base",
-        "dsh-hello-plugin"
-      ]
+      "bundles": ["@deepseek-ai/dsh-base", "dsh-hello-plugin"]
     }
   }
 }
@@ -133,7 +130,7 @@ dsh --profile demo
 
 ```yaml
 - id: hello-startup
-  name: 'dsh-hello-plugin/startup'
+  name: "dsh-hello-plugin/startup"
 ```
 
 该插件导出 `inject = ['cmdlineArgs']`，使用自己的 commander program 调用 [`@deepseek-ai/dsh-cmdline`](../../../../packages/boot/cmdline/README.zh.md) 中的 `parseCmdline`，再在 program 自己的 action 中把应用自有服务提供出去。启动器把自身 flag 之后的同一份不可变参数交给每个插件，因此添加应用专属 flag 无需修改启动器，多个插件也可以解析该快照。Loader 行不需要启动器标记或特殊类型。
@@ -142,7 +139,7 @@ dsh --profile demo
 
 ```yaml
 - id: my-app
-  name: '@example/my-app'
+  name: "@example/my-app"
   inject: [myAppStartup]
   config:
     port: !!js ctx.myAppStartup.port ?? 8080

@@ -26,20 +26,22 @@
   animation: tooltip-in 150ms var(--ds-ease-in-out);
 }
 
-.bubble[data-side='right'] {
+.bubble[data-side="right"] {
   transform: translateY(-50%);
 }
 
-.bubble[data-side='bottom'] {
+.bubble[data-side="bottom"] {
   transform: translateX(-50%);
 }
 
-.bubble[data-side='top'] {
+.bubble[data-side="top"] {
   transform: translate(-50%, -100%);
 }
 
 @keyframes tooltip-in {
-  from { opacity: 0; }
+  from {
+    opacity: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

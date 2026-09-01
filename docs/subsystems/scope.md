@@ -12,7 +12,7 @@ Sources: [`packages/core/scope/src/index.ts`](../../packages/core/scope/src/inde
 
 ```ts type-equiv
 /** An opaque, identity-compared scope key. */
-type ScopeKey = object
+type ScopeKey = object;
 ```
 
 `Scoped<T>` is the compile-time brand on the opaque routing receiver returned by `scopeTarget(base, key)`. Scope-filtered event declarations require this carrier as their `this` type, while the real event subject remains an explicit argument.
@@ -23,7 +23,7 @@ type ScopeKey = object
  * parameter records the subject type for dispatch checking; the carrier does
  * not expose the subject's properties. Event payloads carry the real subject.
  */
-type Scoped<T extends object> = object & { readonly [ScopedBrand]: T }
+type Scoped<T extends object> = object & { readonly [ScopedBrand]: T };
 ```
 
 ## Owned registration context
@@ -34,11 +34,11 @@ type Scoped<T extends object> = object & { readonly [ScopedBrand]: T }
 /** A minted registration scope and its quiescent disposal boundaries. */
 interface Scope {
   /** Context through which scope-owned registrations are made. */
-  ctx: Context
+  ctx: Context;
   /** Exact Cordis disposer, used when nesting this scope in an ordered composite effect. */
-  rawDispose: () => Promise<void> | void
+  rawDispose: () => Promise<void> | void;
   /** Dispose every scope-owned registration; racing calls await the same completion. */
-  dispose(): Promise<void>
+  dispose(): Promise<void>;
 }
 ```
 
@@ -50,7 +50,7 @@ interface Scope {
 /** One scope's aggregate contribution to a registry. */
 interface ScopeLayer {
   /** Whether every table in this layer is empty. */
-  isEmpty(): boolean
+  isEmpty(): boolean;
 }
 ```
 

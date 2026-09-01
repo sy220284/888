@@ -377,7 +377,7 @@
 }
 
 .customizedSummary::before {
-  content: '';
+  content: "";
   width: 5px;
   height: 5px;
   border-right: 1.5px solid currentcolor;

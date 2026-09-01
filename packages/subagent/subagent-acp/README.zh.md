@@ -22,24 +22,24 @@ ACP 不声明任何启动时能力，因为当前进程无法强制执行远程�
 
 ## 配置
 
-| 键 | 默认值 | 含义 |
-|---|---|---|
-| `providerName` | `acp` | `ctx.subagents` 上的注册表名称。 |
-| `command` | 必填 | 每次运行时 spawn 的可执行文件。 |
-| `args` | `[]` | 命令参数。 |
-| `cwd` | 父会话 cwd | 子进程及其 ACP 会话的工作目录覆盖值；不得为空。相对值会在加载时以 harness 启动目录为基准解析，结果必须指向 harness 可以进入的目录。 |
-| `permission` | `reject` | 自动回答权限请求：拒绝，或选择第一个 `allow_once` 或 `allow_always` 选项。 |
-| `env` | `{}` | 显式子进程环境，叠加到已清理凭据的父进程环境之上。 |
-| `disposeEofGraceMs` | `6000` | stdin EOF 之后、平台终止之前的宽限时间须为正值，且不得大于 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)。 |
-| `disposeGraceMs` | `3000` | POSIX 在 SIGTERM 后、SIGKILL 前的宽限时间（Windows 直接强制终止），须为正值且不得大于 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)。 |
+| 键                  | 默认值     | 含义                                                                                                                                            |
+| ------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `providerName`      | `acp`      | `ctx.subagents` 上的注册表名称。                                                                                                                |
+| `command`           | 必填       | 每次运行时 spawn 的可执行文件。                                                                                                                 |
+| `args`              | `[]`       | 命令参数。                                                                                                                                      |
+| `cwd`               | 父会话 cwd | 子进程及其 ACP 会话的工作目录覆盖值；不得为空。相对值会在加载时以 harness 启动目录为基准解析，结果必须指向 harness 可以进入的目录。             |
+| `permission`        | `reject`   | 自动回答权限请求：拒绝，或选择第一个 `allow_once` 或 `allow_always` 选项。                                                                      |
+| `env`               | `{}`       | 显式子进程环境，叠加到已清理凭据的父进程环境之上。                                                                                              |
+| `disposeEofGraceMs` | `6000`     | stdin EOF 之后、平台终止之前的宽限时间须为正值，且不得大于 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)。                            |
+| `disposeGraceMs`    | `3000`     | POSIX 在 SIGTERM 后、SIGKILL 前的宽限时间（Windows 直接强制终止），须为正值且不得大于 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)。 |
 
 ```yaml
 - id: subagent-acp
-  name: '@deepseek-ai/dsh-subagent-acp'
+  name: "@deepseek-ai/dsh-subagent-acp"
   config:
     providerName: acp
     command: node
-    args: ['--import', 'tsx', './packages/examples/acp-demo/src/bin.ts', '--config', './examples/acp-agent/cordis.yml']
+    args: ["--import", "tsx", "./packages/examples/acp-demo/src/bin.ts", "--config", "./examples/acp-agent/cordis.yml"]
     permission: reject
     env:
       DEEPSEEK_API_KEY: !!js process.env.DEEPSEEK_API_KEY
@@ -47,13 +47,13 @@ ACP 不声明任何启动时能力，因为当前进程无法强制执行远程�
 
 ## 结束原因映射
 
-| ACP | Harness |
-|---|---|
-| `end_turn` | `completed` |
-| `max_tokens` | `max-tokens` |
-| `refusal` | `refusal` |
-| `cancelled` | `aborted` |
-| `max_turn_requests` 或未知值 | `error` |
+| ACP                          | Harness      |
+| ---------------------------- | ------------ |
+| `end_turn`                   | `completed`  |
+| `max_tokens`                 | `max-tokens` |
+| `refusal`                    | `refusal`    |
+| `cancelled`                  | `aborted`    |
+| `max_turn_requests` 或未知值 | `error`      |
 
 ## 进程边界
 

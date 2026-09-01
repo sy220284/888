@@ -4,12 +4,8 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": [
-    "src"
-  ],
-  "exclude": [
-    "**/*.legacy.*"
-  ],
+  "include": ["src"],
+  "exclude": ["**/*.legacy.*"],
   "references": [
     {
       "path": "../../runtime-diagnostics/invariants"

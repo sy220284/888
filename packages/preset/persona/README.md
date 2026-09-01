@@ -12,11 +12,11 @@ Mounting this row outside an agent scope collides with the registry's own `deplo
 
 ## Config
 
-| Field | Default | Meaning |
-|---|---|---|
-| `text` | required | Persona prose rendered as the `deployment:persona` section |
-| `complete` | `false` | Restore this persona after assembly as the only system-prompt section |
-| `includeRuntimeContext` | `true` | Include dynamic runtime-context snapshots for this agent scope; false suppresses every context contribution without disabling its owning services |
+| Field                   | Default  | Meaning                                                                                                                                           |
+| ----------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `text`                  | required | Persona prose rendered as the `deployment:persona` section                                                                                        |
+| `complete`              | `false`  | Restore this persona after assembly as the only system-prompt section                                                                             |
+| `includeRuntimeContext` | `true`   | Include dynamic runtime-context snapshots for this agent scope; false suppresses every context contribution without disabling its owning services |
 
 `text` is a template, like any prompt section: complete `{{…}}` groups resolve strictly against registered prompt variables when the prompt renders, not when it assembles. Empty text still occupies the slot, so it shadows the deployment persona away entirely and then disappears at render. With `complete: true`, assembly still resolves contexts, tools, variables, and cooperative listeners, then the prompt registry restores this exact persona as the sole section; no identity, tool guidance, or listener can append prompt text. With `includeRuntimeContext: false`, context providers are not evaluated for this scope and contexts added by assembly listeners are discarded.
 

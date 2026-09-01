@@ -8,10 +8,10 @@ Design rationale, open semantics, and the storage/domain layer split live in the
 
 ## Configuration
 
-| key | meaning |
-| --- | --- |
+| key       | meaning                                                                                 |
+| --------- | --------------------------------------------------------------------------------------- |
 | `backend` | Default backend name for every domain (required; no universally correct medium exists). |
-| `routes` | Per-domain overrides: domain name → backend name. |
+| `routes`  | Per-domain overrides: domain name → backend name.                                       |
 
 ## Model Experience
 

@@ -21,11 +21,15 @@ Generic rows classify known Tool names into search, read, shell, write, edit, co
 An owning business package registers its wire Tool name into `tool.call.toolview`:
 
 ```ts ignore-check
-ctx.slots.inject('tool.call.toolview', () =>
-  ctx.slots.register({
-    name: 'tool.call.toolview',
-    key: '<wire tool name>',
-  }, BusinessToolRow))
+ctx.slots.inject("tool.call.toolview", () =>
+  ctx.slots.register(
+    {
+      name: "tool.call.toolview",
+      key: "<wire tool name>",
+    },
+    BusinessToolRow,
+  ),
+);
 ```
 
 The owner payload is `ToolCallOwnerProps`: `callId`, `toolName`, the frozen `block`, optional `cwd` and `home`, and plain `openFile`/`inspect` callbacks. Path summaries relativize to the session cwd first, then replace a leftover POSIX host home with `~`; `filePath` and Host open keep the authored filesystem path. The registration receives the normal session slot runtime share. It does not receive React nodes, Runtime services, or root/subcall knowledge.

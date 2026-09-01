@@ -4,7 +4,10 @@
       {
         "matcher": "bash",
         "hooks": [
-          { "type": "command", "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Note: command output has been verified against the audit log.\"}}'" }
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"Note: command output has been verified against the audit log.\"}}'"
+          }
         ]
       }
     ]

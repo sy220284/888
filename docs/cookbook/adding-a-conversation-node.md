@@ -12,11 +12,11 @@ Choose one stable business id before writing the Definition. Every event that co
 
 For a review job, the event contract could be:
 
-| Event | Role | Required durable facts |
-|---|---|---|
-| `review/start` | unique start | `reviewId`, Turn/Step coordinates, title |
-| `review/progress` | update | the same `reviewId`, coordinates, replayable progress |
-| `review/end` | update | the same `reviewId`, coordinates, final summary |
+| Event             | Role         | Required durable facts                                |
+| ----------------- | ------------ | ----------------------------------------------------- |
+| `review/start`    | unique start | `reviewId`, Turn/Step coordinates, title              |
+| `review/progress` | update       | the same `reviewId`, coordinates, replayable progress |
+| `review/end`      | update       | the same `reviewId`, coordinates, final summary       |
 
 Use the producer-owned branded id type across the process boundary. Put the `SessionEventMap` merge and payload types on the producer's type-only export, then import that export for side effects from the client package. Each `(kind, id)` may have at most one start event. A single-event business can use the event's stable identity, such as `event.seq`, as its Definition-local id.
 
@@ -27,86 +27,88 @@ Incremental events are supported. Prefer whole-value checkpoints when the produc
 The example keeps the producer declarations and client contribution in one block so the complete relationship is visible. In a package family, keep the branded id and `SessionEventMap` declaration with the event producer, and keep the Definition, Chat data merge, and renderer in the client plugin.
 
 ```ts ignore-check
-import { createElement } from 'react'
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import { createElement } from "react";
+import type { Branded } from "@deepseek-ai/dsh-brand";
 import type {
-  ClientContext, ConversationLocation, ConversationNodeContext,
+  ClientContext,
+  ConversationLocation,
+  ConversationNodeContext,
   ConversationNodeDefinition,
-} from '@deepseek-ai/dsh-client-runtime/client'
-import type { ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from "@deepseek-ai/dsh-client-runtime/client";
+import type { ChatNodeViewProps } from "@deepseek-ai/dsh-client-ui-conversation/client";
 
-type ReviewId = Branded<'ReviewId'>
+type ReviewId = Branded<"ReviewId">;
 
 interface ReviewStartData {
-  readonly reviewId: ReviewId
-  readonly turn: number
-  readonly step: number
-  readonly title: string
+  readonly reviewId: ReviewId;
+  readonly turn: number;
+  readonly step: number;
+  readonly title: string;
 }
 
 interface ReviewProgressData {
-  readonly reviewId: ReviewId
-  readonly turn: number
-  readonly step: number
-  readonly completed: number
+  readonly reviewId: ReviewId;
+  readonly turn: number;
+  readonly step: number;
+  readonly completed: number;
 }
 
 interface ReviewEndData {
-  readonly reviewId: ReviewId
-  readonly turn: number
-  readonly step: number
-  readonly summary: string
+  readonly reviewId: ReviewId;
+  readonly turn: number;
+  readonly step: number;
+  readonly summary: string;
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module "@deepseek-ai/dsh-session/types" {
   interface SessionEventMap {
     /**
      * Opens one durable review job.
      * @mode emit
      * @param data - stable identity, location, and initial display state.
      */
-    'review/start': ReviewStartData
+    "review/start": ReviewStartData;
     /**
      * Records replayable progress for one review job.
      * @mode emit
      * @param data - stable identity, location, and latest progress.
      */
-    'review/progress': ReviewProgressData
+    "review/progress": ReviewProgressData;
     /**
      * Closes one review job with its final summary.
      * @mode emit
      * @param data - stable identity, location, and final display state.
      */
-    'review/end': ReviewEndData
+    "review/end": ReviewEndData;
   }
 }
 
 interface ReviewChatData {
-  readonly title: string
-  readonly completed: number
-  readonly status: 'running' | 'completed'
-  readonly summary?: string
+  readonly title: string;
+  readonly completed: number;
+  readonly status: "running" | "completed";
+  readonly summary?: string;
 }
 
-declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
+declare module "@deepseek-ai/dsh-client-ui-conversation/client" {
   interface ChatNodeDataMap {
-    'review-job': ReviewChatData
+    "review-job": ReviewChatData;
   }
 }
 
-declare module '@deepseek-ai/dsh-client-runtime/client' {
+declare module "@deepseek-ai/dsh-client-runtime/client" {
   interface ConversationStepDataMap {
-    'review-job': ReviewChatData
+    "review-job": ReviewChatData;
   }
 }
 
 interface ReviewState extends ReviewChatData {
-  readonly turn: number
-  readonly step: number
+  readonly turn: number;
+  readonly step: number;
 }
 
 function locationOf(context: ConversationNodeContext): ConversationLocation {
-  return context.start?.location ?? context.matches[0]?.location ?? { kind: 'unresolved' }
+  return context.start?.location ?? context.matches[0]?.location ?? { kind: "unresolved" };
 }
 
 function viewData(state: ReviewState): ReviewChatData {
@@ -114,82 +116,85 @@ function viewData(state: ReviewState): ReviewChatData {
     title: state.title,
     completed: state.completed,
     status: state.status,
-    ...state.summary === undefined ? {} : { summary: state.summary },
-  }
+    ...(state.summary === undefined ? {} : { summary: state.summary }),
+  };
 }
 
 const reviewDefinition: ConversationNodeDefinition<ReviewState> = {
-  kind: 'review-job',
-  target: 'chat',
+  kind: "review-job",
+  target: "chat",
   match: (event) => {
-    if (event.type === 'review/start') {
-      return { id: String(event.data.reviewId), role: 'start' }
+    if (event.type === "review/start") {
+      return { id: String(event.data.reviewId), role: "start" };
     }
-    if (event.type === 'review/progress' || event.type === 'review/end') {
-      return { id: String(event.data.reviewId), role: 'update' }
+    if (event.type === "review/progress" || event.type === "review/end") {
+      return { id: String(event.data.reviewId), role: "update" };
     }
-    return null
+    return null;
   },
   start: (_context, match) => {
-    if (match.event.type !== 'review/start') throw new Error('review-job requires review/start')
+    if (match.event.type !== "review/start") throw new Error("review-job requires review/start");
     return {
       turn: match.event.data.turn,
       step: match.event.data.step,
       title: match.event.data.title,
       completed: 0,
-      status: 'running',
-    }
+      status: "running",
+    };
   },
   update: (context, match) => {
-    if (match.event.type === 'review/progress') {
-      return { ...context.state, completed: match.event.data.completed }
+    if (match.event.type === "review/progress") {
+      return { ...context.state, completed: match.event.data.completed };
     }
-    if (match.event.type === 'review/end') {
-      return { ...context.state, completed: 100, status: 'completed', summary: match.event.data.summary }
+    if (match.event.type === "review/end") {
+      return { ...context.state, completed: 100, status: "completed", summary: match.event.data.summary };
     }
-    return context.state
+    return context.state;
   },
-  publication: match => match.event.type === 'review/progress'
-    ? 'animation-frame'
-    : 'immediate',
+  publication: (match) => (match.event.type === "review/progress" ? "animation-frame" : "immediate"),
   buildLocationData: (context, scope) => {
-    if (scope !== 'step' || context.state === undefined) return null
+    if (scope !== "step" || context.state === undefined) return null;
     return {
-      kind: 'step',
+      kind: "step",
       turn: context.state.turn,
       step: context.state.step,
-      key: 'review-job',
+      key: "review-job",
       value: viewData(context.state),
-    }
+    };
   },
   buildViewNode: (context) => {
-    if (context.state === undefined) return null
+    if (context.state === undefined) return null;
     return {
       key: context.key,
-      kind: 'review-job',
+      kind: "review-job",
       id: context.id,
-      target: 'chat',
+      target: "chat",
       anchorSeq: context.start?.event.seq ?? context.matches[0]?.event.seq ?? 0,
       location: locationOf(context),
-      visibility: 'visible',
+      visibility: "visible",
       data: viewData(context.state),
-    }
+    };
   },
+};
+
+function ReviewNodeView({ node }: ChatNodeViewProps<"review-job">) {
+  const text = node.data.summary ?? `${node.data.title}: ${node.data.completed}%`;
+  return createElement("p", null, text);
 }
 
-function ReviewNodeView({ node }: ChatNodeViewProps<'review-job'>) {
-  const text = node.data.summary ?? `${node.data.title}: ${node.data.completed}%`
-  return createElement('p', null, text)
-}
-
-export const inject = ['conversationEvents', 'slots']
+export const inject = ["conversationEvents", "slots"];
 
 export function apply(ctx: ClientContext): void {
-  ctx.conversationEvents.register(reviewDefinition)
-  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
-    name: 'conversation.chat.node',
-    key: 'review-job',
-  }, ReviewNodeView))
+  ctx.conversationEvents.register(reviewDefinition);
+  ctx.slots.inject("conversation.chat.node", () =>
+    ctx.slots.register(
+      {
+        name: "conversation.chat.node",
+        key: "review-job",
+      },
+      ReviewNodeView,
+    ),
+  );
 }
 ```
 
@@ -209,11 +214,11 @@ The assembler records that dependency. If an older prepend later supplies a near
 
 History may be requested from the tail backward one page at a time, but every accepted page is normalized into ascending `seq` before State replay.
 
-| Path | Engine work | Definition-visible behavior |
-|---|---|---|
-| Replace on open, resync, or gap repair | Rebuild the loaded window, match every event once per Definition, then replay each started Context | `start`, followed by its updates in ascending `seq`; pending update-only Contexts remain without State |
-| Prepend one older page | Match only fresh older events, merge them into Contexts by `(kind, id)`, preserve existing keyed nodes, and replay only affected Contexts and dependencies | A newly found start activates its collected updates; a changed Location or predecessor may rerun the Context |
-| Append one live event | Call each Definition's `match` once, look up the matched Context by key, and update only that Context | One `update` and one requested publication for a matching post-start event; no existing Context scan |
+| Path                                   | Engine work                                                                                                                                                | Definition-visible behavior                                                                                  |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Replace on open, resync, or gap repair | Rebuild the loaded window, match every event once per Definition, then replay each started Context                                                         | `start`, followed by its updates in ascending `seq`; pending update-only Contexts remain without State       |
+| Prepend one older page                 | Match only fresh older events, merge them into Contexts by `(kind, id)`, preserve existing keyed nodes, and replay only affected Contexts and dependencies | A newly found start activates its collected updates; a changed Location or predecessor may rerun the Context |
+| Append one live event                  | Call each Definition's `match` once, look up the matched Context by key, and update only that Context                                                      | One `update` and one requested publication for a matching post-start event; no existing Context scan         |
 
 With `D` registered Definitions, one incoming event performs `D` current-event matches and constant-time Context-key lookup after a match. Definition code must preserve that property: do not traverse the complete event window, every Context, `context.matches`, or the rendered Node collection on the normal append path. Use State for accumulated facts, Location data for same-Turn/Step sharing, and `reader.previous()` for indexed predecessor dependencies.
 

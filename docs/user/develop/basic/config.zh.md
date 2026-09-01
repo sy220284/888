@@ -9,25 +9,25 @@
 在插件中导出一个 `Config` 类型和同名的 Schemastery schema；默认值直接写在 schema 中：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
+import type { Context } from "@deepseek-ai/cordis";
+import Schema from "@deepseek-ai/schemastery";
 
-export const name = 'my-plugin'
+export const name = "my-plugin";
 
 export interface Config {
-  greeting: string
-  maxRetries: number
-  verbose?: boolean
+  greeting: string;
+  maxRetries: number;
+  verbose?: boolean;
 }
 
 export const Config: Schema<Config> = Schema.object({
-  greeting: Schema.string().default('Hello'),
+  greeting: Schema.string().default("Hello"),
   maxRetries: Schema.number().default(3),
   verbose: Schema.boolean().default(false),
-})
+});
 
 export function apply(ctx: Context, config: Config) {
-  console.log(config.greeting)  // User value or schema default.
+  console.log(config.greeting); // User value or schema default.
 }
 ```
 
@@ -36,9 +36,9 @@ export function apply(ctx: Context, config: Config) {
 ```yaml
 - insert:
     - id: hello
-      name: './src/my-plugin.ts'
+      name: "./src/my-plugin.ts"
       config:
-        greeting: 'Hi there'
+        greeting: "Hi there"
         maxRetries: 5
 ```
 
@@ -49,22 +49,22 @@ export function apply(ctx: Context, config: Config) {
 对于需要严格校验的场景，使用 Schemastery 定义 schema：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
+import type { Context } from "@deepseek-ai/cordis";
+import Schema from "@deepseek-ai/schemastery";
 
-export const name = 'validated-plugin'
+export const name = "validated-plugin";
 
 export interface Config {
-  apiKey: string
-  timeout: number
-  mode: 'fast' | 'accurate'
+  apiKey: string;
+  timeout: number;
+  mode: "fast" | "accurate";
 }
 
 export const Config = Schema.object({
   apiKey: Schema.string().required(),
   timeout: Schema.number().default(30000),
-  mode: Schema.union(['fast', 'accurate']).default('fast'),
-})
+  mode: Schema.union(["fast", "accurate"]).default("fast"),
+});
 
 export function apply(ctx: Context, config: Config) {
   // config is validated and type-safe.
@@ -81,11 +81,11 @@ Harness 的约定：**凡是不同部署可能需要采用不同值的参数，�
 
 ```ts
 // Wrong: hardcoded timeout.
-const TIMEOUT = 30000
+const TIMEOUT = 30000;
 
 // Correct: configurable.
 export interface Config {
-  timeoutMs: number  // Defaults to 30000.
+  timeoutMs: number; // Defaults to 30000.
 }
 ```
 

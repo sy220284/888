@@ -6,12 +6,12 @@
 
 ## 配置
 
-| 键 | 默认值 | 含义 |
-|---|---:|---|
-| `backendType` | `shell` | 每个 Agent shell 使用的已注册 terminal backend。 |
-| `timeoutMs` | `300000` | 单条命令的墙钟上限；超时关闭 shell。 |
-| `maxOutputChars` | `16000` | 保留的命令输出字符上限；固定诊断文本在其后追加。 |
-| `description` | 持久 shell 描述 | 模型可见的环境契约。 |
+| 键               |          默认值 | 含义                                             |
+| ---------------- | --------------: | ------------------------------------------------ |
+| `backendType`    |         `shell` | 每个 Agent shell 使用的已注册 terminal backend。 |
+| `timeoutMs`      |        `300000` | 单条命令的墙钟上限；超时关闭 shell。             |
+| `maxOutputChars` |         `16000` | 保留的命令输出字符上限；固定诊断文本在其后追加。 |
+| `description`    | 持久 shell 描述 | 模型可见的环境契约。                             |
 
 ## 模型体验
 

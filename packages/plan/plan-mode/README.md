@@ -28,7 +28,7 @@ When the composition mounts `ctx.sessionProjections` ([`@deepseek-ai/dsh-session
 
 ```yaml
 - id: plan-mode
-  name: '@deepseek-ai/dsh-plan-mode'
+  name: "@deepseek-ai/dsh-plan-mode"
   config:
     section: |
       You are in plan mode. Explore and design before presenting the complete

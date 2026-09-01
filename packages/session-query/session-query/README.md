@@ -37,10 +37,10 @@ The package has no provider coordinator, fallback implementation, or standalone 
 
 ## Configuration
 
-| Key | Default | Contract |
-|---|---:|---|
-| `readWindowMax` | `50` | Maximum `before` or `after` raw-event count. |
-| `persistedInspectConcurrency` | `4` | Maximum concurrent persisted-log inspections in one batch read; must be a positive safe integer. |
+| Key                           | Default | Contract                                                                                         |
+| ----------------------------- | ------: | ------------------------------------------------------------------------------------------------ |
+| `readWindowMax`               |    `50` | Maximum `before` or `after` raw-event count.                                                     |
+| `persistedInspectConcurrency` |     `4` | Maximum concurrent persisted-log inspections in one batch read; must be a positive safe integer. |
 
 ## Model Experience
 

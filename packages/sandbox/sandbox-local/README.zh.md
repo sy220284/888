@@ -20,7 +20,7 @@ Windows 档为每个工作区保留一个确定性写入 SID 和常驻 ACE，但
 
 ```yaml
 - id: sandbox
-  name: '@deepseek-ai/dsh-sandbox-local'
+  name: "@deepseek-ai/dsh-sandbox-local"
 ```
 
 消费方：[`@deepseek-ai/dsh-bash-sandbox`](../../shell/bash-sandbox/)；可运行的默认组合见 [acp-agent 示例](../../../examples/acp-agent/)。

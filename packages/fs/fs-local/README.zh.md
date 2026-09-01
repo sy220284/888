@@ -5,9 +5,9 @@
 `ctx.fs` 提供方约定（[`@deepseek-ai/dsh-fs`](../fs)）的**本地文件系统实现**。它使用宿主文件系统支持十二个 `FileSystem` 原语；将其作为插件加载会填充 `ctx.fs`。
 
 ```ts ignore-check
-import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
+import { LocalFileSystem } from "@deepseek-ai/dsh-fs-local";
 
-await ctx.plugin(LocalFileSystem, { cwd: process.cwd() })
+await ctx.plugin(LocalFileSystem, { cwd: process.cwd() });
 // ctx.fs uses the local backend; load @deepseek-ai/dsh-fs-observation-policy for the
 // freshness policy gate and @deepseek-ai/dsh-tool-fs to expose read/write/edit.
 ```

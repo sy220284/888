@@ -13,7 +13,7 @@
  * Identifies one workspace record. A generated uuid, never the path: path
  * normalization rewrites paths, and a reference anchor must stay stable.
  */
-type WorkspaceId = Branded<'WorkspaceId'>
+type WorkspaceId = Branded<"WorkspaceId">;
 ```
 
 `WorkspaceId` 是[品牌化 id](core.zh.md#branded-ids)。路径标识与之分离：`realpathNormalize`（`fs.realpath`；尾部斜杠、`..` 与符号链接全部解析）是唯一的一套唯一性规范——工作区路径以规范化形式存储，唯一性即规范路径的字符串相等（指向已被拥有目录的符号链接会与之冲突），attach 时的会话 cwd 检查也走同一套规范。
@@ -31,23 +31,23 @@ type WorkspaceId = Branded<'WorkspaceId'>
  */
 interface Workspace {
   /** Stable record id (generated uuid). */
-  readonly id: WorkspaceId
+  readonly id: WorkspaceId;
 
   /**
    * Canonical directory path: the `fs.realpath` of the path given at create
    * time (trailing slashes, `..`, and symlinks all resolved). Never rewritten
    * afterwards, even when the directory disappears (see {@link status}).
    */
-  readonly path: string
+  readonly path: string;
 
   /** Display title. Defaults to `basename(path)` at create; duplicates are allowed. */
-  readonly title: string
+  readonly title: string;
 
   /** ISO-8601 creation instant, stamped at create and never rewritten. */
-  readonly createdAt: string
+  readonly createdAt: string;
 
   /** ISO-8601 instant of the last durable mutation (create counts as one). */
-  readonly updatedAt: string
+  readonly updatedAt: string;
 
   /**
    * Header-validated sessions in manually owned order: a new session is
@@ -57,14 +57,14 @@ interface Workspace {
    * and canonical cwd mismatches are never returned. A subsequent workspace
    * mutation prunes those filtered candidates durably.
    */
-  readonly sessionIds: readonly SessionId[]
+  readonly sessionIds: readonly SessionId[];
 
   /**
    * Replace the display title durably.
    * @param title - New title; any string, duplicates across workspaces allowed.
    * @returns resolution after durability.
    */
-  setTitle(title: string): Promise<void>
+  setTitle(title: string): Promise<void>;
 
   /**
    * Prepend a session to this workspace's candidate account. An already
@@ -77,7 +77,7 @@ interface Workspace {
    * @param sessionId - The session to record.
    * @returns resolution after durability.
    */
-  attachSession(sessionId: SessionId): Promise<void>
+  attachSession(sessionId: SessionId): Promise<void>;
 
   /**
    * Move an accounted session within the manual order, DOM-insertBefore-like:
@@ -91,7 +91,7 @@ interface Workspace {
    * @param beforeSessionId - Accounted anchor to insert before; omitted appends.
    * @returns resolution after durability.
    */
-  insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void>
+  insertSessionBefore(sessionId: SessionId, beforeSessionId?: SessionId): Promise<void>;
 
   /**
    * Remove a session from this workspace's account. Idempotent: an id not on
@@ -101,7 +101,7 @@ interface Workspace {
    * @param sessionId - The session to remove.
    * @returns resolution after durability.
    */
-  detachSession(sessionId: SessionId): Promise<void>
+  detachSession(sessionId: SessionId): Promise<void>;
 
   /**
    * Live directory check, uncached: whether {@link path} currently exists and
@@ -109,7 +109,7 @@ interface Workspace {
    * directory may only be temporarily moved.
    * @returns `'ok'` when the directory exists, `'missing-dir'` otherwise.
    */
-  status(): Promise<'ok' | 'missing-dir'>
+  status(): Promise<"ok" | "missing-dir">;
 }
 ```
 

@@ -16,39 +16,38 @@ ACP（Agent Client Protocol）快照套件工具包：无密钥快照层（`pnpm
 消费方 `*.snapshot.ts` 就是场景表加一次工厂调用：
 
 ```ts
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import {
-  defineAcpSnapshotSuite,
-  type Scenario,
-  type SnapshotSuiteOptions,
-} from '@deepseek-ai/dsh-acp-snapshot'
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineAcpSnapshotSuite, type Scenario, type SnapshotSuiteOptions } from "@deepseek-ai/dsh-acp-snapshot";
 
-function snapshotMode(value: string | undefined): SnapshotSuiteOptions['mode'] {
+function snapshotMode(value: string | undefined): SnapshotSuiteOptions["mode"] {
   switch (value) {
     case undefined:
-    case '':
-    case 'replay': return 'replay'
-    case 'record': return 'record'
-    case 'refresh': return 'refresh'
-    default: throw new Error(`unknown DSH_SNAPSHOT mode: ${value}`)
+    case "":
+    case "replay":
+      return "replay";
+    case "record":
+      return "record";
+    case "refresh":
+      return "refresh";
+    default:
+      throw new Error(`unknown DSH_SNAPSHOT mode: ${value}`);
   }
 }
 
-const SCENARIOS: Scenario[] = [
-  { name: 'text-turn', hasModelTurn: true, recorded: true, pinsHeader: true },
-]
+const SCENARIOS: Scenario[] = [{ name: "text-turn", hasModelTurn: true, recorded: true, pinsHeader: true }];
 
 defineAcpSnapshotSuite({
-  agent: { // absolute paths, resolved from the suite's own location
-    binScript: fileURLToPath(new URL('../../../packages/examples/acp-demo/src/bin.ts', import.meta.url)),
-    configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    tsconfigPath: fileURLToPath(new URL('../../../tsconfig.json', import.meta.url)),
+  agent: {
+    // absolute paths, resolved from the suite's own location
+    binScript: fileURLToPath(new URL("../../../packages/examples/acp-demo/src/bin.ts", import.meta.url)),
+    configPath: fileURLToPath(new URL("../cordis.yml", import.meta.url)),
+    tsconfigPath: fileURLToPath(new URL("../../../tsconfig.json", import.meta.url)),
   },
-  snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),
+  snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), "snapshots"),
   scenarios: SCENARIOS, // exactly one entry per header class sets pinsHeader
   mode: snapshotMode(process.env.DSH_SNAPSHOT),
-})
+});
 ```
 
 启动不同组合树的场景会设置自己的 `configPath`（一个 basename 仍以 `cordis.yml` 结尾的 overlay，使 bin 的回放交换可找到同级 `*cordis.snapshot.yml`）；当该组合改变请求 header 时，还会设置自己的 `headerClass` 和 pin 场景，acp-agent 示例的 Code Mode 与文件系统场景是模板。默认生成的 workspace 在会话 fixture 中存储为 `{{cwd}}`，使平台临时根目录和随机 basename 不影响录制结果；当临时目录授权自身待测时，`workspaceParent` 将生成 cwd 移出平台临时区域，在 fixture 中保留该显式路径，并仍归父级所有，而 harness 只移除生成的子级。场景签入的 `workspace/` 会先复制到该子级，随后 `prepareWorkspace` 在 agent 启动前针对生成 cwd 运行。此 hook 仅用于 Git 无法跨平台表示的 fixture；普通种子应留在 `workspace/` 中，而生成路径在 Windows 上无效时还必须搭配 `posixOnly`。

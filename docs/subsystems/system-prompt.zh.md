@@ -17,9 +17,9 @@ interface AssembleContext {
    * Scope whose providers and waterfall listeners participate. When absent,
    * only global providers and subject-less listeners participate.
    */
-  scope?: ScopeKey
+  scope?: ScopeKey;
   /** Explicit control signal for the turn that requested this assembly, when any. */
-  signal?: AbortSignal
+  signal?: AbortSignal;
 }
 ```
 
@@ -31,9 +31,9 @@ interface AssembleContext {
 /** Tool schemas visible in one assembly and their pre-restriction name set. */
 interface ToolProviderResult {
   /** The schemas this provider contributes to THIS assembly. */
-  readonly schemas: readonly ToolSchema[]
+  readonly schemas: readonly ToolSchema[];
   /** The pre-restriction name universe for config validation (defaults to `schemas`' names). */
-  readonly knownNames?: readonly string[]
+  readonly knownNames?: readonly string[];
 }
 ```
 
@@ -45,26 +45,26 @@ interface ToolProviderResult {
 /** One contributed section of the system prompt (registry input). */
 interface PromptSection {
   /** Unique name — a duplicate registration throws (see {@link SystemPrompt.section}). */
-  readonly name: string
+  readonly name: string;
   /**
    * Sections are concatenated in ascending order. Convention: `-100` is the
    * harness identity, `0` the deployment persona, tool guidance uses 100–199;
    * other negative orders also render before the persona.
    */
-  readonly order: number
+  readonly order: number;
   /**
    * Static text or a provider evaluated at each assembly with that assembly's
    * {@link AssembleContext}. The text may reference `{{variable}}`s — they are
    * interpolated later, by {@link renderPrompt}.
    */
-  readonly text: string | ((context: AssembleContext) => string)
+  readonly text: string | ((context: AssembleContext) => string);
   /**
    * Treat this contribution as the complete system prompt. Assembly still
    * runs the cooperative waterfall so tools, contexts, and variables can be
    * resolved, then restores this exact section as the sole prompt section.
    * More than one effective complete section makes assembly fail.
    */
-  readonly complete?: boolean
+  readonly complete?: boolean;
 }
 ```
 
@@ -76,11 +76,11 @@ interface PromptSection {
 /** Dynamic model context materialized as a durable user-role snapshot. */
 interface PromptContext {
   /** Unique name — a duplicate registration throws (see {@link SystemPrompt.context}). */
-  readonly name: string
+  readonly name: string;
   /** Contexts are joined in ascending order. */
-  readonly order: number
+  readonly order: number;
   /** Static text or a provider evaluated for each assembly. Empty text contributes nothing. */
-  readonly text: string | ((context: AssembleContext) => string)
+  readonly text: string | ((context: AssembleContext) => string);
 }
 ```
 

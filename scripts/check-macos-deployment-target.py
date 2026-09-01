@@ -57,9 +57,7 @@ def deployment_target(executable: Path) -> tuple[int, ...]:
         raise ValueError(f"{executable}: {error}") from error
 
 
-def ensure_compatible(
-    executable: Path, actual: tuple[int, ...], platform_tag: str
-) -> None:
+def ensure_compatible(executable: Path, actual: tuple[int, ...], platform_tag: str) -> None:
     """Reject an executable whose deployment target exceeds its wheel claim."""
     claimed = claimed_version(platform_tag)
     width = max(len(actual), len(claimed))

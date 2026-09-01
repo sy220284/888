@@ -9,15 +9,15 @@
 ### 监听事件
 
 ```ts ignore-check
-ctx.on('event-name', (payload) => {
+ctx.on("event-name", (payload) => {
   // Handle the event.
-})
+});
 ```
 
 ### 触发事件
 
 ```ts ignore-check
-ctx.emit('event-name', payload)
+ctx.emit("event-name", payload);
 ```
 
 ## 事件模式
@@ -30,12 +30,12 @@ Cordis 提供多种事件模式，适用于不同的交互契约：
 
 ```ts ignore-check
 // Emit
-ctx.emit('my-plugin/ready', { id: 'worker-1' })
+ctx.emit("my-plugin/ready", { id: "worker-1" });
 
 // Listen
-ctx.on('my-plugin/ready', ({ id }) => {
-  console.log(`${id} is ready`)
-})
+ctx.on("my-plugin/ready", ({ id }) => {
+  console.log(`${id} is ready`);
+});
 ```
 
 ### bail — 短路
@@ -44,13 +44,13 @@ ctx.on('my-plugin/ready', ({ id }) => {
 
 ```ts ignore-check
 // Dispatch
-const result = ctx.bail('some-check', input)
+const result = ctx.bail("some-check", input);
 
 // Listen: a returned value stops later listeners.
-ctx.on('some-check', (input) => {
-  if (shouldBlock(input)) return 'blocked'
+ctx.on("some-check", (input) => {
+  if (shouldBlock(input)) return "blocked";
   // Return null, false, or undefined to continue to the next listener.
-})
+});
 ```
 
 ### serial — 顺序执行
@@ -58,7 +58,7 @@ ctx.on('some-check', (input) => {
 监听器按注册顺序依次执行，并等待异步结果；第一个不是 `null`、`false` 或 `undefined` 的返回值会终止后续执行：
 
 ```ts ignore-check
-await ctx.serial('setup-phase', context)
+await ctx.serial("setup-phase", context);
 ```
 
 ### waterfall（瀑布式事件）— 流水线
@@ -67,13 +67,13 @@ await ctx.serial('setup-phase', context)
 
 ```ts ignore-check
 // Dispatch
-const output = await ctx.waterfall('my-plugin/transform', input, async () => input)
+const output = await ctx.waterfall("my-plugin/transform", input, async () => input);
 
 // Listen: next() is mandatory.
-ctx.on('my-plugin/transform', async (_input, next) => {
-  const downstream = await next()
-  return downstream.trim()
-})
+ctx.on("my-plugin/transform", async (_input, next) => {
+  const downstream = await next();
+  return downstream.trim();
+});
 ```
 
 ::: warning
@@ -85,13 +85,13 @@ waterfall 监听器**必须调用 `next()`**。不调用 `next` 会短路整个�
 Harness 使用 TypeScript 声明合并来为事件提供类型安全：
 
 ```ts
-import '@deepseek-ai/cordis'
+import "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Events {
-    'my-plugin/ready': (payload: { id: string }) => void
-    'my-plugin/check': (input: string) => boolean | undefined
-    'my-plugin/transform': (input: string, next: () => Promise<string>) => Promise<string>
+    "my-plugin/ready": (payload: { id: string }) => void;
+    "my-plugin/check": (input: string) => boolean | undefined;
+    "my-plugin/transform": (input: string, next: () => Promise<string>) => Promise<string>;
   }
 }
 
@@ -112,7 +112,7 @@ Harness 的 Cordis 事件遵循 `namespace/action` 命名，例如 `agent/step`�
 ```ts ignore-check
 export function apply(ctx: Context) {
   // This listener is removed when the plugin disposes.
-  ctx.on('tools/result', handler)
+  ctx.on("tools/result", handler);
 }
 ```
 
@@ -121,19 +121,17 @@ export function apply(ctx: Context) {
 这个插件记录工具调用和工具结果：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import '@deepseek-ai/dsh-tools'
+import type { Context } from "@deepseek-ai/cordis";
+import "@deepseek-ai/dsh-tools";
 
-export const name = 'tool-logger'
+export const name = "tool-logger";
 
 export function apply(ctx: Context) {
-  ctx.on('tools/result', (exec, result) => {
-    console.log(`[tool] ${exec.name}(${JSON.stringify(exec.arguments)})`)
-    const text = result.content
-      .map(block => block.type === 'text' ? block.text : '')
-      .join('')
-    console.log(`[tool result] ${text.slice(0, 100)}`)
-  })
+  ctx.on("tools/result", (exec, result) => {
+    console.log(`[tool] ${exec.name}(${JSON.stringify(exec.arguments)})`);
+    const text = result.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+    console.log(`[tool result] ${text.slice(0, 100)}`);
+  });
 }
 ```
 

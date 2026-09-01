@@ -9,28 +9,28 @@ A **service** is a named capability one plugin provides and other plugins consum
 Create `greeter.ts` in `tmp/cordis-tutorial`:
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    greeter: GreeterService
+    greeter: GreeterService;
   }
 }
 
 export class GreeterService extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'greeter')
+    super(ctx, "greeter");
   }
 
   greet(who: string) {
-    return `Hello, ${who}!`
+    return `Hello, ${who}!`;
   }
 }
 
-export const name = 'greeter'
+export const name = "greeter";
 
 export function apply(ctx: Context) {
-  ctx.plugin(GreeterService)
+  ctx.plugin(GreeterService);
 }
 ```
 
@@ -46,13 +46,13 @@ A `Service` subclass is itself a plugin (the class form from chapter 1), so `ctx
 Create `consumer.ts`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'consumer'
-export const inject = ['greeter']
+export const name = "consumer";
+export const inject = ["greeter"];
 
 export function apply(ctx: Context) {
-  console.log(ctx.greeter.greet('world'))
+  console.log(ctx.greeter.greet("world"));
 }
 ```
 
@@ -61,8 +61,8 @@ export function apply(ctx: Context) {
 Compose and run:
 
 ```yaml
-- name: './greeter.ts'
-- name: './consumer.ts'
+- name: "./greeter.ts"
+- name: "./consumer.ts"
 ```
 
 ```
@@ -84,8 +84,8 @@ This is also why service replacement works in config: unload the `dsh-bash-local
 ```ts ignore-check
 export function apply(ctx: Context) {
   // undefined when no provider is loaded; the plugin still runs.
-  const greeter = ctx.get('greeter')
-  console.log(greeter?.greet('maybe') ?? 'no greeter available')
+  const greeter = ctx.get("greeter");
+  console.log(greeter?.greet("maybe") ?? "no greeter available");
 }
 ```
 

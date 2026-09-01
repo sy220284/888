@@ -26,11 +26,11 @@ A pristine database initializes directly at schema 17. Older schemas, foreign ap
 
 ```ts
 interface Config {
-  path: string
-  journalMode?: 'wal' | 'delete' | 'truncate' | 'persist'
-  busyTimeoutMs?: number
-  preparedSessionCacheSize?: number
-  writeBatchMaxDelayMs?: number
+  path: string;
+  journalMode?: "wal" | "delete" | "truncate" | "persist";
+  busyTimeoutMs?: number;
+  preparedSessionCacheSize?: number;
+  writeBatchMaxDelayMs?: number;
 }
 ```
 

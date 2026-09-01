@@ -13,36 +13,37 @@
 ## 接口
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { AuthorizationDeclinedError, type AuthorizationSession } from '@deepseek-ai/dsh-authorization'
-import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { Context } from "@deepseek-ai/cordis";
+import { AuthorizationDeclinedError, type AuthorizationSession } from "@deepseek-ai/dsh-authorization";
+import { credentialKey } from "@deepseek-ai/dsh-credentials";
 
-declare const ctx: Context
-declare const exchange: (signal: AbortSignal) => Promise<void>
+declare const ctx: Context;
+declare const exchange: (signal: AbortSignal) => Promise<void>;
 
-const key = credentialKey('llm-pi-ai', 'openai-codex')
+const key = credentialKey("llm-pi-ai", "openai-codex");
 
 const dispose = ctx.authorization.registerFlow({
   key,
-  label: 'ChatGPT (Codex)',
-  methods: [{ id: 'oauth', label: 'Sign in with ChatGPT' }],
+  label: "ChatGPT (Codex)",
+  methods: [{ id: "oauth", label: "Sign in with ChatGPT" }],
   async run(session: AuthorizationSession) {
-    session.notify({ message: 'Continue in your browser', url: 'https://auth.example/start' })
-    const code = await session.prompt({ kind: 'text', message: 'Paste the code' })
+    session.notify({ message: "Continue in your browser", url: "https://auth.example/start" });
+    const code = await session.prompt({ kind: "text", message: "Paste the code" });
     // Commits the record through ctx.credentials before resolving.
-    await exchange(session.signal)
-    void code
+    await exchange(session.signal);
+    void code;
   },
-})
+});
 
-ctx.authorization.list()                    // [{ key, label, methods, inFlight }]
-ctx.authorization.describe(key)             // the same entry, or undefined
-await ctx.authorization.begin({             // { status: 'authorized' | 'cancelled' }
+ctx.authorization.list(); // [{ key, label, methods, inFlight }]
+ctx.authorization.describe(key); // the same entry, or undefined
+await ctx.authorization.begin({
+  // { status: 'authorized' | 'cancelled' }
   key,
   interaction: { notify: () => {}, prompt: () => Promise.reject(new AuthorizationDeclinedError()) },
-})
-ctx.authorization.cancel(key)               // withdraw whatever is running for the key
-dispose()
+});
+ctx.authorization.cancel(key); // withdraw whatever is running for the key
+dispose();
 ```
 
 同一个键同时只允许一次尝试。第二个调用方会收到 `ALREADY_IN_FLIGHT` 拒绝而不是被并入：否则两者会通过同一个 flow 向不同的人发问，而第二个人回答的是问给第一个人的问题。`inFlight` 放在 entry 上，界面据此把按钮渲染为禁用，而不是靠报错才发现。

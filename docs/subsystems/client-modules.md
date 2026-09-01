@@ -22,17 +22,17 @@ The graph is the wire single source between the Node and browser halves: the hos
  */
 interface WebBootEntry {
   /** Entry name == package name. */
-  id: string
+  id: string;
   /** Bundle endpoint, '/plugins/<id>/client.js?rev=<rev>'. */
-  url: string
+  url: string;
   /** Bundle content hash (cache-busting consistency anchor). */
-  rev: string
+  rev: string;
   /** Package-name dependency edges, informational (preflight display / HMR diffing). */
-  inject?: string[]
+  inject?: string[];
   /** Stage-one prefetch mark: load the script for factory registration during module-face boot. */
-  immediately?: boolean
+  immediately?: boolean;
   /** Non-baseline module specifiers this row requests; omitted when it requests none. */
-  external?: string[]
+  external?: string[];
 }
 ```
 
@@ -40,13 +40,13 @@ interface WebBootEntry {
 /** The composed client entry graph the host injects as `window.__DSH_BOOT__`. */
 interface WebBootGraph {
   /** Consistency anchor over the whole graph (content + bundle hashes). */
-  rev: string
+  rev: string;
   /**
    * Composed entries in module-graph order — a dynamic package row precedes
    * rows whose `external` requests that package. Cordis activation order is
    * unrelated and remains owned by fiber service waiting.
    */
-  entries: WebBootEntry[]
+  entries: WebBootEntry[];
 }
 ```
 

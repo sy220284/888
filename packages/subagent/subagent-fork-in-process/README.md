@@ -20,10 +20,10 @@ Fork advertises `{ outputSchema: true, depthLimit: true, toolFilter: true, perso
 
 ## Config
 
-| Key | Meaning |
-|---|---|
-| `providerName` | Registry name on `ctx.subagents` (default `fork`). |
-See [`dsh-subagent-spawn-in-process`](../subagent-spawn-in-process/README.md) for the run lifecycle, model inheritance, and depth tracking — all shared.
+| Key                                                                                                                                                      | Meaning                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `providerName`                                                                                                                                           | Registry name on `ctx.subagents` (default `fork`). |
+| See [`dsh-subagent-spawn-in-process`](../subagent-spawn-in-process/README.md) for the run lifecycle, model inheritance, and depth tracking — all shared. |
 
 ## Model Experience
 

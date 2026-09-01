@@ -6,24 +6,24 @@
 
 本包承担 bash 能力的 Service Definition 角色，各角色因此可以独立演进（和替换）：
 
-| 包 | 职责 |
-|---|---|
-| `@deepseek-ai/dsh-shell`（本包） | Service Definition：抽象服务 + 词汇类型 |
-| `@deepseek-ai/dsh-bash-local` | Service Provider：本地子进程 |
-| `@deepseek-ai/dsh-bash-sandbox` | Service Provider：沿用 `dsh-bash-local` 的机制，但通过 [`ctx.sandbox`](../../sandbox/sandbox/) 限制每次 spawn，并将拒绝报告为结果事实 |
-| `@deepseek-ai/dsh-tool-bash` | 基于 `ctx.shell`、面向模型的工具 schema |
+| 包                               | 职责                                                                                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `@deepseek-ai/dsh-shell`（本包） | Service Definition：抽象服务 + 词汇类型                                                                                               |
+| `@deepseek-ai/dsh-bash-local`    | Service Provider：本地子进程                                                                                                          |
+| `@deepseek-ai/dsh-bash-sandbox`  | Service Provider：沿用 `dsh-bash-local` 的机制，但通过 [`ctx.sandbox`](../../sandbox/sandbox/) 限制每次 spawn，并将拒绝报告为结果事实 |
+| `@deepseek-ai/dsh-tool-bash`     | 基于 `ctx.shell`、面向模型的工具 schema                                                                                               |
 
 该拆分是一个标准的能力 seam（[capability-seams Agent Note](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)）：`dsh-bash-sandbox` 是位于同一 Service Definition 之后的沙箱执行器——Consumer 检测其 `sandboxMode` 能力并添加升权字段，无需导入提供方——容器化或远程执行器也可以同样接入。
 
 ## 服务 API（`ctx.shell`）
 
-| 成员 | 语义 |
-|---|---|
-| `run(spec)` | 前台执行。命令完成时 resolve。**只会因基础设施失败而 reject**（工作目录不可用、shell 缺失、信号已在调用前中止）；非零退出、超时终止和中止导致的终止都会 resolve 为描述性 `ShellRunResult`。 |
-| `start(spec)` | 后台执行。立即返回不含任务语义的 `ShellProcess` 句柄；**不应用超时**。调用方可以将其适配到 `ctx.jobs`。 |
-| `sandboxMode` | 工具层的能力事实：沙箱执行器用于限制执行的默认模式（基类中为 `undefined`，即「此执行器不使用沙箱」）。`dsh-tool-bash` 会在注册时读取它，仅当组合确实支持升权字段时才公布这些字段。 |
-| `ShellProcess.readOutput()` | **增量** 读取输出：连续读取绝不会重复交付。因缓冲区容量限制而丢失数据的读取会标记 `lossy`，并指向完整流 spill 文件。 |
-| `ShellProcess.kill()` | 终止进程组。如果进程已结束，返回 `false`。 |
+| 成员                        | 语义                                                                                                                                                                                        |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `run(spec)`                 | 前台执行。命令完成时 resolve。**只会因基础设施失败而 reject**（工作目录不可用、shell 缺失、信号已在调用前中止）；非零退出、超时终止和中止导致的终止都会 resolve 为描述性 `ShellRunResult`。 |
+| `start(spec)`               | 后台执行。立即返回不含任务语义的 `ShellProcess` 句柄；**不应用超时**。调用方可以将其适配到 `ctx.jobs`。                                                                                     |
+| `sandboxMode`               | 工具层的能力事实：沙箱执行器用于限制执行的默认模式（基类中为 `undefined`，即「此执行器不使用沙箱」）。`dsh-tool-bash` 会在注册时读取它，仅当组合确实支持升权字段时才公布这些字段。          |
+| `ShellProcess.readOutput()` | **增量** 读取输出：连续读取绝不会重复交付。因缓冲区容量限制而丢失数据的读取会标记 `lossy`，并指向完整流 spill 文件。                                                                        |
+| `ShellProcess.kill()`       | 终止进程组。如果进程已结束，返回 `false`。                                                                                                                                                  |
 
 实现会继承 `ShellExecutor` 并实现抽象方法。dispose（资源释放）必须终止每个运行中的进程并等待其退出。
 

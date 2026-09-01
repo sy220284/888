@@ -20,19 +20,19 @@ Service Definition：[dsh-workflow](../../packages/workflow/workflow)（`ctx.wor
  */
 interface WorkflowStartRequest {
   /** The plain-JS script body (top-level await allowed; ends with `return <json-value>`). */
-  script: string
+  script: string;
   /** The workflow's identity block, as plain JSON data (shape-validated by the engine). */
-  meta: WorkflowMeta
+  meta: WorkflowMeta;
   /** Optional input exposed verbatim to the script as the `args` global. */
-  args?: unknown
+  args?: unknown;
   /** Optional engine-wide child-provider override for this run. */
-  subagentProvider?: string
+  subagentProvider?: string;
   /** Optional per-run total-child ceiling. */
-  maxTotalAgents?: number
+  maxTotalAgents?: number;
   /** The agent on whose behalf the run executes (parent of every child). */
-  parent: Agent
+  parent: Agent;
   /** Cancels the run when aborted. */
-  signal?: AbortSignal
+  signal?: AbortSignal;
 }
 ```
 
@@ -50,13 +50,13 @@ interface WorkflowStartRequest {
  */
 interface WorkflowMeta {
   /** Short kebab-case workflow name (display + persistence key). */
-  name: string
+  name: string;
   /** One-line description of what the workflow does. */
-  description: string
+  description: string;
   /** Optional guidance on when this workflow applies (shown in listings). */
-  whenToUse?: string
+  whenToUse?: string;
   /** Optional phase declarations matched by `phase()` calls. */
-  phases?: WorkflowPhase[]
+  phases?: WorkflowPhase[];
 }
 ```
 
@@ -74,11 +74,11 @@ interface WorkflowMeta {
  */
 interface WorkflowResult {
   /** The script's return value (host JSON data; `null` for no return). */
-  value: unknown
+  value: unknown;
   /** Why the run settled. */
-  stopReason: WorkflowStopReason
+  stopReason: WorkflowStopReason;
   /** The failure message (present iff `stopReason` is not `completed`). */
-  error?: string
+  error?: string;
   /**
    * How many `agent()` calls the run accepted over its whole lifetime. On a
    * graceful settlement this is the script-side count (calls still queued for
@@ -86,7 +86,7 @@ interface WorkflowResult {
    * worker death) it degrades to the host-observed count — calls queued
    * inside a terminated script are unknowable then.
    */
-  agentsStarted: number
+  agentsStarted: number;
 }
 ```
 
@@ -100,14 +100,14 @@ interface WorkflowResult {
  * and must call idempotent `dispose()` to await script and child quiescence.
  */
 interface WorkflowRun {
-  readonly id: WorkflowRunId
+  readonly id: WorkflowRunId;
   /** The validated meta block available before the script body runs. */
-  readonly meta: WorkflowMeta
-  readonly result: Promise<WorkflowResult>
+  readonly meta: WorkflowMeta;
+  readonly result: Promise<WorkflowResult>;
   /** Cancel the run and its children. */
-  cancel(reason?: string): void
+  cancel(reason?: string): void;
   /** Cancel if needed and await bounded settlement and cleanup. */
-  dispose(): Promise<void>
+  dispose(): Promise<void>;
 }
 ```
 

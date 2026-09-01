@@ -16,24 +16,24 @@ seam 与模型恰好公开 4 项语义查询；该联合是闭合的，因此新
  * compile-enforced change across the seam, providers, and the tool. Symbols and call hierarchy are
  * not operations here; they need different schemas.
  */
-type LspOperation = 'goToDefinition' | 'findReferences' | 'goToImplementation' | 'hover'
+type LspOperation = "goToDefinition" | "findReferences" | "goToImplementation" | "hover";
 ```
 
 ```ts type-equiv
 /** A zero-based UTF-16 cursor coordinate, matching the LSP wire convention. */
 interface LspPosition {
   /** Zero-based line. */
-  readonly line: number
+  readonly line: number;
   /** Zero-based UTF-16 code-unit offset within the line. */
-  readonly character: number
+  readonly character: number;
 }
 ```
 
 ```ts type-equiv
 /** A zero-based UTF-16 half-open range `[start, end)`. */
 interface LspRange {
-  readonly start: LspPosition
-  readonly end: LspPosition
+  readonly start: LspPosition;
+  readonly end: LspPosition;
 }
 ```
 
@@ -49,13 +49,13 @@ interface LspRange {
  */
 interface LspQueryRequest {
   /** Which semantic query to run. */
-  readonly operation: LspOperation
+  readonly operation: LspOperation;
   /** The source file to query (relative to `workspaceRoot` or absolute; the provider canonicalizes). */
-  readonly filePath: string
+  readonly filePath: string;
   /** The zero-based UTF-16 cursor position to query at. */
-  readonly position: LspPosition
+  readonly position: LspPosition;
   /** The workspace root the provider resolves against and indexes; required, never defaulted. */
-  readonly workspaceRoot: string
+  readonly workspaceRoot: string;
 }
 ```
 
@@ -67,7 +67,7 @@ interface LspQueryRequest {
  */
 interface LspProviderQuery extends LspQueryRequest {
   /** The LSP language id for `filePath`, from this provider's extension mapping. */
-  readonly languageId: string
+  readonly languageId: string;
 }
 ```
 
@@ -79,9 +79,9 @@ interface LspProviderQuery extends LspQueryRequest {
 /** One resolved location: a document URI and the range within it. */
 interface LspLocation {
   /** The target document URI (`file:` or otherwise), verbatim from the server. */
-  readonly uri: string
+  readonly uri: string;
   /** The range within the target document. */
-  readonly range: LspRange
+  readonly range: LspRange;
 }
 ```
 
@@ -89,9 +89,9 @@ interface LspLocation {
 /** Normalized hover content, or `null` for no hover at the position. */
 interface LspHover {
   /** The normalized hover text (markdown or plaintext, provider-joined). */
-  readonly contents: string
+  readonly contents: string;
   /** The range the hover applies to, when the server supplied one. */
-  readonly range?: LspRange
+  readonly range?: LspRange;
 }
 ```
 
@@ -107,8 +107,8 @@ interface LspHover {
  * differ from the caller's.
  */
 type LspQueryResult =
-  | { readonly kind: 'locations'; readonly locations: readonly LspLocation[]; readonly resolvedWorkspaceUri: string }
-  | { readonly kind: 'hover'; readonly hover: LspHover | null }
+  | { readonly kind: "locations"; readonly locations: readonly LspLocation[]; readonly resolvedWorkspaceUri: string }
+  | { readonly kind: "hover"; readonly hover: LspHover | null };
 ```
 
 ## 提供方与服务
@@ -124,16 +124,16 @@ type LspQueryResult =
  */
 interface LspProvider {
   /** Stable provider identity, reserved atomically with the extension mappings. */
-  readonly id: LspProviderId
+  readonly id: LspProviderId;
   /** Lowercase leading-dot extension → LSP language id (e.g. `{ '.ts': 'typescript' }`). */
-  readonly extensionToLanguage: Readonly<Record<string, string>>
+  readonly extensionToLanguage: Readonly<Record<string, string>>;
   /**
    * Run one query. The seam has already selected this provider and derived `languageId`.
    * @param request - the resolved provider query (caller request + derived language id).
    * @param signal - optional cancellation; the provider stops its own work when it aborts.
    * @returns the normalized, closed-union result.
    */
-  query(request: LspProviderQuery, signal?: AbortSignal): Promise<LspQueryResult>
+  query(request: LspProviderQuery, signal?: AbortSignal): Promise<LspQueryResult>;
 }
 ```
 
@@ -150,7 +150,7 @@ interface LspService {
    * @param provider - the backend to register.
    * @returns a synchronous disposer releasing the id and all extension reservations.
    */
-  registerProvider(provider: LspProvider): () => void
+  registerProvider(provider: LspProvider): () => void;
   /**
    * Select a provider by the file's extension and run one query. Selection is per-query and
    * order-independent; no match throws `LspError` `LSP_UNAVAILABLE`.
@@ -158,7 +158,7 @@ interface LspService {
    * @param signal - optional cancellation forwarded to the selected provider.
    * @returns the normalized, closed-union result.
    */
-  query(request: LspQueryRequest, signal?: AbortSignal): Promise<LspQueryResult>
+  query(request: LspQueryRequest, signal?: AbortSignal): Promise<LspQueryResult>;
 }
 ```
 

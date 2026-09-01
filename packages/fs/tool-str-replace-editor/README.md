@@ -6,10 +6,10 @@ Standalone model-facing `str_replace_editor` over `ctx.fs`. It can be composed w
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---:|---|
-| `maxOutputChars` | `16000` | Prefix characters retained for file and directory views. |
-| `description` | Editor command guide | Model-facing tool description. |
+| Key              |              Default | Meaning                                                  |
+| ---------------- | -------------------: | -------------------------------------------------------- |
+| `maxOutputChars` |              `16000` | Prefix characters retained for file and directory views. |
+| `description`    | Editor command guide | Model-facing tool description.                           |
 
 ## Tool
 

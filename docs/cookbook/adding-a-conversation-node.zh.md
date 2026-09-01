@@ -12,11 +12,11 @@
 
 以一个 review job 为例，事件约定可以是：
 
-| 事件 | 角色 | 必须持久化的事实 |
-|---|---|---|
-| `review/start` | 唯一 start | `reviewId`、Turn/Step 坐标、标题 |
-| `review/progress` | update | 相同的 `reviewId`、坐标、可回放进度 |
-| `review/end` | update | 相同的 `reviewId`、坐标、最终摘要 |
+| 事件              | 角色       | 必须持久化的事实                    |
+| ----------------- | ---------- | ----------------------------------- |
+| `review/start`    | 唯一 start | `reviewId`、Turn/Step 坐标、标题    |
+| `review/progress` | update     | 相同的 `reviewId`、坐标、可回放进度 |
+| `review/end`      | update     | 相同的 `reviewId`、坐标、最终摘要   |
 
 跨进程边界使用生产方拥有的 branded id 类型。把 `SessionEventMap` 合并和 payload 类型放在生产方的纯类型导出中，再由 Client 包通过仅类型副作用导入该导出。每个 `(kind, id)` 最多只能有一条 start 事件。单事件业务可以把事件自身的稳定身份（例如 `event.seq`）作为 Definition 内部 id。
 
@@ -27,86 +27,88 @@
 为了完整展示关联关系，下面把生产方声明和 Client 贡献写在同一个代码块里。实际的包族中，branded id 与 `SessionEventMap` 声明留在事件生产方，Definition、Chat data 合并与 renderer 留在 Client 插件。
 
 ```ts ignore-check
-import { createElement } from 'react'
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import { createElement } from "react";
+import type { Branded } from "@deepseek-ai/dsh-brand";
 import type {
-  ClientContext, ConversationLocation, ConversationNodeContext,
+  ClientContext,
+  ConversationLocation,
+  ConversationNodeContext,
   ConversationNodeDefinition,
-} from '@deepseek-ai/dsh-client-runtime/client'
-import type { ChatNodeViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from "@deepseek-ai/dsh-client-runtime/client";
+import type { ChatNodeViewProps } from "@deepseek-ai/dsh-client-ui-conversation/client";
 
-type ReviewId = Branded<'ReviewId'>
+type ReviewId = Branded<"ReviewId">;
 
 interface ReviewStartData {
-  readonly reviewId: ReviewId
-  readonly turn: number
-  readonly step: number
-  readonly title: string
+  readonly reviewId: ReviewId;
+  readonly turn: number;
+  readonly step: number;
+  readonly title: string;
 }
 
 interface ReviewProgressData {
-  readonly reviewId: ReviewId
-  readonly turn: number
-  readonly step: number
-  readonly completed: number
+  readonly reviewId: ReviewId;
+  readonly turn: number;
+  readonly step: number;
+  readonly completed: number;
 }
 
 interface ReviewEndData {
-  readonly reviewId: ReviewId
-  readonly turn: number
-  readonly step: number
-  readonly summary: string
+  readonly reviewId: ReviewId;
+  readonly turn: number;
+  readonly step: number;
+  readonly summary: string;
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module "@deepseek-ai/dsh-session/types" {
   interface SessionEventMap {
     /**
      * Opens one durable review job.
      * @mode emit
      * @param data - stable identity, location, and initial display state.
      */
-    'review/start': ReviewStartData
+    "review/start": ReviewStartData;
     /**
      * Records replayable progress for one review job.
      * @mode emit
      * @param data - stable identity, location, and latest progress.
      */
-    'review/progress': ReviewProgressData
+    "review/progress": ReviewProgressData;
     /**
      * Closes one review job with its final summary.
      * @mode emit
      * @param data - stable identity, location, and final display state.
      */
-    'review/end': ReviewEndData
+    "review/end": ReviewEndData;
   }
 }
 
 interface ReviewChatData {
-  readonly title: string
-  readonly completed: number
-  readonly status: 'running' | 'completed'
-  readonly summary?: string
+  readonly title: string;
+  readonly completed: number;
+  readonly status: "running" | "completed";
+  readonly summary?: string;
 }
 
-declare module '@deepseek-ai/dsh-client-ui-conversation/client' {
+declare module "@deepseek-ai/dsh-client-ui-conversation/client" {
   interface ChatNodeDataMap {
-    'review-job': ReviewChatData
+    "review-job": ReviewChatData;
   }
 }
 
-declare module '@deepseek-ai/dsh-client-runtime/client' {
+declare module "@deepseek-ai/dsh-client-runtime/client" {
   interface ConversationStepDataMap {
-    'review-job': ReviewChatData
+    "review-job": ReviewChatData;
   }
 }
 
 interface ReviewState extends ReviewChatData {
-  readonly turn: number
-  readonly step: number
+  readonly turn: number;
+  readonly step: number;
 }
 
 function locationOf(context: ConversationNodeContext): ConversationLocation {
-  return context.start?.location ?? context.matches[0]?.location ?? { kind: 'unresolved' }
+  return context.start?.location ?? context.matches[0]?.location ?? { kind: "unresolved" };
 }
 
 function viewData(state: ReviewState): ReviewChatData {
@@ -114,82 +116,85 @@ function viewData(state: ReviewState): ReviewChatData {
     title: state.title,
     completed: state.completed,
     status: state.status,
-    ...state.summary === undefined ? {} : { summary: state.summary },
-  }
+    ...(state.summary === undefined ? {} : { summary: state.summary }),
+  };
 }
 
 const reviewDefinition: ConversationNodeDefinition<ReviewState> = {
-  kind: 'review-job',
-  target: 'chat',
+  kind: "review-job",
+  target: "chat",
   match: (event) => {
-    if (event.type === 'review/start') {
-      return { id: String(event.data.reviewId), role: 'start' }
+    if (event.type === "review/start") {
+      return { id: String(event.data.reviewId), role: "start" };
     }
-    if (event.type === 'review/progress' || event.type === 'review/end') {
-      return { id: String(event.data.reviewId), role: 'update' }
+    if (event.type === "review/progress" || event.type === "review/end") {
+      return { id: String(event.data.reviewId), role: "update" };
     }
-    return null
+    return null;
   },
   start: (_context, match) => {
-    if (match.event.type !== 'review/start') throw new Error('review-job requires review/start')
+    if (match.event.type !== "review/start") throw new Error("review-job requires review/start");
     return {
       turn: match.event.data.turn,
       step: match.event.data.step,
       title: match.event.data.title,
       completed: 0,
-      status: 'running',
-    }
+      status: "running",
+    };
   },
   update: (context, match) => {
-    if (match.event.type === 'review/progress') {
-      return { ...context.state, completed: match.event.data.completed }
+    if (match.event.type === "review/progress") {
+      return { ...context.state, completed: match.event.data.completed };
     }
-    if (match.event.type === 'review/end') {
-      return { ...context.state, completed: 100, status: 'completed', summary: match.event.data.summary }
+    if (match.event.type === "review/end") {
+      return { ...context.state, completed: 100, status: "completed", summary: match.event.data.summary };
     }
-    return context.state
+    return context.state;
   },
-  publication: match => match.event.type === 'review/progress'
-    ? 'animation-frame'
-    : 'immediate',
+  publication: (match) => (match.event.type === "review/progress" ? "animation-frame" : "immediate"),
   buildLocationData: (context, scope) => {
-    if (scope !== 'step' || context.state === undefined) return null
+    if (scope !== "step" || context.state === undefined) return null;
     return {
-      kind: 'step',
+      kind: "step",
       turn: context.state.turn,
       step: context.state.step,
-      key: 'review-job',
+      key: "review-job",
       value: viewData(context.state),
-    }
+    };
   },
   buildViewNode: (context) => {
-    if (context.state === undefined) return null
+    if (context.state === undefined) return null;
     return {
       key: context.key,
-      kind: 'review-job',
+      kind: "review-job",
       id: context.id,
-      target: 'chat',
+      target: "chat",
       anchorSeq: context.start?.event.seq ?? context.matches[0]?.event.seq ?? 0,
       location: locationOf(context),
-      visibility: 'visible',
+      visibility: "visible",
       data: viewData(context.state),
-    }
+    };
   },
+};
+
+function ReviewNodeView({ node }: ChatNodeViewProps<"review-job">) {
+  const text = node.data.summary ?? `${node.data.title}: ${node.data.completed}%`;
+  return createElement("p", null, text);
 }
 
-function ReviewNodeView({ node }: ChatNodeViewProps<'review-job'>) {
-  const text = node.data.summary ?? `${node.data.title}: ${node.data.completed}%`
-  return createElement('p', null, text)
-}
-
-export const inject = ['conversationEvents', 'slots']
+export const inject = ["conversationEvents", "slots"];
 
 export function apply(ctx: ClientContext): void {
-  ctx.conversationEvents.register(reviewDefinition)
-  ctx.slots.inject('conversation.chat.node', () => ctx.slots.register({
-    name: 'conversation.chat.node',
-    key: 'review-job',
-  }, ReviewNodeView))
+  ctx.conversationEvents.register(reviewDefinition);
+  ctx.slots.inject("conversation.chat.node", () =>
+    ctx.slots.register(
+      {
+        name: "conversation.chat.node",
+        key: "review-job",
+      },
+      ReviewNodeView,
+    ),
+  );
 }
 ```
 
@@ -209,11 +214,11 @@ Assembler 会记录这项依赖。如果后续 older prepend 带来了更近的�
 
 历史可能从尾部开始一页一页向前请求，但每个已接收分页都会先按 `seq` 升序归一化，再进入 State 回放。
 
-| 路径 | 引擎工作 | Definition 可观察到的行为 |
-|---|---|---|
-| open、resync 或 gap repair 时 replace | 重建已加载窗口，每条事件对每个 Definition 匹配一次，再回放每个已有 start 的 Context | 先执行 `start`，再按 `seq` 升序执行其 update；只有 update 的 pending Context 仍没有 State |
-| prepend 一页更早历史 | 只匹配新增的更早事件，按 `(kind, id)` 合并进 Context，保留现有 keyed node，并只重放受影响的 Context 与依赖 | 新发现的 start 会激活已收集 update；Location 或前序依赖变化也可能重跑 Context |
-| append 一条实时事件 | 每个 Definition 各调用一次 `match`，按 key 查找命中的 Context，只更新该 Context | 对 start 之后的匹配事件执行一次 `update` 并请求一次发布；不扫描已有 Context |
+| 路径                                  | 引擎工作                                                                                                   | Definition 可观察到的行为                                                                 |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| open、resync 或 gap repair 时 replace | 重建已加载窗口，每条事件对每个 Definition 匹配一次，再回放每个已有 start 的 Context                        | 先执行 `start`，再按 `seq` 升序执行其 update；只有 update 的 pending Context 仍没有 State |
+| prepend 一页更早历史                  | 只匹配新增的更早事件，按 `(kind, id)` 合并进 Context，保留现有 keyed node，并只重放受影响的 Context 与依赖 | 新发现的 start 会激活已收集 update；Location 或前序依赖变化也可能重跑 Context             |
+| append 一条实时事件                   | 每个 Definition 各调用一次 `match`，按 key 查找命中的 Context，只更新该 Context                            | 对 start 之后的匹配事件执行一次 `update` 并请求一次发布；不扫描已有 Context               |
 
 注册 `D` 个 Definition 时，一条新事件会进行 `D` 次仅当前事件匹配；命中后的 Context key 查询是常数时间。Definition 代码必须维持这个性质：正常 append 热路径不得遍历完整事件窗口、所有 Context、`context.matches` 或已渲染 Node 集合。累计事实放进 State，同 Turn/Step 共享信息放进 Location data，有索引的前序依赖使用 `reader.previous()`。
 

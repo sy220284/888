@@ -8,10 +8,10 @@ Tool-result events invalidate the addressed agent's reusable index so later comp
 
 ## Configuration
 
-| Key | Default | Contract |
-|---|---:|---|
-| `maxResults` | `20` | Maximum ranked candidates returned for one query. |
-| `maxEntries` | `10000` | Maximum files and directories indexed per agent workspace. |
+| Key                   |                    Default | Contract                                                   |
+| --------------------- | -------------------------: | ---------------------------------------------------------- |
+| `maxResults`          |                       `20` | Maximum ranked candidates returned for one query.          |
+| `maxEntries`          |                    `10000` | Maximum files and directories indexed per agent workspace. |
 | `excludedDirectories` | `[".git", "node_modules"]` | Directory basenames omitted from traversal and candidates. |
 
 Every numeric value must be a positive safe integer. Excluded names must be non-empty basenames without `/` or `\`.

@@ -25,23 +25,23 @@
 ## 接口
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { Context } from "@deepseek-ai/cordis";
+import { credentialKey, credentialRef } from "@deepseek-ai/dsh-credentials";
 
-declare const ctx: Context
+declare const ctx: Context;
 
-const ref = credentialRef('DEEPSEEK_API_KEY')            // POSIX shell identifier, branded
-const hit = await ctx.credentials.resolve(ref)           // { value, source } | undefined
-const info = await ctx.credentials.describe(ref)         // { configured, source?, writable } — never the value
-await ctx.credentials.set(ref, 'sk-…')                   // rejects while a read-only source shadows the ref
-await ctx.credentials.unset(ref)                         // no-op when absent; same shadowing rule
+const ref = credentialRef("DEEPSEEK_API_KEY"); // POSIX shell identifier, branded
+const hit = await ctx.credentials.resolve(ref); // { value, source } | undefined
+const info = await ctx.credentials.describe(ref); // { configured, source?, writable } — never the value
+await ctx.credentials.set(ref, "sk-…"); // rejects while a read-only source shadows the ref
+await ctx.credentials.unset(ref); // no-op when absent; same shadowing rule
 
-const key = credentialKey('llm-pi-ai', 'openai-codex')   // <owner>/<id>, branded
-await ctx.credentials.readRecord(key)                    // CredentialRecord | undefined
-await ctx.credentials.describeRecord(key)                // { configured, kind?, writable } — never the value
-await ctx.credentials.listRecords()                      // [{ key, kind }] — never values
-await ctx.credentials.modifyRecord(key, async () => ({ kind: 'grant', payload: { token: '…' } }))
-await ctx.credentials.deleteRecord(key)                  // no-op when absent
+const key = credentialKey("llm-pi-ai", "openai-codex"); // <owner>/<id>, branded
+await ctx.credentials.readRecord(key); // CredentialRecord | undefined
+await ctx.credentials.describeRecord(key); // { configured, kind?, writable } — never the value
+await ctx.credentials.listRecords(); // [{ key, kind }] — never values
+await ctx.credentials.modifyRecord(key, async () => ({ kind: "grant", payload: { token: "…" } }));
+await ctx.credentials.deleteRecord(key); // no-op when absent
 ```
 
 `modifyRecord` 是唯一写路径，因为正确的写入依赖当前值：刷新 token 是「读—决定—替换」，变更函数必须看到写入取得独占那一刻的记录。独占跨进程成立，这正是防止两个进程同时轮换同一个 refresh token、丢掉先写那一个的机制。变更函数返回 `undefined` 表示保持原状，不写盘也不发通知。

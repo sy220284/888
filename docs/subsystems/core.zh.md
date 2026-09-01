@@ -8,14 +8,14 @@
 
 一个轮次按同一条循环流经六个包：[`agent-loop`](../../packages/core/agent-loop) 中的 driver 认领一条排队的提示词，在[会话日志](session.zh.md)（`ctx.sessions`）上开启轮次，通过 [system-prompt](system-prompt.zh.md)（`ctx.systemPrompt`）组装请求前缀并从日志派生历史，经 [LLM（大语言模型） seam](llm-streaming.zh.md) 流式获取模型响应，经[工具注册表](tools.zh.md)（`ctx.tools`）分发工具调用，并把每个模型可见的事实追加回日志，供下一步派生。循环搬运的对话词汇——`Message`、`ContentBlock`、`StreamChunk`、模型请求——由 [`packages/llm`](../../packages/llm/README.zh.md) 声明，记录在 [llm-streaming.md](llm-streaming.zh.md)。
 
-| 包 | 负责内容 | 页面 |
-|---|---|---|
-| `session/` | 仅追加的 `SessionEvent` 日志与内存 store——唯一真源（`ctx.sessions`） | [session.md](session.zh.md) |
-| `system-prompt/` | 提示词段落与工具 schema 组装（`ctx.systemPrompt`） | [system-prompt.md](system-prompt.zh.md) |
-| `tools/` | 带作用域的工具注册表与受保护的执行流水线（`ctx.tools`） | [tools.md](tools.zh.md) |
-| `agent/` | `Agent` 接口、实时注册表、发起者作用域与 `agent/*` 事件词汇（`ctx.agents`） | 本页 |
-| `agent-loop/` | 实现公开 `Agent` 约定的具体 driver（`ctx.agentLoop`） | 本页 |
-| `scope/` | 注册表与循环用于构建按 agent 作用域的注册原语 | [scope.md](scope.zh.md) |
+| 包               | 负责内容                                                                    | 页面                                    |
+| ---------------- | --------------------------------------------------------------------------- | --------------------------------------- |
+| `session/`       | 仅追加的 `SessionEvent` 日志与内存 store——唯一真源（`ctx.sessions`）        | [session.md](session.zh.md)             |
+| `system-prompt/` | 提示词段落与工具 schema 组装（`ctx.systemPrompt`）                          | [system-prompt.md](system-prompt.zh.md) |
+| `tools/`         | 带作用域的工具注册表与受保护的执行流水线（`ctx.tools`）                     | [tools.md](tools.zh.md)                 |
+| `agent/`         | `Agent` 接口、实时注册表、发起者作用域与 `agent/*` 事件词汇（`ctx.agents`） | 本页                                    |
+| `agent-loop/`    | 实现公开 `Agent` 约定的具体 driver（`ctx.agentLoop`）                       | 本页                                    |
+| `scope/`         | 注册表与循环用于构建按 agent 作用域的注册原语                               | [scope.md](scope.zh.md)                 |
 
 `scope/` 是这里唯一的非服务包：一个零依赖库（`createScope`/`scopeOf`/`scopeTarget`），在模块图中位于 `session/` 与 `system-prompt/` 之下，正是为了让它们消费它而不形成环。`agent-loop` 是公开 `Agent` 约定的唯一具体实现，放在这里因为它是 harness 的默认产品循环；它在 `ctx.agents.withInitiator()` 内运行每个 driver。扩展插件依赖 `agent`——包括需要发起 Agent 时——而绝不直接依赖 `agent-loop`，因此循环保持可替换。把这条主干接成可运行 agent 的默认组合是 [`examples/agent-spine-demo`](../../packages/examples/agent-spine-demo/README.zh.md)。
 
@@ -43,8 +43,8 @@
  * startup) are owned by the loop fiber and never need a handle.
  */
 interface AgentHandle {
-  agent: Agent
-  dispose(): Promise<void>
+  agent: Agent;
+  dispose(): Promise<void>;
 }
 ```
 
@@ -64,17 +64,17 @@ interface AgentHandle {
 /** Public live-agent handle. */
 interface Agent {
   /** The single identity shared with {@link session}. */
-  readonly id: SessionId
+  readonly id: SessionId;
   /** The provider route and model this agent's requests use. */
-  readonly options: AgentOptions
+  readonly options: AgentOptions;
   /** The live session this agent drives; its log is the durable source of truth. */
-  readonly session: Session
+  readonly session: Session;
   /** The agent-owned projection of durable pending work. */
-  readonly inbox: Inbox
+  readonly inbox: Inbox;
   /** The current lifecycle state, mirrored on every `agent/status` transition. */
-  readonly status: AgentStatus
+  readonly status: AgentStatus;
   /** Agent-scoped context; its contributions are agent-local, unwind on disposal, and reject registration afterward. */
-  readonly ctx: Context
+  readonly ctx: Context;
 
   /**
    * Clear queued and steering work — unless `keepInbox` — and abort the active
@@ -83,7 +83,7 @@ interface Agent {
    * @param cause - the stable caller intent carried by the active operation signal.
    * @param options - cancellation options; `keepInbox` preserves pending work.
    */
-  cancel(cause: AgentCancelCause, options?: CancelOptions): void
+  cancel(cause: AgentCancelCause, options?: CancelOptions): void;
 
   /**
    * Resolve after the current whole-agent activity reaches quiescence. This
@@ -91,7 +91,7 @@ interface Agent {
    * but does not identify the settlement of any particular message.
    * @returns fulfillment after no active driver or maintenance task remains.
    */
-  whenIdle(): Promise<void>
+  whenIdle(): Promise<void>;
 
   /**
    * Run one non-turn maintenance task from the true idle phase. The task starts
@@ -102,7 +102,7 @@ interface Agent {
    * @throws synchronously when turn-driving or another maintenance task already owns the agent.
    * @returns the task promise.
    */
-  runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>
+  runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;
 
   /**
    * Route identified input to an inbox boundary and optionally wake the driver.
@@ -115,14 +115,14 @@ interface Agent {
    * @param target - the preferred next-turn or next-step inbox boundary.
    * @param wakeup - whether delivery may wake the driver.
    */
-  send(message: UserMessage, target: InboxTarget, wakeup: boolean): void
+  send(message: UserMessage, target: InboxTarget, wakeup: boolean): void;
 
   /**
    * Queue an ordinary follow-up turn and wake the driver. The item becomes the
    * sole ordinary message of its own turn.
    * @param message - identified prompt content and the source that supplied it.
    */
-  followup(message: UserMessage): void
+  followup(message: UserMessage): void;
 
   /**
    * Submit steering for the nearest step. An idle driver starts a turn;
@@ -131,7 +131,7 @@ interface Agent {
    * wake; cancellation or disposal may discard pending steering.
    * @param message - identified steering content and the source that supplied it.
    */
-  steer(message: UserMessage): void
+  steer(message: UserMessage): void;
 
   /**
    * Queue model-facing context for the next pre-step without waking the
@@ -141,7 +141,7 @@ interface Agent {
    * batch. Cancellation or disposal may discard pending context.
    * @param message - identified injected context and the source that supplied it.
    */
-  inject(message: UserMessage): void
+  inject(message: UserMessage): void;
 }
 ```
 
@@ -153,7 +153,7 @@ interface Agent {
  * closes, or checkpoints turns. Disposal removes the agent from its registry;
  * it is not a third observable status.
  */
-type AgentStatus = 'idle' | 'running'
+type AgentStatus = "idle" | "running";
 ```
 
 `running` 描述整个驱动器的排空区间，可能跨越连续的排队轮次；它不能证明某个轮次仍然打开。dispose 会把 agent 从注册表移除并发出 `agent/disposed`；它不是一个终态 status 值。`followup()` 不返回句柄：其 `MessageId` 标识的是持久的 inbox 插入、认领与丢弃事实，而非之后的助手输出或轮次结束。`whenIdle()` 观察的是整个 agent，因此只有当调用方明确拥有从回执到空闲的这段区间时，才能把它称为一次 run（[决策](../../.agents/notes/implemented/architecture/2026-07-30-followup-enqueue-and-owned-runs.zh.md)）。
@@ -162,11 +162,11 @@ type AgentStatus = 'idle' | 'running'
 /** Merge-extensible agent creation options. Persona belongs to system-prompt sections. */
 interface AgentOptions {
   /** Provider route (must have a registered adapter at call time). */
-  provider?: string
+  provider?: string;
   /** Model id interpreted by the selected provider adapter. */
-  model?: string
+  model?: string;
   /** Maximum output tokens for each conversation-model request. */
-  maxTokens?: number
+  maxTokens?: number;
 }
 ```
 
@@ -176,7 +176,7 @@ inbox 即投递词汇——agent 以持久投影形式拥有的两条有序待�
 
 ```ts type-equiv
 /** One of the two ordered pending-message lists owned by an agent. */
-type InboxTarget = 'next-turn' | 'next-step'
+type InboxTarget = "next-turn" | "next-step";
 ```
 
 每个待处理入队项就是其 `UserMessage`；`MessageId` 是唯一标识。`Inbox.append`、`prepend`、`replace`、`remove`、`clear`、`splice` 与 `claim` 会记录规范化的持久 `agent/inbox/spliced` 变更，并拒绝重复的待处理 id。`replace(messageId, newMessage)` 与 `remove(messageId)` 通过 `MessageId` 跨两份列表定位待处理消息；替换可以改变标识，并先将旧消息作为 discarded 发布，再将新消息作为 inserted 发布。普通删除和 `clear()` 都表示取消。`claim(target)` 通过纯删除 splice 移除拟进入步骤的批次——全部 `next-step` 输入，外加轮次边界上的一条 `next-turn` 消息——且不发出 discarded 通知；循环另行逐条发出 claimed 通知。UI 投影等整体队列消费方通过持久 splice 重建 `nextTurn` 与 `nextStep`，而跟踪单条消息的消费方使用精确的 `agent/inbox/inserted`、`claimed` 与 `discarded` 通知。
@@ -191,17 +191,17 @@ interface CancelOptions {
    * active turn is still aborted, but un-started and pending work survives for a
    * later turn and no canceled inbox splice is logged.
    */
-  keepInbox?: boolean | undefined
+  keepInbox?: boolean | undefined;
 }
 ```
 
 ```ts type-equiv
 /** Why an active agent driver was cancelled. */
 type AgentCancelCause =
-  | { readonly kind: 'user' }
-  | { readonly kind: 'parent' }
-  | { readonly kind: 'hook'; readonly reason: string }
-  | { readonly kind: 'disposed' }
+  | { readonly kind: "user" }
+  | { readonly kind: "parent" }
+  | { readonly kind: "hook"; readonly reason: string }
+  | { readonly kind: "disposed" };
 ```
 
 cause 是由 TypeScript 强制约束的同进程输入。活跃的取消持有者会将它复制到仅运行时的 `AbortSignal.reason`；signal 不授予协作监听器任何分类权限。持久 `turn/end` 保留粗粒度 `{ kind: 'aborted' }` 结果；若需记录谁请求了取消，应使用单独的持久事件，而不是让终态结果承担额外含义。
@@ -228,16 +228,14 @@ pre-step 决策使用与持久 user-role 输入相同、带标识的 `UserMessag
 
 ```ts type-equiv
 /** Whether and with which messages the loop enters a proposed step. */
-type PreStepDecision =
-  | { kind: 'reject' }
-  | { kind: 'enter'; messages: UserMessage[] }
+type PreStepDecision = { kind: "reject" } | { kind: "enter"; messages: UserMessage[] };
 ```
 
 `agent/request-error` 在失败的模型步骤关闭之后、其轮次关闭之前运行。listener 可以在失败轮次的 signal 仍然存活时修复持久状态或 await 策略工作。处理该错误的 listener 返回 `{ kind: 'retry' }` 且不调用 `next()`；默认的 `undefined` 会让失败保持终态。
 
 ```ts type-equiv
 /** Action returned by a listener that owns model-request recovery. */
-type RequestErrorAction = { kind: 'retry' } | undefined
+type RequestErrorAction = { kind: "retry" } | undefined;
 ```
 
 `agent/pre-step` 是请求推导前唯一的串行监听器链。`agent/turn-stopping` 在轮次没有工具或 steering（中途引导）后续时运行，先于最后一次 steering 排空。
@@ -246,7 +244,7 @@ type RequestErrorAction = { kind: 'retry' } | undefined
 
 ```ts type-equiv
 /** Why a session lifecycle began; seeded creates are `startup`, while persisted loads are `resume`. */
-type SessionStartSource = 'startup' | 'resume' | 'clear' | 'compact'
+type SessionStartSource = "startup" | "resume" | "clear" | "compact";
 ```
 
 ## 会话
@@ -274,30 +272,30 @@ harness 中几乎所有可扩展的和类型都遵循同一模式：一个以判
 ```ts ignore-check
 // The pattern, schematically:
 interface ThingMap {
-  'a': { kind: 'a'; /* … */ }
-  'b': { kind: 'b'; /* … */ }
+  a: { kind: "a" /* … */ };
+  b: { kind: "b" /* … */ };
 }
-type ThingKind = keyof ThingMap          // 'a' | 'b'
-type Thing = ThingMap[keyof ThingMap]    // the discriminated union
+type ThingKind = keyof ThingMap; // 'a' | 'b'
+type Thing = ThingMap[keyof ThingMap]; // the discriminated union
 
 // A plugin extends it without touching the source package:
-declare module '@deepseek-ai/dsh-llm' {
+declare module "@deepseek-ai/dsh-llm" {
   interface ThingMap {
-    'c': { kind: 'c'; /* … */ }
+    c: { kind: "c" /* … */ };
   }
 }
 ```
 
 六个规范 map 使用此模式；插件作者扩展它们：
 
-| Map | 包 | 派生 | 目录 |
-|---|---|---|---|
-| `ContentBlockMap` | dsh-llm | `ContentBlock` | [llm-streaming.md](llm-streaming.zh.md#content-blocks-and-messages) |
-| `MessageSourceMap` | dsh-llm | `MessageSource` | [llm-streaming.md](llm-streaming.zh.md#content-blocks-and-messages) |
-| `FinishReasonMap` | dsh-llm | `FinishReason` | [llm-streaming.md](llm-streaming.zh.md#the-model-request-and-result) |
-| `TurnTriggerMap` | dsh-session | `TurnTrigger` | [session.md](session.zh.md) |
-| `TurnEndReasonMap` | dsh-session | `TurnEndReason` | [session.md](session.zh.md) |
-| `SessionEventMap` | dsh-session | `SessionEvent` | [session.md](session.zh.md) |
+| Map                | 包          | 派生            | 目录                                                                 |
+| ------------------ | ----------- | --------------- | -------------------------------------------------------------------- |
+| `ContentBlockMap`  | dsh-llm     | `ContentBlock`  | [llm-streaming.md](llm-streaming.zh.md#content-blocks-and-messages)  |
+| `MessageSourceMap` | dsh-llm     | `MessageSource` | [llm-streaming.md](llm-streaming.zh.md#content-blocks-and-messages)  |
+| `FinishReasonMap`  | dsh-llm     | `FinishReason`  | [llm-streaming.md](llm-streaming.zh.md#the-model-request-and-result) |
+| `TurnTriggerMap`   | dsh-session | `TurnTrigger`   | [session.md](session.zh.md)                                          |
+| `TurnEndReasonMap` | dsh-session | `TurnEndReason` | [session.md](session.zh.md)                                          |
+| `SessionEventMap`  | dsh-session | `SessionEvent`  | [session.md](session.zh.md)                                          |
 
 消费方最常 `switch` 的两个大型判别联合类型是：**`StreamChunk`**（流式协议）和 **`SessionEvent`**（日志条目）。按仓库约定，对标签做 `switch`——不要链式 `if`——这样每个分支都能窄化类型，拼错的标签会编译失败。
 
@@ -313,7 +311,7 @@ declare module '@deepseek-ai/dsh-llm' {
 
 ```ts type-equiv
 /** A string carrying a compile-time-only brand `B`. */
-type Branded<B extends string> = string & { readonly [BRAND]: B }
+type Branded<B extends string> = string & { readonly [BRAND]: B };
 ```
 
 两个核心 ID 是 `CallId`（关联工具调用及其结果；dsh-llm）和 `SessionId`（活跃 agent 与持久会话共享的标识；dsh-session）。能力包也会品牌化各自的 id，例如 [jobs.md](jobs.zh.md) 中的 `JobId`。
@@ -564,7 +562,7 @@ Source: [`packages/preset/agent-presets/src/index.ts`](../../packages/preset/age
 
 ### `ctx.agents` — `AgentRegistry`
 
-Agent service (`ctx.agents`): tracks live agents and carries the initiating Agent through one process-local asynchronous driver chain. Agent *creation* is provided by whichever plugin implements the AgentFactory (`@deepseek-ai/dsh-agent-loop`), registered via setFactory.
+Agent service (`ctx.agents`): tracks live agents and carries the initiating Agent through one process-local asynchronous driver chain. Agent _creation_ is provided by whichever plugin implements the AgentFactory (`@deepseek-ai/dsh-agent-loop`), registered via setFactory.
 
 Initiator methods provide same-process causal attribution only. Ambient presence is neither liveness proof nor authorization; subjects and owners remain explicit, as does identity at worker, process, persistence, and wire boundaries. Returned Promise boundaries drain during teardown, except a nested lineage that starts an owning-fiber unload is excluded from its own drain.
 

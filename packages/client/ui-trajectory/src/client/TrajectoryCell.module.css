@@ -57,11 +57,7 @@
 }
 
 .tagContext {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-state-success-primary) 68%,
-    var(--dsw-alias-label-secondary)
-  );
+  color: color-mix(in srgb, var(--dsw-alias-state-success-primary) 68%, var(--dsw-alias-label-secondary));
   background: var(--dsw-alias-state-success-tertiary);
 }
 
@@ -74,10 +70,11 @@
   background: color-mix(
     in srgb,
     color-mix(
-      in srgb,
-      var(--dsw-alias-brand-primary-new-colorprimary-new-color) 55%,
-      var(--dsw-alias-state-error-secondary)
-    ) 15%,
+        in srgb,
+        var(--dsw-alias-brand-primary-new-colorprimary-new-color) 55%,
+        var(--dsw-alias-state-error-secondary)
+      )
+      15%,
     var(--dsw-alias-bg-layer-1)
   );
 }
@@ -90,19 +87,11 @@
 /* run_code sub-dispatch cells: the business tint plus an indent so the
    nesting under the parent Tool cell reads at a glance. */
 .tagSubtool {
-  color: color-mix(
-    in srgb,
-    var(--dsw-alias-state-warn-label) 62%,
-    var(--dsw-alias-label-tertiary)
-  );
-  background: color-mix(
-    in srgb,
-    var(--dsw-alias-state-warn-tertiary) 58%,
-    var(--dsw-alias-bg-layer-1)
-  );
+  color: color-mix(in srgb, var(--dsw-alias-state-warn-label) 62%, var(--dsw-alias-label-tertiary));
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-tertiary) 58%, var(--dsw-alias-bg-layer-1));
 }
 
-.root[data-kind='subtool'] {
+.root[data-kind="subtool"] {
   padding-left: 28px;
 }
 

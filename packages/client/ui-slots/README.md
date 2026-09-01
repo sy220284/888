@@ -6,12 +6,12 @@ Slot registry pure core, slot terminal design: SlotMap declaration merging, the 
 
 One `register({ name, children?, store?, inject?, ...kind }, Component)` call contributes a component into a declared slot and, in the same breath, declares child slots (declaration = render authorization = runtime spec, one table), a store seat, and the registrant's business face. The component is checked at the call site against `ComposedProps` — the intersection of four shares, each derived from its single source of truth:
 
-| share | type | source |
-|---|---|---|
-| runtime | `PropsRuntime<K>` | SlotMap entry: `owner` (parent's renderSlot call site) + session standard kit + global seat |
-| child render | `PropsRenderSlots<S>` | the register call's `children` key set (statically narrowed `renderSlot`) |
-| store | `PropsStore<H>` | the declared handle: `useStore` selector hook + draft-stripped `actions` |
-| business | `I` | inferred from the `inject` factory's return |
+| share        | type                  | source                                                                                      |
+| ------------ | --------------------- | ------------------------------------------------------------------------------------------- |
+| runtime      | `PropsRuntime<K>`     | SlotMap entry: `owner` (parent's renderSlot call site) + session standard kit + global seat |
+| child render | `PropsRenderSlots<S>` | the register call's `children` key set (statically narrowed `renderSlot`)                   |
+| store        | `PropsStore<H>`       | the declared handle: `useStore` selector hook + draft-stripped `actions`                    |
+| business     | `I`                   | inferred from the `inject` factory's return                                                 |
 
 Chain-kind slots invert keyed routing — entries self-nominate instead of the dispatch site picking an `entryKey`: each registration carries a pure `ChainSelect` selector (plus optional ascending `priority`, ties in registration order), the first non-null return elects its entry and becomes the component's `matched` prop, and all-null falls to the owner's `renderSlotChain` fallback (`ChainRenderOpts`).
 

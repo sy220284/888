@@ -9,24 +9,24 @@ Each `cordis.yml` entry can carry a `config` block, and the plugin declares a sc
 Create `config-demo.ts` in `tmp/cordis-tutorial`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
+import type { Context } from "@deepseek-ai/cordis";
+import Schema from "@deepseek-ai/schemastery";
 
-export const name = 'config-demo'
+export const name = "config-demo";
 
 export interface Config {
-  greeting: string
-  targets: string[]
+  greeting: string;
+  targets: string[];
 }
 
 export const Config: Schema<Config> = Schema.object({
-  greeting: Schema.string().default('Hello'),
-  targets: Schema.array(String).default(['world']),
-})
+  greeting: Schema.string().default("Hello"),
+  targets: Schema.array(String).default(["world"]),
+});
 
 export function apply(ctx: Context, config: Config) {
   for (const target of config.targets) {
-    console.log(`${config.greeting}, ${target}!`)
+    console.log(`${config.greeting}, ${target}!`);
   }
 }
 ```
@@ -36,9 +36,9 @@ The exported `Config` is both a TypeScript interface and a runtime schema with t
 Configure it:
 
 ```yaml
-- name: './config-demo.ts'
+- name: "./config-demo.ts"
   config:
-    targets: ['alpha', 'beta']
+    targets: ["alpha", "beta"]
 ```
 
 Run:
@@ -55,9 +55,9 @@ Hello, beta!
 Now feed it something invalid:
 
 ```yaml
-- name: './config-demo.ts'
+- name: "./config-demo.ts"
   config:
-    targets: 'not-an-array'
+    targets: "not-an-array"
 ```
 
 ```
@@ -72,7 +72,7 @@ The plugin's fiber goes to FAILED, and this tutorial's launcher exits with statu
 The loader used in this repo supports a `!!js` tag for config values that must be computed at load time:
 
 ```yaml
-- name: './config-demo.ts'
+- name: "./config-demo.ts"
   config:
     greeting: !!js process.env.DEMO_GREETING ?? 'Hello'
 ```

@@ -22,18 +22,18 @@
 
 ## 配置
 
-| 配置键 | 默认值 | 含义 |
-|---|---|---|
-| `providerName` | `codex` | `ctx.subagents` 中的非空注册名称；每个已挂载实例都需要唯一值。 |
-| `env` | `{}` | 显式指定的子进程环境，叠加在由子进程 seam 清除凭证后的父环境之上。 |
-| `permissionMode` | `never` | 为该提供方实例的每个线程固定原生非交互审批与沙箱模式。 |
-| `disposeGraceMs` | `3000` | 共享进程树责任方各终止层级之间的宽限期，单位为毫秒且须为正有限值，并不得大于仓库共享的 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)；随后资源释放会等待整棵进程树退出。 |
+| 配置键           | 默认值  | 含义                                                                                                                                                                               |
+| ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `providerName`   | `codex` | `ctx.subagents` 中的非空注册名称；每个已挂载实例都需要唯一值。                                                                                                                     |
+| `env`            | `{}`    | 显式指定的子进程环境，叠加在由子进程 seam 清除凭证后的父环境之上。                                                                                                                 |
+| `permissionMode` | `never` | 为该提供方实例的每个线程固定原生非交互审批与沙箱模式。                                                                                                                             |
+| `disposeGraceMs` | `3000`  | 共享进程树责任方各终止层级之间的宽限期，单位为毫秒且须为正有限值，并不得大于仓库共享的 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)；随后资源释放会等待整棵进程树退出。 |
 
-| `permissionMode` 值 | `thread/start` 字段 | 原生行为 |
-|---|---|---|
-| `never` | `approvalPolicy: never`；省略 sandbox | 永不请求审批；执行失败会在原生 sandbox 下返回模型。 |
-| `approve-for-me` | `approvalPolicy: on-request`、`approvalsReviewer: auto_review`、`sandbox: workspace-write` | 由 Codex 自动评审权限请求，不等待人工。 |
-| `dangerously-bypass-approvals-and-sandbox` | `approvalPolicy: never`、`sandbox: danger-full-access` | 跳过审批与 sandbox；必须显式选择该值。 |
+| `permissionMode` 值                        | `thread/start` 字段                                                                        | 原生行为                                            |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| `never`                                    | `approvalPolicy: never`；省略 sandbox                                                      | 永不请求审批；执行失败会在原生 sandbox 下返回模型。 |
+| `approve-for-me`                           | `approvalPolicy: on-request`、`approvalsReviewer: auto_review`、`sandbox: workspace-write` | 由 Codex 自动评审权限请求，不等待人工。             |
+| `dangerously-bypass-approvals-and-sandbox` | `approvalPolicy: never`、`sandbox: danger-full-access`                                     | 跳过审批与 sandbox；必须显式选择该值。              |
 
 生产环境会解析锁定的 `@openai/codex@0.147.0` 依赖所声明的 `codex` bin，并使用当前 Node 可执行文件启动该 JavaScript wrapper。Wrapper 会选择匹配的原生平台载荷；提供方既不检查也不回退 `PATH` 中的宿主 `codex`。父会话 cwd、`HOME` 与 `CODEX_HOME` 继续让原生 Codex 配置和身份验证保持权威，而提供方只覆盖选定线程的 approval／reviewer／sandbox 字段。其他项目、模型、provider、MCP、hook、skill 与账户设置仍由原生机制负责。本插件不选择模型、不创建 `CODEX_HOME`、不执行登录，也不探测账户。子进程 seam 会先移除具有凭证特征的环境变量，再应用显式 `env` 覆盖。
 
@@ -51,7 +51,7 @@ dsh --profile <name>
 
 ```yaml
 - id: subagent-codex-safe
-  name: '@deepseek-ai/dsh-subagent-codex'
+  name: "@deepseek-ai/dsh-subagent-codex"
   config:
     providerName: codex-safe
     permissionMode: never
@@ -59,7 +59,7 @@ dsh --profile <name>
       OPENAI_API_KEY: !!js process.env.OPENAI_API_KEY
 
 - id: subagent-codex-bypass
-  name: '@deepseek-ai/dsh-subagent-codex'
+  name: "@deepseek-ai/dsh-subagent-codex"
   config:
     providerName: codex-bypass
     permissionMode: dangerously-bypass-approvals-and-sandbox
@@ -69,13 +69,13 @@ dsh --profile <name>
 
 ```yaml
 - id: jobs
-  name: '@deepseek-ai/dsh-jobs-local'
+  name: "@deepseek-ai/dsh-jobs-local"
 
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: "@deepseek-ai/dsh-tool-jobs"
 
 - id: tool-subagent-codex-safe
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   disabled: true
   config:
     provider: codex-safe
@@ -84,7 +84,7 @@ dsh --profile <name>
     maxDepth: provider-managed
 
 - id: tool-subagent-codex-bypass
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   config:
     provider: codex-bypass
     toolName: subagent_codex_bypass

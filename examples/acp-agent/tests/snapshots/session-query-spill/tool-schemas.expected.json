@@ -29,20 +29,14 @@
           "sandbox_permissions": {
             "type": "string",
             "description": "The wider sandbox mode this command needs. Only valid as a one-shot retry of a command the sandbox just denied; requires justification and user approval.",
-            "enum": [
-              "workspace-write",
-              "danger-full-access"
-            ]
+            "enum": ["workspace-write", "danger-full-access"]
           },
           "justification": {
             "type": "string",
             "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact command needs the wider access."
           }
         },
-        "required": [
-          "command",
-          "description"
-        ]
+        "required": ["command", "description"]
       }
     },
     {
@@ -60,9 +54,7 @@
             "description": "Optional positive safe-integer limit on automatic continuation rounds."
           }
         },
-        "required": [
-          "objective"
-        ]
+        "required": ["objective"]
       }
     },
     {
@@ -90,21 +82,14 @@
           "sandbox_permissions": {
             "type": "string",
             "description": "The wider sandbox mode this file operation needs. Only valid as a one-shot retry of an operation the sandbox just denied; requires justification and user approval.",
-            "enum": [
-              "workspace-write",
-              "danger-full-access"
-            ]
+            "enum": ["workspace-write", "danger-full-access"]
           },
           "justification": {
             "type": "string",
             "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access."
           }
         },
-        "required": [
-          "file_path",
-          "old_string",
-          "new_string"
-        ]
+        "required": ["file_path", "old_string", "new_string"]
       }
     },
     {
@@ -126,9 +111,7 @@
             "description": "The agent id of the running agent to interrupt."
           }
         },
-        "required": [
-          "agent_id"
-        ]
+        "required": ["agent_id"]
       }
     },
     {
@@ -146,9 +129,7 @@
             "description": "Optional short reason, recorded in the log and forwarded to the job."
           }
         },
-        "required": [
-          "job_id"
-        ]
+        "required": ["job_id"]
       }
     },
     {
@@ -178,9 +159,7 @@
             "description": "Max wait in milliseconds (only meaningful with wait: true). Defaults to the configured wait timeout; capped by the configured maximum."
           }
         },
-        "required": [
-          "job_id"
-        ]
+        "required": ["job_id"]
       }
     },
     {
@@ -192,10 +171,7 @@
           "scope": {
             "type": "string",
             "description": "children (default) lists direct children only; descendants walks the complete tree below you.",
-            "enum": [
-              "children",
-              "descendants"
-            ]
+            "enum": ["children", "descendants"]
           }
         }
       }
@@ -215,9 +191,7 @@
             "description": "Optional positive safe-integer round cap, bounded by the deployment ceiling."
           }
         },
-        "required": [
-          "objective"
-        ]
+        "required": ["objective"]
       }
     },
     {
@@ -239,9 +213,7 @@
             "description": "Maximum number of lines to return. Defaults to 2000."
           }
         },
-        "required": [
-          "file_path"
-        ]
+        "required": ["file_path"]
       }
     },
     {
@@ -259,10 +231,7 @@
             "description": "The message to deliver to the subagent."
           }
         },
-        "required": [
-          "subagent_id",
-          "message"
-        ]
+        "required": ["subagent_id", "message"]
       }
     },
     {
@@ -288,9 +257,7 @@
             "description": "Number of following raw events to summarize. Omit for none."
           }
         },
-        "required": [
-          "seq"
-        ]
+        "required": ["seq"]
       }
     },
     {
@@ -335,17 +302,11 @@
             "description": "Event surfaces to include.",
             "items": {
               "type": "string",
-              "enum": [
-                "current",
-                "shadowed",
-                "log-only"
-              ]
+              "enum": ["current", "shadowed", "log-only"]
             }
           }
         },
-        "required": [
-          "query"
-        ]
+        "required": ["query"]
       }
     },
     {
@@ -363,9 +324,7 @@
             "description": "Target event sequence number."
           }
         },
-        "required": [
-          "seq"
-        ]
+        "required": ["seq"]
       }
     },
     {
@@ -409,10 +368,7 @@
             "description": "Require at least one selected source availability.",
             "items": {
               "type": "string",
-              "enum": [
-                "live",
-                "persisted"
-              ]
+              "enum": ["live", "persisted"]
             }
           },
           "event_seq_from": {
@@ -443,17 +399,11 @@
             "description": "Event surfaces to include.",
             "items": {
               "type": "string",
-              "enum": [
-                "current",
-                "shadowed",
-                "log-only"
-              ]
+              "enum": ["current", "shadowed", "log-only"]
             }
           }
         },
-        "required": [
-          "query"
-        ]
+        "required": ["query"]
       }
     },
     {
@@ -480,9 +430,7 @@
             "description": "The exact skill name from the available skills list."
           }
         },
-        "required": [
-          "name"
-        ]
+        "required": ["name"]
       }
     },
     {
@@ -504,10 +452,7 @@
             "description": "Whether to run in the background and return a durable subagent id immediately. Defaults to true. Set false to wait for the result when your next action depends on it."
           }
         },
-        "required": [
-          "description",
-          "prompt"
-        ]
+        "required": ["description", "prompt"]
       }
     },
     {
@@ -525,10 +470,7 @@
             "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
           }
         },
-        "required": [
-          "description",
-          "prompt"
-        ]
+        "required": ["description", "prompt"]
       }
     },
     {
@@ -551,23 +493,14 @@
                 "status": {
                   "type": "string",
                   "description": "pending (not started) | in_progress (now) | completed (done).",
-                  "enum": [
-                    "pending",
-                    "in_progress",
-                    "completed"
-                  ]
+                  "enum": ["pending", "in_progress", "completed"]
                 }
               },
-              "required": [
-                "content",
-                "status"
-              ]
+              "required": ["content", "status"]
             }
           }
         },
-        "required": [
-          "todos"
-        ]
+        "required": ["todos"]
       }
     },
     {
@@ -587,13 +520,7 @@
           "action": {
             "type": "string",
             "description": "edit | pause | resume | complete | blocked",
-            "enum": [
-              "edit",
-              "pause",
-              "resume",
-              "complete",
-              "blocked"
-            ]
+            "enum": ["edit", "pause", "resume", "complete", "blocked"]
           },
           "objective": {
             "type": "string",
@@ -608,11 +535,7 @@
             "description": "Concrete blocking condition; required only with action blocked."
           }
         },
-        "required": [
-          "goal_id",
-          "revision",
-          "action"
-        ]
+        "required": ["goal_id", "revision", "action"]
       }
     },
     {
@@ -666,16 +589,11 @@
                       "description": "Optional model override this phase is expected to use."
                     }
                   },
-                  "required": [
-                    "title"
-                  ]
+                  "required": ["title"]
                 }
               }
             },
-            "required": [
-              "name",
-              "description"
-            ]
+            "required": ["name", "description"]
           },
           "args": {
             "type": "object",
@@ -683,10 +601,7 @@
             "additionalProperties": true
           }
         },
-        "required": [
-          "script",
-          "meta"
-        ]
+        "required": ["script", "meta"]
       }
     },
     {
@@ -706,20 +621,14 @@
           "sandbox_permissions": {
             "type": "string",
             "description": "The wider sandbox mode this file operation needs. Only valid as a one-shot retry of an operation the sandbox just denied; requires justification and user approval.",
-            "enum": [
-              "workspace-write",
-              "danger-full-access"
-            ]
+            "enum": ["workspace-write", "danger-full-access"]
           },
           "justification": {
             "type": "string",
             "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access."
           }
         },
-        "required": [
-          "file_path",
-          "content"
-        ]
+        "required": ["file_path", "content"]
       }
     }
   ],

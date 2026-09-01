@@ -3,16 +3,10 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types",
-    "lib": [
-      "ES2024",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["node"]
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../../../vendor/cordis"

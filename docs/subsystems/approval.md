@@ -15,7 +15,7 @@ Every request receives a fresh `ApprovalRequestId`. The brand pairs the `approva
  * Pairs one `approval/asked` audit event with its `approval/decided`.
  * Service-issued (one fresh id per {@link ApprovalService.request} call).
  */
-type ApprovalRequestId = Branded<'ApprovalRequestId'>
+type ApprovalRequestId = Branded<"ApprovalRequestId">;
 ```
 
 `ApprovalOutcome` is closed and fail-closed. `allowed-once` grants only the asked-about action; callers deny on `rejected`, `cancelled`, and `unavailable`. A missing, non-owning, throwing, or non-conforming answerer becomes `unavailable` rather than opening the gate.
@@ -25,7 +25,7 @@ type ApprovalRequestId = Branded<'ApprovalRequestId'>
  * Closed approval outcomes: a one-shot grant, explicit rejection, withdrawn
  * request, or unavailable answerer. Callers fail closed on `unavailable`.
  */
-type ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
+type ApprovalOutcome = "allowed-once" | "rejected" | "cancelled" | "unavailable";
 ```
 
 ## Per-session policy
@@ -43,7 +43,7 @@ type ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
  *   deterministically. The strict headless stance (CI, unattended runs) and
  *   the policy whose outcome is knowable without asking.
  */
-type ApprovalPolicy = 'ask' | 'never'
+type ApprovalPolicy = "ask" | "never";
 ```
 
 Both policies contribute their complete current meaning to the cache-safe runtime-context snapshot. The sourced `user/message` is the durable model-visible input; changing approval state appends a new full snapshot after retained history without rewriting the request header's system prompt.
@@ -63,21 +63,21 @@ interface ApprovalRequest {
    * UI answerer only answers for agents it owns) and receives the audit
    * events on its session log.
    */
-  readonly agent: Agent
+  readonly agent: Agent;
   /** The tool the question is about (presentation and audit). */
-  readonly toolName: string
+  readonly toolName: string;
   /**
    * The exact tool call being decided, when the asker has one — lets a UI
    * attach the prompt to the tool call it already streamed.
    */
-  readonly callId?: CallId
+  readonly callId?: CallId;
   /** The asker's human-readable explanation of WHY it is asking. */
-  readonly reason?: string
+  readonly reason?: string;
   /**
    * Aborting withdraws the question: the request settles `'cancelled'`
    * immediately and a late answer from a still-pending answerer is discarded.
    */
-  readonly signal?: AbortSignal
+  readonly signal?: AbortSignal;
 }
 ```
 

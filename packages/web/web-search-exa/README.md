@@ -8,17 +8,17 @@ This is an **implementation** package: it registers a provider into `ctx.web`, i
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---|---|
-| `apiKey` | `$EXA_API_KEY` | Exa API key. Empty/absent makes the provider unavailable. |
-| `baseURL` | `https://api.exa.ai` | Endpoint base; `/search` is appended. An unparseable value makes the provider unavailable. |
-| `searchType` | `auto` | Retrieval mode sent as Exa's `type`: `auto` (Exa decides), `keyword`, or `neural`. |
-| `numResults` | (unset) | Default result count when a request carries no `maxResults`. Unset sends no default. Must be a positive integer. |
-| `highlightsPerResult` | `1` | Highlight sentences requested per result (Exa's `highlightsPerUrl`). Must be a positive integer. |
+| Key                   | Default              | Meaning                                                                                                          |
+| --------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `apiKey`              | `$EXA_API_KEY`       | Exa API key. Empty/absent makes the provider unavailable.                                                        |
+| `baseURL`             | `https://api.exa.ai` | Endpoint base; `/search` is appended. An unparseable value makes the provider unavailable.                       |
+| `searchType`          | `auto`               | Retrieval mode sent as Exa's `type`: `auto` (Exa decides), `keyword`, or `neural`.                               |
+| `numResults`          | (unset)              | Default result count when a request carries no `maxResults`. Unset sends no default. Must be a positive integer. |
+| `highlightsPerResult` | `1`                  | Highlight sentences requested per result (Exa's `highlightsPerUrl`). Must be a positive integer.                 |
 
 ```yaml
 - id: web-search-exa
-  name: '@deepseek-ai/dsh-web-search-exa'
+  name: "@deepseek-ai/dsh-web-search-exa"
   config:
     apiKey: !!js process.env.EXA_API_KEY
 ```

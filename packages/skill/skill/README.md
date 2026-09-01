@@ -24,19 +24,19 @@ The registry is host+per-scope layered over [`@deepseek-ai/dsh-scope`](../../cor
 
 ### Config
 
-| Field | Default | Meaning |
-|---|---|---|
-| `collectCacheMaxEntries` | `128` | Maximum completed cwd/provider catalogs kept in memory. |
+| Field                    | Default | Meaning                                                 |
+| ------------------------ | ------- | ------------------------------------------------------- |
+| `collectCacheMaxEntries` | `128`   | Maximum completed cwd/provider catalogs kept in memory. |
 
 ### Invocation policy
 
 `SkillSummary.invocation` is a required typed policy object whose positive booleans `modelInvocable` and `userInvocable` describe the two surfaces independently. Providers return this resolved shape on every candidate and definition; only the `SkillRegistration` input may omit it, in which case `register()` supplies `{ modelInvocable: true, userInvocable: true }`. The registry keeps all four combinations so one discovery result can serve model-facing tools, human-facing commands, and trusted internal callers without conflating their catalogs.
 
-| Policy | Model | User |
-|---|---|---|
-| `{ modelInvocable: true, userInvocable: true }` | included | included |
-| `{ modelInvocable: true, userInvocable: false }` | included | excluded |
-| `{ modelInvocable: false, userInvocable: true }` | excluded | included |
+| Policy                                            | Model    | User     |
+| ------------------------------------------------- | -------- | -------- |
+| `{ modelInvocable: true, userInvocable: true }`   | included | included |
+| `{ modelInvocable: true, userInvocable: false }`  | included | excluded |
+| `{ modelInvocable: false, userInvocable: true }`  | excluded | included |
 | `{ modelInvocable: false, userInvocable: false }` | excluded | excluded |
 
 ### Shared model-facing rendering

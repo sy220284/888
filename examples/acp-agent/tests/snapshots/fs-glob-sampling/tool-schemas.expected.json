@@ -27,10 +27,7 @@
             "description": "Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies."
           }
         },
-        "required": [
-          "command",
-          "description"
-        ]
+        "required": ["command", "description"]
       }
     },
     {
@@ -48,9 +45,7 @@
             "description": "Directory to search in. Defaults to the session workspace; a relative path resolves against it."
           }
         },
-        "required": [
-          "pattern"
-        ]
+        "required": ["pattern"]
       }
     },
     {
@@ -72,9 +67,7 @@
             "description": "One glob filter for which files to search (e.g. \"*.ts\", \"*.{js,jsx}\"). Not a list; negation is not supported."
           }
         },
-        "required": [
-          "pattern"
-        ]
+        "required": ["pattern"]
       }
     }
   ],

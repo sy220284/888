@@ -18,8 +18,8 @@ The catalog is omitted when no model-invocable skills are initially available, a
 
 ## Tool: `skill`
 
-| Arg | Type | Notes |
-|---|---|---|
+| Arg    | Type              | Notes                                                          |
+| ------ | ----------------- | -------------------------------------------------------------- |
 | `name` | string (required) | Exact kebab-case skill name from the available skills listing. |
 
 Execution uses the calling agent's `session.header.cwd` so workspace-sensitive providers resolve the winning skill. A successful call returns canonical `{ name, provider, resourceBase?, content }`, excluding catalog ranking and provider-internal machinery; its Native renderer produces one text result containing `<skill_content name="...">`, `<skill_resources>`, and `<skill_instructions>`.
@@ -45,8 +45,9 @@ If model-invocable skills exist and this exact `skill` tool is visible, the agen
 A skill is a reusable set of task-specific instructions. The following skills are available in this session:
 
 <available_skills>
+
 - `<name>`: <normalized-and-capped-description>
-</available_skills>
+  </available_skills>
 
 If the user names a skill, or the task clearly matches a skill's description, call the `skill` tool with the exact skill name before taking task actions. Load all applicable skills, then follow their full instructions. This catalog contains summaries only; do not infer or follow a skill's instructions until it has been loaded.
 A user may also invoke a skill directly; its <skill_content> block then appears in this conversation. Follow it, and do not call the `skill` tool again for that skill.

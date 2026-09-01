@@ -58,16 +58,16 @@
   line-height: 24px;
 }
 
-.card[data-cordis-status='awaiting-approval'] .status,
-.card[data-cordis-status='client-pending'] .status {
+.card[data-cordis-status="awaiting-approval"] .status,
+.card[data-cordis-status="client-pending"] .status {
   color: var(--dsw-alias-state-warn-label);
 }
 
-.card[data-cordis-status='running'] .status {
+.card[data-cordis-status="running"] .status {
   color: var(--dsw-alias-state-success-primary);
 }
 
-.card[data-cordis-status='failed'] .status {
+.card[data-cordis-status="failed"] .status {
   color: var(--dsw-alias-state-error-primary);
 }
 

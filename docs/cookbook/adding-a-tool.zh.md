@@ -7,31 +7,33 @@
 ## 最小形态
 
 ```ts
-import { readFile } from 'node:fs/promises'
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
+import { readFile } from "node:fs/promises";
+import type { Context } from "@deepseek-ai/cordis";
+import { defineTool } from "@deepseek-ai/dsh-tools";
 
-export const name = 'my-tool'
-export const inject = ['tools']
+export const name = "my-tool";
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
-  ctx.tools.register(defineTool({
-    name: 'read_file',
-    description: 'Read a file from disk.',          // what the model sees
-    parameters: {
-      path: { type: 'string', required: true, description: 'Absolute path' },
-      limit: { type: 'number' },                     // optional by default
-    },
-    output: {
-      schema: { type: 'string' },
-      render: (_args, value) => [{ type: 'text', text: value }],
-    },
-    async execute(args, exec) {
-      // args is TYPED from the schema: { path: string; limit?: number }
-      // exec carries immutable identity + token; signal is the operational field
-      return readFile(args.path, { encoding: 'utf8', signal: exec.signal })
-    },
-  }))
+  ctx.tools.register(
+    defineTool({
+      name: "read_file",
+      description: "Read a file from disk.", // what the model sees
+      parameters: {
+        path: { type: "string", required: true, description: "Absolute path" },
+        limit: { type: "number" }, // optional by default
+      },
+      output: {
+        schema: { type: "string" },
+        render: (_args, value) => [{ type: "text", text: value }],
+      },
+      async execute(args, exec) {
+        // args is TYPED from the schema: { path: string; limit?: number }
+        // exec carries immutable identity + token; signal is the operational field
+        return readFile(args.path, { encoding: "utf8", signal: exec.signal });
+      },
+    }),
+  );
 }
 ```
 

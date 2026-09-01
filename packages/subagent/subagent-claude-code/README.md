@@ -24,20 +24,20 @@ The provider advertises no optional start-time capabilities and reports `inherit
 
 ## Configuration
 
-| Key | Default | Meaning |
-|---|---|---|
-| `providerName` | `claude-code` | Non-empty registry name on `ctx.subagents`; each mounted instance needs a unique value. |
-| `env` | `{}` | Explicit SDK/CLI environment layered over the shared credential-scrubbed parent environment. |
-| `permissionMode` | `dontAsk` | Native non-interactive permission policy fixed for every run from this Provider instance. |
-| `disposeGraceMs` | `3000` | Positive finite grace in milliseconds, no greater than [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md), between the shared process-tree owner's termination tiers; disposal then waits for whole-tree exit. |
+| Key              | Default       | Meaning                                                                                                                                                                                                          |
+| ---------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `providerName`   | `claude-code` | Non-empty registry name on `ctx.subagents`; each mounted instance needs a unique value.                                                                                                                          |
+| `env`            | `{}`          | Explicit SDK/CLI environment layered over the shared credential-scrubbed parent environment.                                                                                                                     |
+| `permissionMode` | `dontAsk`     | Native non-interactive permission policy fixed for every run from this Provider instance.                                                                                                                        |
+| `disposeGraceMs` | `3000`        | Positive finite grace in milliseconds, no greater than [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md), between the shared process-tree owner's termination tiers; disposal then waits for whole-tree exit. |
 
-| `permissionMode` value | Native behavior |
-|---|---|
-| `dontAsk` | Deny operations that are not already authorized instead of prompting. |
-| `acceptEdits` | Accept file edits; any remaining permission prompt is denied by the unattended callback. |
-| `auto` | Let Claude Code's native classifier allow or deny permission requests. |
-| `plan` | Run in native planning mode, deny execution approval, and return the completed plan as the final answer. |
-| `bypassPermissions` | Explicitly set the SDK's dangerous confirmation and bypass permission checks. |
+| `permissionMode` value | Native behavior                                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| `dontAsk`              | Deny operations that are not already authorized instead of prompting.                                    |
+| `acceptEdits`          | Accept file edits; any remaining permission prompt is denied by the unattended callback.                 |
+| `auto`                 | Let Claude Code's native classifier allow or deny permission requests.                                   |
+| `plan`                 | Run in native planning mode, deny execution approval, and return the completed plan as the final answer. |
+| `bypassPermissions`    | Explicitly set the SDK's dangerous confirmation and bypass permission checks.                            |
 
 Production omits `pathToClaudeCodeExecutable`, so Agent SDK 0.3.220 selects the matching native `claude` or `claude.exe` from its own platform package and passes that absolute command through the custom-spawn hook to `dsh-subprocess`. The provider does not inspect `PATH`, implement platform selection, or fall back to a host `claude`. Native settings and authentication remain authoritative, while `permissionMode` is the only query-level policy override. The plugin does not select a model, create a product home, log in, or probe an account. Credential-shaped ambient variables are removed before the explicit `env` overlay is applied, so an API key or token intended for the child must be supplied there. Non-credential endpoint variables such as `ANTHROPIC_BASE_URL`, along with ordinary ambient values such as `PATH` and `HOME`, remain inherited unless overridden; `PATH` does not choose the Claude executable.
 
@@ -55,7 +55,7 @@ The standalone composition below shows the complete explicit capability. A Profi
 
 ```yaml
 - id: subagent-claude-safe
-  name: '@deepseek-ai/dsh-subagent-claude-code'
+  name: "@deepseek-ai/dsh-subagent-claude-code"
   config:
     providerName: claude-safe
     permissionMode: dontAsk
@@ -63,7 +63,7 @@ The standalone composition below shows the complete explicit capability. A Profi
       ANTHROPIC_API_KEY: !!js process.env.ANTHROPIC_API_KEY
 
 - id: subagent-claude-bypass
-  name: '@deepseek-ai/dsh-subagent-claude-code'
+  name: "@deepseek-ai/dsh-subagent-claude-code"
   config:
     providerName: claude-bypass
     permissionMode: bypassPermissions
@@ -73,13 +73,13 @@ The standalone composition below shows the complete explicit capability. A Profi
 
 ```yaml
 - id: jobs
-  name: '@deepseek-ai/dsh-jobs-local'
+  name: "@deepseek-ai/dsh-jobs-local"
 
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: "@deepseek-ai/dsh-tool-jobs"
 
 - id: tool-subagent-claude-safe
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   disabled: true
   config:
     provider: claude-safe
@@ -88,7 +88,7 @@ The standalone composition below shows the complete explicit capability. A Profi
     maxDepth: provider-managed
 
 - id: tool-subagent-claude-bypass
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   config:
     provider: claude-bypass
     toolName: subagent_claude_bypass

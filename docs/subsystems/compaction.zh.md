@@ -10,11 +10,11 @@
 
 压缩通过声明合并为 [`SessionEventMap`](session.zh.md) 扩展三种事件类型。三者都**仅写入日志**——它们记录锁、摘要、选中范围、被遮蔽事件 seq、token 数以及模型调用，绝不进入 surface。这里有意不扩展 `SurfaceEventType`（只有产生消息的事件才到达模型），因此摘要本身承载在另一条带有 `surfaceOp: { op: 'replace', start, end }` 的 `user/message` 上——这是摘要压缩执行的唯一 surface 变更。[Agent Note](../../.agents/notes/implemented/feature/2026-06-18-compaction-capability-seam.zh.md) 负责复用 `user/message` 的决策依据。
 
-| 事件 | 载荷 | 作用 |
-|---|---|---|
-| `compaction/start` | `{ turn }` | 获取日志记录的锁；数字标识尚未结束的自动轮次，`null` 标识独立手动尝试 |
+| 事件                 | 载荷                                                                                                                            | 作用                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compaction/start`   | `{ turn }`                                                                                                                      | 获取日志记录的锁；数字标识尚未结束的自动轮次，`null` 标识独立手动尝试                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `compaction/summary` | `{ summary, rawOutput?, llmStreamCall?, shadowedRange, shadowedSeqs, shadowedTokenCount, provider, model, maxTokens?, usage? }` | 安全摘要投影、可选的完整提供方输出与 usage、生成结果时恰好通过此上下文的 `ctx.llm.stream()` 发起一次调用所带的 `llmStreamCall: true` 标记（此时必须提供完整的 `rawOutput`）、被遮蔽的 surface 边界对（`start`/`end` seq——位置跨度，而非数值区间）、按 surface 顺序排列的被遮蔽 seq、估算 token 数，以及摘要调用的 envelope（`provider`、`model`，若有生成上限则还包括该上限）——写入日志后，该一次性请求可由日志 + 代码重建（见可重建性 Agent Note）；未带标记的 `rawOutput` 并不能判定调用路径 |
-| `compaction/end` | `{ turn, error? }` | 使用相同的数字或 `null` 归属值释放锁（`error` 记录失败尝试） |
+| `compaction/end`     | `{ turn, error? }`                                                                                                              | 使用相同的数字或 `null` 归属值释放锁（`error` 记录失败尝试）                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 
 锁括住**整个**操作：先追加 `compaction/start`，然后执行摘要生成、写入 `compaction/summary` 记录与 `user/message` 替换，最后才追加 `compaction/end`。最后释放锁意味着操作中途崩溃会表现为可检测的遗留锁（有 `compaction/start` 而无匹配的 `compaction/end`），而非一个虚假声称压缩已完成的 `compaction/end`。
 
@@ -30,17 +30,17 @@
 /** Result of a successful compaction operation. */
 interface CompactionResult {
   /** Stable identity shared by this compaction's complete durable lifecycle. */
-  compactionId: CompactionId
+  compactionId: CompactionId;
   /** Human command that initiated this compaction, when it was manual. */
-  sourceCommandId?: CommandId
+  sourceCommandId?: CommandId;
   /** The seq of the appended `compaction/start` event. */
-  startSeq: number
+  startSeq: number;
   /** The seq of the appended `compaction/summary` event. */
-  summarySeq: number
+  summarySeq: number;
   /** The seq of the appended `compaction/end` event. */
-  endSeq: number
+  endSeq: number;
   /** The summary content blocks produced by the backend. */
-  summary: ContentBlock[]
+  summary: ContentBlock[];
   /**
    * The surface-boundary pair that was shadowed: the seqs of the first
    * (`start`) and last (`end`) surface nodes of the replaced range. A
@@ -49,11 +49,11 @@ interface CompactionResult {
    * can be GREATER than `end`. {@link CompactionResult.shadowedSeqs} is the
    * authoritative set of shadowed nodes, in surface order.
    */
-  shadowedRange: { start: number; end: number }
+  shadowedRange: { start: number; end: number };
   /** The seqs of all shadowed surface nodes, in surface order. */
-  shadowedSeqs: number[]
+  shadowedSeqs: number[];
   /** Estimated token count of the shadowed content. */
-  shadowedTokenCount: number
+  shadowedTokenCount: number;
 }
 ```
 
@@ -63,7 +63,7 @@ interface CompactionResult {
 
 ```ts type-equiv
 /** Why automatic policy is asking a backend to consider compaction. */
-type CompactionTrigger = 'pressure' | 'context-overflow'
+type CompactionTrigger = "pressure" | "context-overflow";
 ```
 
 `CompactionEngine` 暴露 `compactIfNeeded(agent, trigger, signal)` 以执行自动 `pressure` 或 `context-overflow` 策略，暴露 `compactNow(agent, signal)` 以便即使未达到压力也对空闲会话进行一次有效缩减，还针对显式、两端均包含的 surface 范围暴露 `compactRegion(...)`。`compactNow()` 作为轮次之间的 agent maintenance 运行；没有有效范围时返回 `null` 且不写入；在摘要前记录独立的 `turn: null` 标记对，并在后续排队提示词能够从新表层派生前 flush 已闭合尝试。每个后端都使用 `compactCheckpointSource(compactionId, sourceCommandId?)` 创建替换用 `user/message` 的源；client 与 wire 消费方从无 Cordis 的 `@deepseek-ai/dsh-compaction/checkpoint` 子路径导入该构造函数、`CompactionCheckpointSource` 和 `isCompactCheckpointSource()`，包根则为 host 消费方重新导出它们。必填的事务身份会关联替换检查点，而该判定函数使检查点识别不依赖任一特定后端。实现必须把传入的 signal 转发给摘要流程。该 seam 不拥有计价 API：单例 [`ctx.tokenMeter`](token-meter.zh.md) 直接拥有估算与回放，而 `dsh-compaction-basic` 拥有保留策略、事件排序、按路由执行的摘要调用及其配置。
@@ -72,13 +72,7 @@ type CompactionTrigger = 'pressure' | 'context-overflow'
 
 ```ts type-equiv
 /** Expected failure classes for an explicit idle-session compaction request. */
-type ManualCompactionErrorCode =
-  | 'busy'
-  | 'cancelled'
-  | 'changed'
-  | 'summary'
-  | 'commit'
-  | 'persistence'
+type ManualCompactionErrorCode = "busy" | "cancelled" | "changed" | "summary" | "commit" | "persistence";
 ```
 
 `changed` 和 `summary` 保持会话表层不变，但仍会闭合失败尝试并将其持久化到日志。`commit` 可能发生在部分变更之后；`persistence` 表示内存中的标记对已闭合，但 flush 失败。取消独立于这些失败，并在完成必要清理后抛出原始 abort 原因。
@@ -95,15 +89,15 @@ type ManualCompactionErrorCode =
 /** Cited source event and size accounting for one landed surface replacement. */
 interface PrunedEntry {
   /** Full-fidelity tool-result event shadowed by the replacement. */
-  readonly originalSeq: number
+  readonly originalSeq: number;
   /** Newly appended pruned tool-result event. */
-  readonly replacementSeq: number
+  readonly replacementSeq: number;
   /** Tool call shared by the original and replacement. */
-  readonly callId: CallId
+  readonly callId: CallId;
   /** Original text size in Unicode code points. */
-  readonly charsBefore: number
+  readonly charsBefore: number;
   /** Replacement text size in Unicode code points. */
-  readonly charsAfter: number
+  readonly charsAfter: number;
 }
 ```
 
@@ -111,9 +105,9 @@ interface PrunedEntry {
 /** Aggregate outcome of one stable-surface pruning pass. */
 interface PruneResult {
   /** Replacements in the snapshotted surface order. */
-  readonly pruned: readonly PrunedEntry[]
+  readonly pruned: readonly PrunedEntry[];
   /** Total Unicode code points removed across replacements. */
-  readonly charsRemoved: number
+  readonly charsRemoved: number;
 }
 ```
 

@@ -5,37 +5,37 @@
 **fs-observation-policy 插件**：它记录观测到的存在或缺失状态，并在 `ctx.fs` 提供方约定（[`@deepseek-ai/dsh-fs`](../fs)）之上增加编辑前读取和带防护的写入/编辑；它通过 `fs/*` 事件门禁参与，**不是**通过方法服务。该插件**不**注册 `ctx.fsPolicy` 服务，也没有公开的 `read`/`write`/`edit`/`resolve` 方法。它是文件系统栈的政策层：不是可替换 seam，而是不应位于 `FileSystem` 提供方基类上的政策。
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import * as FsPolicy from '@deepseek-ai/dsh-fs-observation-policy'
+import type { Context } from "@deepseek-ai/cordis";
+import * as FsPolicy from "@deepseek-ai/dsh-fs-observation-policy";
 
-declare const ctx: Context
+declare const ctx: Context;
 
 // No service to inject — this plugin only registers the three fs/* listeners.
 // Load it alongside a ctx.fs provider (e.g. @deepseek-ai/dsh-fs-local) and the
 // @deepseek-ai/dsh-tool-fs tools; the tools dispatch the fs/* events this plugin
 // decides. Order does not matter for resolution (no inject), but the policy
 // listener should be the first decider registered for the fs/*-intent slots.
-await ctx.plugin(FsPolicy)
+await ctx.plugin(FsPolicy);
 ```
 
 ## 四层拆分
 
-| 层 | 包 | 角色 |
-|---|---|---|
-| 工具/执行器 | `@deepseek-ai/dsh-tool-fs` | 面向模型的 schema、读取窗口和文本渲染；通过 `ctx.fs` 读取/写入/编辑，并分派 `fs/*` 事件 |
-| 策略 | `@deepseek-ai/dsh-fs-observation-policy`（本包） | 通过 `fs/*` 事件门禁提供已观察状态、编辑前读取和版本防护的写入/编辑（无服务） |
-| 提供方约定 | `@deepseek-ai/dsh-fs` | `ctx.fs`：文本 I/O 与原子变更原语（可选版本防护）；拥有 `fs/*` 事件词汇 |
-| 提供方 | `@deepseek-ai/dsh-fs-local` | `ctx.fs` 的本地实现 |
+| 层          | 包                                               | 角色                                                                                    |
+| ----------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| 工具/执行器 | `@deepseek-ai/dsh-tool-fs`                       | 面向模型的 schema、读取窗口和文本渲染；通过 `ctx.fs` 读取/写入/编辑，并分派 `fs/*` 事件 |
+| 策略        | `@deepseek-ai/dsh-fs-observation-policy`（本包） | 通过 `fs/*` 事件门禁提供已观察状态、编辑前读取和版本防护的写入/编辑（无服务）           |
+| 提供方约定  | `@deepseek-ai/dsh-fs`                            | `ctx.fs`：文本 I/O 与原子变更原语（可选版本防护）；拥有 `fs/*` 事件词汇                 |
+| 提供方      | `@deepseek-ai/dsh-fs-local`                      | `ctx.fs` 的本地实现                                                                     |
 
 ## 门禁的参与方式
 
 三个 `fs/*` 事件（由 `@deepseek-ai/dsh-fs` 声明，`@deepseek-ai/dsh-tool-fs` 分派）：
 
-| 事件 | 本插件的监听器 |
-|---|---|
+| 事件              | 本插件的监听器                                                                                                                                        |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `fs/write-intent` | 未见或已观测为缺失 → `{ kind: 'createIfAbsent' }`；已观测为存在 → `{ kind: 'replaceIfVersion', version: vObserved }`。单 slot 决策；不调用 `next()`。 |
-| `fs/edit-intent` | 未见 → `FS_NOT_OBSERVED`；已观测为缺失 → `FS_NOT_FOUND`；已观测为存在 → 返回 `{ version: vObserved }` 作为 CAS 基础。单 slot 决策；不调用 `next()`。 |
-| `fs/observed` | 为该所有者与目标记录 `{ kind: 'present', version }` 或 `{ kind: 'absent' }`。同步、只有副作用的 `WeakMap.set`。 |
+| `fs/edit-intent`  | 未见 → `FS_NOT_OBSERVED`；已观测为缺失 → `FS_NOT_FOUND`；已观测为存在 → 返回 `{ version: vObserved }` 作为 CAS 基础。单 slot 决策；不调用 `next()`。  |
+| `fs/observed`     | 为该所有者与目标记录 `{ kind: 'present', version }` 或 `{ kind: 'absent' }`。同步、只有副作用的 `WeakMap.set`。                                       |
 
 ## 已观察状态是先前观察记录；新鲜度由提供方 CAS 保证
 

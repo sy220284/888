@@ -21,12 +21,12 @@ Consumers that share the filesystem's execution world obtain cross-capability co
  */
 interface FsTarget {
   /** Opaque key for stale guards and target lookup. */
-  targetKey: FsTargetKey
+  targetKey: FsTargetKey;
   /**
    * Path for model/UI-facing output. May be a local absolute path,
    * workspace-relative path, or remote URI depending on the backend.
    */
-  displayPath: string
+  displayPath: string;
 }
 ```
 
@@ -38,7 +38,7 @@ The backend owns file-version tokens — the freshness token a write/edit guards
  * realpath-like string; a remote backend might use a workspace URI or file id.
  * Consumers MUST NOT parse it or assume it is a local absolute path.
  */
-type FsTargetKey = Branded<'FsTargetKey'>
+type FsTargetKey = Branded<"FsTargetKey">;
 ```
 
 ```ts type-equiv
@@ -49,7 +49,7 @@ type FsTargetKey = Branded<'FsTargetKey'>
  * for stale checks; consumers may display related metadata but MUST NOT
  * interpret this token.
  */
-type FsVersion = Branded<'FsVersion'>
+type FsVersion = Branded<"FsVersion">;
 ```
 
 `stat` returns metadata (never content), or `undefined` when the target is absent. `type` lets consumers reject directories and special files before reading, and `size` lets text consumers choose `readText` vs `streamText` without probing by failure. A text consumer applies its own retention ceiling while consuming `streamText`. Raw-byte consumers use `readBytes(target, signal, maxBytes)`; its required complete-content cap makes a known or discovered overflow fail with `FS_TOO_LARGE` instead of truncating or buffering without a bound.
@@ -63,11 +63,11 @@ type FsVersion = Branded<'FsVersion'>
  */
 interface FsInfo {
   /** Opaque freshness token of the target right now. */
-  version: FsVersion
+  version: FsVersion;
   /** Whether the target is a regular file, a directory, or something else. */
-  type: 'file' | 'directory' | 'other'
+  type: "file" | "directory" | "other";
   /** Byte size of a regular file, when the backend can report it. */
-  size?: number
+  size?: number;
 }
 ```
 
@@ -82,11 +82,11 @@ interface FsInfo {
  */
 interface FsPathInfo {
   /** Opaque freshness token of the path entry right now. */
-  version: FsVersion
+  version: FsVersion;
   /** Whether the path entry is a regular file, directory, symlink, or other. */
-  type: 'file' | 'directory' | 'symlink' | 'other'
+  type: "file" | "directory" | "symlink" | "other";
   /** Byte size of the path entry, when the backend can report it. */
-  size?: number
+  size?: number;
 }
 ```
 
@@ -99,15 +99,15 @@ interface FsPathInfo {
  */
 interface FsDirEntry {
   /** Basename of the child inside the listed directory. */
-  name: string
+  name: string;
   /** Whether the child is a regular file, a directory, or something else. */
-  type: 'file' | 'directory' | 'other'
+  type: "file" | "directory" | "other";
   /** Resolved child target for follow-up operations. */
-  target: FsTarget
+  target: FsTarget;
   /** Opaque freshness token when the backend can report metadata cheaply. */
-  version?: FsVersion
+  version?: FsVersion;
   /** Byte size of a regular file, when the backend can report it. */
-  size?: number
+  size?: number;
 }
 ```
 
@@ -122,18 +122,16 @@ Both `writeText` and `editText` take their version guard OPTIONALLY: omit it for
  * `FS_STALE_VERSION`. Omitting the intent from `writeText` means unconditional
  * create-or-overwrite, not a third union arm.
  */
-type FsWriteIntent =
-  | { kind: 'createIfAbsent' }
-  | { kind: 'replaceIfVersion'; version: FsVersion }
+type FsWriteIntent = { kind: "createIfAbsent" } | { kind: "replaceIfVersion"; version: FsVersion };
 ```
 
 ```ts type-equiv
 /** Outcome of a full-file write. */
 interface FsWriteOutcome {
   /** Whether the write created a new file or replaced an existing one. */
-  operation: 'create' | 'update'
+  operation: "create" | "update";
   /** Opaque version of the file after the write. */
-  version: FsVersion
+  version: FsVersion;
   /**
    * The file's content BEFORE the write, or `null` when the file did not exist
    * (a create) or the backend declined a contextual basis (for example, a
@@ -142,9 +140,9 @@ interface FsWriteOutcome {
    * computes the result-time contextual diff from `before`/`after` when
    * `before` is present, else falls back to a whole-file diff.
    */
-  before: string | null
+  before: string | null;
   /** The file's content AFTER the write, LF-normalized to share `before`'s diff basis. */
-  after: string
+  after: string;
 }
 ```
 
@@ -154,11 +152,11 @@ interface FsWriteOutcome {
 /** A literal-replacement edit request. */
 interface FsEditRequest {
   /** Literal non-empty text to replace. Must match exactly (after line-ending normalization). */
-  oldString: string
+  oldString: string;
   /** Literal replacement text. An empty string deletes the matched text. */
-  newString: string
+  newString: string;
   /** Replace every match instead of requiring exactly one. */
-  replaceAll: boolean
+  replaceAll: boolean;
 }
 ```
 
@@ -166,15 +164,15 @@ interface FsEditRequest {
 /** Outcome of a literal edit. */
 interface FsEditOutcome {
   /** Opaque version of the file after the edit. */
-  version: FsVersion
+  version: FsVersion;
   /**
    * The file's content BEFORE the edit. Raw storage text (LF-normalized by the
    * backend), never a diff — a consumer computes the result-time contextual diff
    * (the applied hunk with context) from `before`/`after`.
    */
-  before: string
+  before: string;
   /** The file's content AFTER the edit. */
-  after: string
+  after: string;
 }
 ```
 
@@ -190,9 +188,7 @@ interface FsEditOutcome {
  * version used by guarded replacement; an absent observation authorizes only a
  * guarded create, never an edit.
  */
-type FsObservation =
-  | { readonly kind: 'present'; readonly version: FsVersion }
-  | { readonly kind: 'absent' }
+type FsObservation = { readonly kind: "present"; readonly version: FsVersion } | { readonly kind: "absent" };
 ```
 
 ## Execution context (policy plugin)
@@ -214,8 +210,8 @@ interface FsObservationActor {
   /** The agent on whose behalf the call runs, when there is one. */
   agent?: {
     /** The session that owns observed-file state, used as an opaque key. */
-    session?: object
-  }
+    session?: object;
+  };
 }
 ```
 
@@ -227,13 +223,13 @@ A text read is bounded by line window, byte cap, and backend limits. After the b
 /** Outcome of a bounded text read — what {@link formatReadOutput} renders. */
 interface FileReadOutcome {
   /** 1-based first line requested. */
-  offset: number
+  offset: number;
   /** Returned lines, already numbered. */
-  lines: FileTextLine[]
+  lines: FileTextLine[];
   /** Exact total line count in the file. */
-  totalLines: number
+  totalLines: number;
   /** Whether selected output hit the byte cap. */
-  truncatedByBytes?: true
+  truncatedByBytes?: true;
 }
 ```
 
@@ -252,19 +248,19 @@ Filesystem failures use stable `FsErrorCode` strings carried by `FsError` (`Harn
  * results so retry/permission/UI layers can branch without parsing messages.
  */
 type FsErrorCode =
-  | 'FS_NOT_FOUND'
-  | 'FS_NOT_DIRECTORY'
-  | 'FS_NOT_TEXT'
-  | 'FS_NOT_REGULAR_FILE'
-  | 'FS_TOO_LARGE'
-  | 'FS_PERMISSION_DENIED'
-  | 'FS_SANDBOX_DENIED'
-  | 'FS_IO_ERROR'
-  | 'FS_STALE_VERSION'
-  | 'FS_NOT_OBSERVED'
-  | 'FS_AMBIGUOUS_EDIT'
-  | 'FS_EDIT_NOT_FOUND'
-  | 'FS_ABORTED'
+  | "FS_NOT_FOUND"
+  | "FS_NOT_DIRECTORY"
+  | "FS_NOT_TEXT"
+  | "FS_NOT_REGULAR_FILE"
+  | "FS_TOO_LARGE"
+  | "FS_PERMISSION_DENIED"
+  | "FS_SANDBOX_DENIED"
+  | "FS_IO_ERROR"
+  | "FS_STALE_VERSION"
+  | "FS_NOT_OBSERVED"
+  | "FS_AMBIGUOUS_EDIT"
+  | "FS_EDIT_NOT_FOUND"
+  | "FS_ABORTED";
 ```
 
 `FS_NOT_DIRECTORY`, `FS_PERMISSION_DENIED`, and `FS_IO_ERROR` are used by directory listing to distinguish an existing non-directory target, a denied listing, and an unexpected backend I/O failure. `FS_SANDBOX_DENIED` is a POLICY refusal from a sandbox-enforcing backend (`dsh-fs-sandbox`) — the mode fence denied a write/edit — distinct from `FS_PERMISSION_DENIED` (the host kernel refusing). `FS_NOT_OBSERVED` means the policy plugin has no prior-observation record for this owner (or a `createIfAbsent` hit an existing file). `FS_NOT_FOUND` also represents an edit rejected from confirmed absence. `FS_STALE_VERSION` means the backend version no longer matches the observed one (or the provider itself receives an edit for a missing target). Freshness authorization has no partial/full distinction, so there is no `FS_PARTIAL_OBSERVATION`.

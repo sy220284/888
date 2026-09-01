@@ -3,9 +3,7 @@
     "PostToolUse": [
       {
         "matcher": "bash",
-        "hooks": [
-          { "type": "command", "command": "sh posttool-once.sh" }
-        ]
+        "hooks": [{ "type": "command", "command": "sh posttool-once.sh" }]
       }
     ]
   }

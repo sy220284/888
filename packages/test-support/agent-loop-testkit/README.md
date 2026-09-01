@@ -7,15 +7,15 @@ Shared prerequisite mounting for tests that exercise the concrete `AgentLoop`. `
 The caller registers adapters and optional plugins, mounts `AgentLoop` with the configuration under test, and disposes its own Context. System-prompt and tool-registry configuration can be forwarded through `options`; the helper does not provide test defaults beyond those owned by the services. A plugin-load failure rejects the helper call, while services activated earlier in the sequence remain owned by the caller's Context.
 
 ```ts
-import { Context } from '@deepseek-ai/cordis'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from "@deepseek-ai/cordis";
+import AgentLoop from "@deepseek-ai/dsh-agent-loop";
+import { mountAgentLoopTestDependencies } from "@deepseek-ai/dsh-agent-loop-testkit";
 
-const ctx = new Context()
+const ctx = new Context();
 
-await mountAgentLoopTestDependencies(ctx)
+await mountAgentLoopTestDependencies(ctx);
 // Register the test adapter and any optional plugins here.
-await ctx.plugin(AgentLoop, { agents: [] })
+await ctx.plugin(AgentLoop, { agents: [] });
 ```
 
 Tests of injection failures, partial topology, service load order, or service teardown mount their dependencies directly instead of using this helper.

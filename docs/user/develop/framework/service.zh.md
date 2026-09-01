@@ -9,9 +9,9 @@
 在 Harness 中，`tools`、`llm`、`agents` 都是服务。服务是挂载在 `ctx` 上的命名能力：
 
 ```ts ignore-check
-ctx.tools    // ToolRuntime service
-ctx.llm      // LLM service
-ctx.agents   // Agent service
+ctx.tools; // ToolRuntime service
+ctx.llm; // LLM service
+ctx.agents; // Agent service
 ```
 
 任何插件都可以提供服务，供其他插件使用。
@@ -21,11 +21,11 @@ ctx.agents   // Agent service
 声明 `inject` 来使用已有服务：
 
 ```ts ignore-check
-export const inject = ['tools']
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
   // ctx.tools exists and is ready here.
-  ctx.tools.register(/* ... */)
+  ctx.tools.register(/* ... */);
 }
 ```
 
@@ -36,13 +36,13 @@ export function apply(ctx: Context) {
 ### 使用 Service 基类
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
 export default class MetricsService extends Service {
-  static inject = ['llm']  // A service may depend on other services.
+  static inject = ["llm"]; // A service may depend on other services.
 
   constructor(ctx: Context) {
-    super(ctx, 'metrics')  // 'metrics' is the service name.
+    super(ctx, "metrics"); // 'metrics' is the service name.
   }
 
   // Public service method.
@@ -55,10 +55,10 @@ export default class MetricsService extends Service {
 加载这个插件后，消费方就可以通过 `ctx.metrics` 访问它：
 
 ```ts ignore-check
-export const inject = ['metrics']
+export const inject = ["metrics"];
 
 export function apply(ctx: Context) {
-  ctx.metrics.record('tool_call', 1)
+  ctx.metrics.record("tool_call", 1);
 }
 ```
 
@@ -67,20 +67,22 @@ export function apply(ctx: Context) {
 使用 TypeScript 声明合并让 `ctx.metrics` 有正确类型：
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    metrics: MetricsService
+    metrics: MetricsService;
   }
 }
 
 export default class MetricsService extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'metrics')
+    super(ctx, "metrics");
   }
 
-  record(event: string, value: number) { /* ... */ }
+  record(event: string, value: number) {
+    /* ... */
+  }
 }
 ```
 
@@ -90,12 +92,12 @@ export default class MetricsService extends Service {
 
 ```ts ignore-check
 // Required: the plugin does not load while the service is absent.
-export const inject = ['tools']
+export const inject = ["tools"];
 
 // Optional: omit inject and query with ctx.get() at the use site.
 export function apply(ctx: Context) {
-  const metrics = ctx.get('metrics')
-  metrics?.record('plugin_loaded', 1)
+  const metrics = ctx.get("metrics");
+  metrics?.record("plugin_loaded", 1);
 }
 ```
 
@@ -116,26 +118,26 @@ export function apply(ctx: Context) {
 
 ```yaml
 - id: group-a
-  name: '@deepseek-ai/cordis-plugin-group'
+  name: "@deepseek-ai/cordis-plugin-group"
   group: true
   isolate:
     shell: true
   config:
-    - name: '@deepseek-ai/dsh-bash-local'
+    - name: "@deepseek-ai/dsh-bash-local"
       config:
         timeoutMs: 5000
-    - name: './src/plugin-a.ts'
+    - name: "./src/plugin-a.ts"
 
 - id: group-b
-  name: '@deepseek-ai/cordis-plugin-group'
+  name: "@deepseek-ai/cordis-plugin-group"
   group: true
   isolate:
     shell: true
   config:
-    - name: '@deepseek-ai/dsh-bash-local'
+    - name: "@deepseek-ai/dsh-bash-local"
       config:
         timeoutMs: 60000
-    - name: './src/plugin-b.ts'
+    - name: "./src/plugin-b.ts"
 ```
 
 `plugin-a` 和 `plugin-b` 各自看到自己组内的 Bash 实例，互不影响。

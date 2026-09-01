@@ -40,15 +40,15 @@ dsh --profile web --dump-config
 
 以下是向 Cordis 树贡献内容的部分核心包。
 
-| 包 | 职责 | `ctx` 键 |
-|---|---|---|
-| [`core/session`](subsystems/session.zh.md) | 仅追加的 `SessionEvent` 日志和内存存储 | `ctx.sessions` |
-| [`core/system-prompt`](subsystems/system-prompt.zh.md) | 提示词片段与工具 schema 的组装 | `ctx.systemPrompt` |
-| [`core/tools`](subsystems/tools.zh.md) | 作用域化的工具注册表和带把关的执行流水线 | `ctx.tools` |
-| [`core/agent`](subsystems/core.zh.md) | `Agent` 接口、活跃 agent 注册表和 `agent/*` 事件 | `ctx.agents` |
-| [`core/agent-loop`](subsystems/core.zh.md) | 实现该接口的默认驱动器 | `ctx.agentLoop` |
-| [`core/scope`](subsystems/scope.zh.md) | 按 agent 划分作用域的注册原语 | 库，无 ctx 键 |
-| [`llm/llm`](subsystems/llm-streaming.zh.md) | 消息与流式词汇表，以及适配器 seam | `ctx.llm` |
+| 包                                                     | 职责                                             | `ctx` 键           |
+| ------------------------------------------------------ | ------------------------------------------------ | ------------------ |
+| [`core/session`](subsystems/session.zh.md)             | 仅追加的 `SessionEvent` 日志和内存存储           | `ctx.sessions`     |
+| [`core/system-prompt`](subsystems/system-prompt.zh.md) | 提示词片段与工具 schema 的组装                   | `ctx.systemPrompt` |
+| [`core/tools`](subsystems/tools.zh.md)                 | 作用域化的工具注册表和带把关的执行流水线         | `ctx.tools`        |
+| [`core/agent`](subsystems/core.zh.md)                  | `Agent` 接口、活跃 agent 注册表和 `agent/*` 事件 | `ctx.agents`       |
+| [`core/agent-loop`](subsystems/core.zh.md)             | 实现该接口的默认驱动器                           | `ctx.agentLoop`    |
+| [`core/scope`](subsystems/scope.zh.md)                 | 按 agent 划分作用域的注册原语                    | 库，无 ctx 键      |
+| [`llm/llm`](subsystems/llm-streaming.zh.md)            | 消息与流式词汇表，以及适配器 seam                | `ctx.llm`          |
 
 <a id="events"></a>
 
@@ -111,25 +111,25 @@ seam 正是替换一个提供方就能改变整个产品的原因。文件系统
 
 新行为附加到已有文档记录的扩展点。改动循环本身时，本映射随之更新。
 
-| 目标 | 机制 |
-|---|---|
-| 添加模型提供方 | 在 `ctx.llm` 上注册其适配器 |
-| 添加面向模型的能力 | 在 `ctx.tools` 上注册；其 schema 加入提示词组装 |
-| 让某个会话拥有不同的能力集合 | 组装一个 agent preset；其中的服务行需要 `isolate` realm |
-| 添加 shell 执行 | 注册 `ctx.shell` 后端；本地后端通过 `ctx.subprocess` spawn 进程 |
-| 添加持久化终端执行 | 注册 `ctx.terminals` 后端和 `dsh-tool-terminal` |
-| 添加用户命令 | 在 `ctx.commands` 上注册；它无需模型轮次即可分派 |
-| 添加后台工作 | 在 `ctx.jobs` 上注册；`job_*` 工具负责收集或停止 |
-| 添加文件系统访问或策略 | 注册 `ctx.fs` 提供方，或监听 `fs/*` 事件 |
-| 限制所启动的进程 | 使用 `ctx.sandbox` 后端；消费方在启动进程前包装 argv |
-| 拦截请求、工具或轮次 | 使用相应的 `agent/*` 或 `tools/*` 事件；`agent/turn-stopping` 会停止轮次 |
-| 添加模型可见上下文 | 调用 `agent.inject()`；它会落到下一次获准的请求中 |
-| 添加 UI 或编辑器集成 | 驱动 `ctx.agents` 并从 `session/event` 渲染 |
-| 添加 Web Client Chat 节点 | 注册 `ConversationNodeDefinition` + keyed renderer |
-| 添加持久会话状态 | 扩展 `SessionEventMap`；从日志渲染和回放 |
-| 生成会话标题 | 注册唯一的 `ctx.sessionTitle` 提供方 |
-| 管理同会话目标 | 使用 `ctx.goals`；通过 `agent/*` 续跑 |
-| fork 活跃会话 | `ctx.sessions.fork(source, boundary?, childSessionId?)` |
-| 将注册项限定到单个 agent | 使用该 agent 的 `agent.ctx` |
+| 目标                         | 机制                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| 添加模型提供方               | 在 `ctx.llm` 上注册其适配器                                              |
+| 添加面向模型的能力           | 在 `ctx.tools` 上注册；其 schema 加入提示词组装                          |
+| 让某个会话拥有不同的能力集合 | 组装一个 agent preset；其中的服务行需要 `isolate` realm                  |
+| 添加 shell 执行              | 注册 `ctx.shell` 后端；本地后端通过 `ctx.subprocess` spawn 进程          |
+| 添加持久化终端执行           | 注册 `ctx.terminals` 后端和 `dsh-tool-terminal`                          |
+| 添加用户命令                 | 在 `ctx.commands` 上注册；它无需模型轮次即可分派                         |
+| 添加后台工作                 | 在 `ctx.jobs` 上注册；`job_*` 工具负责收集或停止                         |
+| 添加文件系统访问或策略       | 注册 `ctx.fs` 提供方，或监听 `fs/*` 事件                                 |
+| 限制所启动的进程             | 使用 `ctx.sandbox` 后端；消费方在启动进程前包装 argv                     |
+| 拦截请求、工具或轮次         | 使用相应的 `agent/*` 或 `tools/*` 事件；`agent/turn-stopping` 会停止轮次 |
+| 添加模型可见上下文           | 调用 `agent.inject()`；它会落到下一次获准的请求中                        |
+| 添加 UI 或编辑器集成         | 驱动 `ctx.agents` 并从 `session/event` 渲染                              |
+| 添加 Web Client Chat 节点    | 注册 `ConversationNodeDefinition` + keyed renderer                       |
+| 添加持久会话状态             | 扩展 `SessionEventMap`；从日志渲染和回放                                 |
+| 生成会话标题                 | 注册唯一的 `ctx.sessionTitle` 提供方                                     |
+| 管理同会话目标               | 使用 `ctx.goals`；通过 `agent/*` 续跑                                    |
+| fork 活跃会话                | `ctx.sessions.fork(source, boundary?, childSessionId?)`                  |
+| 将注册项限定到单个 agent     | 使用该 agent 的 `agent.ctx`                                              |
 
 [扩展实操手册](cookbook/extension-cookbook.zh.md)将功能映射到能力，并索引[包](cookbook/adding-a-package.zh.md)、[工具](cookbook/adding-a-tool.zh.md)、[LLM（大语言模型）适配器](cookbook/adding-an-llm-adapter.zh.md)、[Chat 节点](cookbook/adding-a-conversation-node.zh.md)和[设置卡片](cookbook/adding-a-settings-card.zh.md)的分步指南。

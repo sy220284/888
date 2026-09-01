@@ -64,9 +64,7 @@ def test_runtime_requires_spawn_helper_only_on_macos(
     assert runtime.bundled_runtime_path() == linux
 
 
-def test_runtime_requires_ripgrep_sidecar(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_runtime_requires_ripgrep_sidecar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     runtime_dir = tmp_path / "runtime"
     runtime_dir.mkdir()
     (runtime_dir / "dsh-jsonrpc-agent-pkg-linux-x64").touch()

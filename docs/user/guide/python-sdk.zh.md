@@ -82,16 +82,16 @@ print(result.final_response)
 
 ## 了解示例组合
 
-| 属性 | 值 |
-|---|---|
-| 系统提示词 | `DSH_SYSTEM_PROMPT`；未设置时使用 `You are a helpful software engineer assistant.` |
-| `minimal.py` 使用的模型 | `--model`，其次为 `DSH_MODEL`，最后为 `deepseek-v4-flash` |
-| 面向模型的工具 | 仅持久 `bash` 与 `str_replace_editor` |
-| Bash 超时 | 300 秒 |
-| 编辑器输出上限 | 16,000 个字符 |
-| 上下文压缩 | 已关闭 |
-| 文件系统 | 裸本地后端；编辑器使用绝对路径，可以访问运行时进程可见的任何路径 |
-| 会话持久化 | `DSH_SESSION_ROOT` 下未压缩的 JSONL |
+| 属性                    | 值                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| 系统提示词              | `DSH_SYSTEM_PROMPT`；未设置时使用 `You are a helpful software engineer assistant.` |
+| `minimal.py` 使用的模型 | `--model`，其次为 `DSH_MODEL`，最后为 `deepseek-v4-flash`                          |
+| 面向模型的工具          | 仅持久 `bash` 与 `str_replace_editor`                                              |
+| Bash 超时               | 300 秒                                                                             |
+| 编辑器输出上限          | 16,000 个字符                                                                      |
+| 上下文压缩              | 已关闭                                                                             |
+| 文件系统                | 裸本地后端；编辑器使用绝对路径，可以访问运行时进程可见的任何路径                   |
+| 会话持久化              | `DSH_SESSION_ROOT` 下未压缩的 JSONL                                                |
 
 该组合省略了 harness 身份、workspace 提示词文本、skill（技能）、一次性 Bash、任务工具、上下文压缩和其他所有面向模型的插件。沙箱策略事实记录为运行时用户上下文，而不会追加到系统提示词中。
 

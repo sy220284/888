@@ -8,10 +8,10 @@ Each tool is registered independently; a product that wants only one disables th
 
 ## Tools
 
-| Tool | Args | Behavior |
-|---|---|---|
+| Tool         | Args                          | Behavior                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------ | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `web_search` | `queries` (required string[]) | Discovery. Returns an optional answer plus source URLs. It runs one to `searchMaxQueries` distinct searches concurrently and merges their sources in round-robin order before applying the combined `searchMaxResults` cap. A one-item array performs one search. Exact duplicate queries run once. Any failed search aborts the remaining batch, which settles before the call returns an error. Neither bound is model-facing. |
-| `web_fetch` | `url` (string) | Retrieves a specific URL. HTML bodies are rendered to markdown (turndown with GFM tables/strikethrough); text bodies pass through. A non-2xx status is reported, not an error. The tool-call timeout is deployment policy (`dsh-tool-call-timeout-policy`), not a model argument. |
+| `web_fetch`  | `url` (string)                | Retrieves a specific URL. HTML bodies are rendered to markdown (turndown with GFM tables/strikethrough); text bodies pass through. A non-2xx status is reported, not an error. The tool-call timeout is deployment policy (`dsh-tool-call-timeout-policy`), not a model argument.                                                                                                                                                |
 
 Both tools opt into concurrent scheduling because provider reads return content without mutating parent-agent state.
 
@@ -19,21 +19,21 @@ The normalized service results are also the canonical tool values: `WebSearchRes
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---|---|
-| `search` | `true` | Register `web_search`. |
-| `fetch` | `true` | Register `web_fetch`. |
-| `searchMaxResults` | `8` | Upper bound on sources returned by one `web_search` call (the seam truncates each provider list; the tool also caps a combined multi-query list). |
-| `searchMaxQueries` | `4` | Upper bound on queries accepted by one `web_search` call. The configured value appears in its prompt guidance and schema descriptions. |
-| `fetchTimeoutMs` | `30000` | Cooperative tool-call timeout budget (ms) for `web_fetch`. |
-| `searchTimeoutMs` | `30000` | Cooperative tool-call timeout budget (ms) for `web_search`. |
+| Key                   | Default  | Meaning                                                                                                                                                                          |
+| --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search`              | `true`   | Register `web_search`.                                                                                                                                                           |
+| `fetch`               | `true`   | Register `web_fetch`.                                                                                                                                                            |
+| `searchMaxResults`    | `8`      | Upper bound on sources returned by one `web_search` call (the seam truncates each provider list; the tool also caps a combined multi-query list).                                |
+| `searchMaxQueries`    | `4`      | Upper bound on queries accepted by one `web_search` call. The configured value appears in its prompt guidance and schema descriptions.                                           |
+| `fetchTimeoutMs`      | `30000`  | Cooperative tool-call timeout budget (ms) for `web_fetch`.                                                                                                                       |
+| `searchTimeoutMs`     | `30000`  | Cooperative tool-call timeout budget (ms) for `web_search`.                                                                                                                      |
 | `fetchMaxOutputChars` | `200000` | Cap on source characters converted synchronously and on one complete `web_fetch` output (header, rendered body, and footer); a cut body gets the truncation notice when it fits. |
 
 `searchMaxQueries` bounds the accepted array before exact-string deduplication, provider fan-out, and combined provider-answer growth; validation rejects an oversized array before any search starts, then dispatch keeps the first occurrence of each query. Together with each provider's own controls such as `maxUses`, these independent settings are the product's search budgets; the generic seam does not expose provider-internal native-search accounting. `fetchTimeoutMs`/`searchTimeoutMs` declare each tool's cooperative timeout budget (attached as `ToolDefinition.timeoutMs`), enforced by [`@deepseek-ai/dsh-tool-call-timeout-policy`](../../guard/timeout-policy/README.md); the model-facing schema exposes no timeout argument. `fetchMaxOutputChars` bounds both synchronous conversion work and the complete rendered result: only that many source characters are converted, and the header, converted prefix, and truncation notice are then capped together. The default leaves headroom above the local provider's 100,000-character body cap, but rendered expansion can still make the final bound truncate the result.
 
 ```yaml
 - id: tool-web
-  name: '@deepseek-ai/dsh-tool-web'
+  name: "@deepseek-ai/dsh-tool-web"
 ```
 
 ## Stable registration

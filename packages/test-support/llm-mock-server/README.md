@@ -32,21 +32,21 @@ The repository script writes JSONL to stdout: a `ready` record carries the `/v1`
 
 `--sequence` is a comma-separated FIFO. Exhaustion returns a structured HTTP 500; `--repeat-last` explicitly reuses the last entry.
 
-| Behavior | Wire result |
-|---|---|
-| `connection_reset` | Destroy the socket before HTTP headers |
-| `stream_disconnect` | Send SSE headers, then reset before the first event |
-| `partial_disconnect` | Send text deltas, then reset the socket |
-| `stall` | Send SSE headers and remain idle until client/server cancellation |
-| `empty` | Send a valid content-less stop and `[DONE]` |
-| `empty_body` / `stream_eof` / `partial_eof` | End cleanly without the required `[DONE]` boundary |
-| `malformed_json` / `malformed_event` | Send invalid SSE JSON or an invalid provider chunk shape |
-| `rate_limit` / `server_error` / `service_unavailable` | Return retry-oriented 429/500/503 JSON errors |
-| `auth_error` / `invalid_request` / `context_overflow` / `quota_exceeded` | Return terminal or separately recovered provider errors |
-| `success` / `slow_success` / `reasoning_success` | Stream a complete text response, optionally delayed or preceded by reasoning |
-| `tool_call_success` / `max_tokens` | Complete with a tool call or `length` finish |
-| `wrong_content_type` | Send a valid SSE body under `application/json` |
-| `random` | Select a concrete request behavior from weighted seeded randomness |
+| Behavior                                                                 | Wire result                                                                  |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `connection_reset`                                                       | Destroy the socket before HTTP headers                                       |
+| `stream_disconnect`                                                      | Send SSE headers, then reset before the first event                          |
+| `partial_disconnect`                                                     | Send text deltas, then reset the socket                                      |
+| `stall`                                                                  | Send SSE headers and remain idle until client/server cancellation            |
+| `empty`                                                                  | Send a valid content-less stop and `[DONE]`                                  |
+| `empty_body` / `stream_eof` / `partial_eof`                              | End cleanly without the required `[DONE]` boundary                           |
+| `malformed_json` / `malformed_event`                                     | Send invalid SSE JSON or an invalid provider chunk shape                     |
+| `rate_limit` / `server_error` / `service_unavailable`                    | Return retry-oriented 429/500/503 JSON errors                                |
+| `auth_error` / `invalid_request` / `context_overflow` / `quota_exceeded` | Return terminal or separately recovered provider errors                      |
+| `success` / `slow_success` / `reasoning_success`                         | Stream a complete text response, optionally delayed or preceded by reasoning |
+| `tool_call_success` / `max_tokens`                                       | Complete with a tool call or `length` finish                                 |
+| `wrong_content_type`                                                     | Send a valid SSE body under `application/json`                               |
+| `random`                                                                 | Select a concrete request behavior from weighted seeded randomness           |
 
 `connection_refused` is CLI-only and must be the first entry. It delays binding a caller-specified nonzero port, so requests during `--listen-delay-ms` receive a real TCP refusal; the remaining entries begin after the listener starts.
 

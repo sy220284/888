@@ -40,15 +40,15 @@ Composition mechanics are in [app-boot](../packages/boot/app-boot/README.md#prof
 
 Here are some core packages that contribute to the Cordis tree.
 
-| Package | Owns | `ctx` key |
-|---|---|---|
-| [`core/session`](subsystems/session.md) | The append-only `SessionEvent` log and in-memory store | `ctx.sessions` |
-| [`core/system-prompt`](subsystems/system-prompt.md) | Prompt-section and tool-schema assembly | `ctx.systemPrompt` |
-| [`core/tools`](subsystems/tools.md) | The scoped tool registry and guarded execution pipeline | `ctx.tools` |
-| [`core/agent`](subsystems/core.md) | The `Agent` interface, live registry, and `agent/*` events | `ctx.agents` |
-| [`core/agent-loop`](subsystems/core.md) | The default driver implementing that interface | `ctx.agentLoop` |
-| [`core/scope`](subsystems/scope.md) | The per-agent scoped-registration primitive | library, no key |
-| [`llm/llm`](subsystems/llm-streaming.md) | Message and stream vocabulary plus the adapter seam | `ctx.llm` |
+| Package                                             | Owns                                                       | `ctx` key          |
+| --------------------------------------------------- | ---------------------------------------------------------- | ------------------ |
+| [`core/session`](subsystems/session.md)             | The append-only `SessionEvent` log and in-memory store     | `ctx.sessions`     |
+| [`core/system-prompt`](subsystems/system-prompt.md) | Prompt-section and tool-schema assembly                    | `ctx.systemPrompt` |
+| [`core/tools`](subsystems/tools.md)                 | The scoped tool registry and guarded execution pipeline    | `ctx.tools`        |
+| [`core/agent`](subsystems/core.md)                  | The `Agent` interface, live registry, and `agent/*` events | `ctx.agents`       |
+| [`core/agent-loop`](subsystems/core.md)             | The default driver implementing that interface             | `ctx.agentLoop`    |
+| [`core/scope`](subsystems/scope.md)                 | The per-agent scoped-registration primitive                | library, no key    |
+| [`llm/llm`](subsystems/llm-streaming.md)            | Message and stream vocabulary plus the adapter seam        | `ctx.llm`          |
 
 ## Events
 
@@ -107,25 +107,25 @@ Seams are why one provider swap changes the whole product. Filesystem and subpro
 
 New behavior attaches to a documented extension point. Changing the loop itself updates this map.
 
-| Goal | Mechanism |
-|---|---|
-| Add a model provider | register its adapter on `ctx.llm` |
-| Add a model-facing capability | register on `ctx.tools`; its schema joins prompt assembly |
-| Give one session a different capability set | compose an agent preset; a service row there needs an `isolate` realm |
-| Add shell execution | register a `ctx.shell` backend; the local one spawns through `ctx.subprocess` |
-| Add persistent terminal execution | register a `ctx.terminals` backend plus `dsh-tool-terminal` |
-| Add a human command | register on `ctx.commands`; it dispatches without a model turn |
-| Add background work | register on `ctx.jobs`; `job_*` tools collect or stop it |
-| Add filesystem access or policy | register a `ctx.fs` provider or listen to `fs/*` events |
-| Confine spawned processes | use a `ctx.sandbox` backend; consumers wrap argv before spawning |
-| Intercept a request, tool, or turn | use its `agent/*` or `tools/*` event; `agent/turn-stopping` stops a turn |
-| Add model-facing context | call `agent.inject()`; it lands in the next admitted request |
-| Add UI or editor integration | drive `ctx.agents` and render from `session/event` |
-| Add a Web Client Chat node | register a `ConversationNodeDefinition` + keyed renderer |
-| Add durable session state | extend `SessionEventMap`; render and replay from the log |
-| Generate session titles | register the sole `ctx.sessionTitle` provider |
-| Manage a same-session objective | use `ctx.goals`; continue through `agent/*` |
-| Fork a live session | `ctx.sessions.fork(source, boundary?, childSessionId?)` |
-| Scope a registration to one agent | use that agent's `agent.ctx` |
+| Goal                                        | Mechanism                                                                     |
+| ------------------------------------------- | ----------------------------------------------------------------------------- |
+| Add a model provider                        | register its adapter on `ctx.llm`                                             |
+| Add a model-facing capability               | register on `ctx.tools`; its schema joins prompt assembly                     |
+| Give one session a different capability set | compose an agent preset; a service row there needs an `isolate` realm         |
+| Add shell execution                         | register a `ctx.shell` backend; the local one spawns through `ctx.subprocess` |
+| Add persistent terminal execution           | register a `ctx.terminals` backend plus `dsh-tool-terminal`                   |
+| Add a human command                         | register on `ctx.commands`; it dispatches without a model turn                |
+| Add background work                         | register on `ctx.jobs`; `job_*` tools collect or stop it                      |
+| Add filesystem access or policy             | register a `ctx.fs` provider or listen to `fs/*` events                       |
+| Confine spawned processes                   | use a `ctx.sandbox` backend; consumers wrap argv before spawning              |
+| Intercept a request, tool, or turn          | use its `agent/*` or `tools/*` event; `agent/turn-stopping` stops a turn      |
+| Add model-facing context                    | call `agent.inject()`; it lands in the next admitted request                  |
+| Add UI or editor integration                | drive `ctx.agents` and render from `session/event`                            |
+| Add a Web Client Chat node                  | register a `ConversationNodeDefinition` + keyed renderer                      |
+| Add durable session state                   | extend `SessionEventMap`; render and replay from the log                      |
+| Generate session titles                     | register the sole `ctx.sessionTitle` provider                                 |
+| Manage a same-session objective             | use `ctx.goals`; continue through `agent/*`                                   |
+| Fork a live session                         | `ctx.sessions.fork(source, boundary?, childSessionId?)`                       |
+| Scope a registration to one agent           | use that agent's `agent.ctx`                                                  |
 
 The [extension cookbook](cookbook/extension-cookbook.md) maps features to capabilities and indexes the step-by-step guides for [packages](cookbook/adding-a-package.md), [tools](cookbook/adding-a-tool.md), [LLM adapters](cookbook/adding-an-llm-adapter.md), [Chat nodes](cookbook/adding-a-conversation-node.md), and [settings cards](cookbook/adding-a-settings-card.md).

@@ -18,13 +18,13 @@ An embedding host with no command line provides an empty list; that is the hones
 Any app plugin may inject `cmdlineArgs`, parse it, and publish an ordinary app-owned service. `parseCmdline(ctx, program)` is only a commander adapter; the program's own action owns validation and the published service:
 
 ```ts ignore
-export const name = 'web-startup'
-export const inject = ['cmdlineArgs']
+export const name = "web-startup";
+export const inject = ["cmdlineArgs"];
 
 export function apply(ctx: Context): void {
-  const program = webCommand()
-  program.action(() => ctx.provide('webStartup', webValuesFrom(program)))
-  parseCmdline(ctx, program)
+  const program = webCommand();
+  program.action(() => ctx.provide("webStartup", webValuesFrom(program)));
+  parseCmdline(ctx, program);
 }
 ```
 
@@ -32,14 +32,14 @@ Its Loader row carries no launcher marker or special kind:
 
 ```yaml
 - id: web-startup
-  name: '@deepseek-ai/dsh-web-app/startup'
+  name: "@deepseek-ai/dsh-web-app/startup"
 ```
 
 Every row configured from those values uses ordinary service injection and direct lazy config access:
 
 ```yaml
 - id: webserver
-  name: '@deepseek-ai/dsh-host-webserver'
+  name: "@deepseek-ai/dsh-host-webserver"
   inject: [webStartup]
   config:
     host: !!js ctx.webStartup.host ?? '127.0.0.1'

@@ -5,37 +5,37 @@ English | [中文](README.zh.md)
 The **fs-observation-policy plugin**: it records observed presence or absence and adds read-before-edit plus guarded write/edit on top of the `ctx.fs` provider contract ([`@deepseek-ai/dsh-fs`](../fs)) — through the `fs/*` event gate, **NOT** through a method service. This plugin registers **no** `ctx.fsPolicy` service and has no public `read`/`write`/`edit`/`resolve` methods. It is the policy third of the filesystem stack: not a swappable seam, but the policy that does not belong on the `FileSystem` provider base class.
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import * as FsPolicy from '@deepseek-ai/dsh-fs-observation-policy'
+import type { Context } from "@deepseek-ai/cordis";
+import * as FsPolicy from "@deepseek-ai/dsh-fs-observation-policy";
 
-declare const ctx: Context
+declare const ctx: Context;
 
 // No service to inject — this plugin only registers the three fs/* listeners.
 // Load it alongside a ctx.fs provider (e.g. @deepseek-ai/dsh-fs-local) and the
 // @deepseek-ai/dsh-tool-fs tools; the tools dispatch the fs/* events this plugin
 // decides. Order does not matter for resolution (no inject), but the policy
 // listener should be the first decider registered for the fs/*-intent slots.
-await ctx.plugin(FsPolicy)
+await ctx.plugin(FsPolicy);
 ```
 
 ## The four-layer split
 
-| Layer | Package | Role |
-|---|---|---|
-| tool / executor | `@deepseek-ai/dsh-tool-fs` | model-facing schemas + read windowing + text rendering; reads/writes/edits via `ctx.fs`, dispatches the `fs/*` events |
-| policy | `@deepseek-ai/dsh-fs-observation-policy` (this) | observed-state + read-before-edit + version-guarded write/edit, contributed through the `fs/*` event gate (no service) |
-| provider contract | `@deepseek-ai/dsh-fs` | `ctx.fs`: text IO + atomic mutation primitives (optional version guard); owns the `fs/*` event vocabulary |
-| provider | `@deepseek-ai/dsh-fs-local` | local implementation of `ctx.fs` |
+| Layer             | Package                                         | Role                                                                                                                   |
+| ----------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| tool / executor   | `@deepseek-ai/dsh-tool-fs`                      | model-facing schemas + read windowing + text rendering; reads/writes/edits via `ctx.fs`, dispatches the `fs/*` events  |
+| policy            | `@deepseek-ai/dsh-fs-observation-policy` (this) | observed-state + read-before-edit + version-guarded write/edit, contributed through the `fs/*` event gate (no service) |
+| provider contract | `@deepseek-ai/dsh-fs`                           | `ctx.fs`: text IO + atomic mutation primitives (optional version guard); owns the `fs/*` event vocabulary              |
+| provider          | `@deepseek-ai/dsh-fs-local`                     | local implementation of `ctx.fs`                                                                                       |
 
 ## How the gate participates
 
 Three `fs/*` events (declared by `@deepseek-ai/dsh-fs`, dispatched by `@deepseek-ai/dsh-tool-fs`):
 
-| Event | This plugin's listener |
-|---|---|
+| Event             | This plugin's listener                                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `fs/write-intent` | Unseen or observed absent → `{ kind: 'createIfAbsent' }`; observed present → `{ kind: 'replaceIfVersion', version: vObserved }`. Single-slot decision; does NOT call `next()`. |
-| `fs/edit-intent` | Unseen → `FS_NOT_OBSERVED`; observed absent → `FS_NOT_FOUND`; observed present → `{ version: vObserved }` as the CAS basis. Single-slot decision; does NOT call `next()`. |
-| `fs/observed` | Records `{ kind: 'present', version }` or `{ kind: 'absent' }` for this owner+target. Synchronous, side-effect-only `WeakMap.set`. |
+| `fs/edit-intent`  | Unseen → `FS_NOT_OBSERVED`; observed absent → `FS_NOT_FOUND`; observed present → `{ version: vObserved }` as the CAS basis. Single-slot decision; does NOT call `next()`.      |
+| `fs/observed`     | Records `{ kind: 'present', version }` or `{ kind: 'absent' }` for this owner+target. Synchronous, side-effect-only `WeakMap.set`.                                             |
 
 ## Observed state is the prior-observation record; freshness is provider CAS
 

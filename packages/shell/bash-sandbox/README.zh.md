@@ -8,11 +8,11 @@
 
 每条命令的限制方式都是：把本执行器即将 spawn 的精确 `['bash', '-c', command]` argv 交给提供方，并直接 spawn 返回的 argv。使用随附的原生 runner 时，内层 Bash 保留 shell 语义，并且只在 runner 建立约束后才求值 `BASH_ENV`。由哪种平台 runner 执行限制，以及是否有 runner 可用，属于提供方职责；若无可用 runner，则按失败关闭原则拒绝执行并返回结构化 `SANDBOX_UNAVAILABLE` 错误，绝不能静默地无约束运行。本包只负责 bash 侧。
 
-| 模式 | 文件影响 |
-|---|---|
-| `read-only`（默认） | 任何位置都不可写（在 `/dev` 中只有 `/dev/null` 节点可写，因此 `>/dev/null` 仍可正常工作） |
-| `workspace-write` | 只能写入 `workspaceRoot` + `/tmp`（在 bwrap 下为临时目录，在 Landlock 下为宿主 `/tmp`，在 Seatbelt 下为 `/private/tmp` 加每用户临时目录） |
-| `danger-full-access` | 不作限制；绝不咨询提供方。前台结果携带 `sandbox: { mode, denied: false }`；后台进程句柄不携带沙箱事实。 |
+| 模式                 | 文件影响                                                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `read-only`（默认）  | 任何位置都不可写（在 `/dev` 中只有 `/dev/null` 节点可写，因此 `>/dev/null` 仍可正常工作）                                                 |
+| `workspace-write`    | 只能写入 `workspaceRoot` + `/tmp`（在 bwrap 下为临时目录，在 Landlock 下为宿主 `/tmp`，在 Seatbelt 下为 `/private/tmp` 加每用户临时目录） |
+| `danger-full-access` | 不作限制；绝不咨询提供方。前台结果携带 `sandbox: { mode, denied: false }`；后台进程句柄不携带沙箱事实。                                   |
 
 语义：
 
@@ -26,14 +26,14 @@
 
 ```yaml
 - id: sandbox
-  name: '@deepseek-ai/dsh-sandbox-local'
+  name: "@deepseek-ai/dsh-sandbox-local"
 - id: sandbox-policy
-  name: '@deepseek-ai/dsh-sandbox-policy'
+  name: "@deepseek-ai/dsh-sandbox-policy"
   config:
     mode: read-only
     workspaceRoot: !!js process.cwd() # fallback for calls without a session cwd
 - id: bash
-  name: '@deepseek-ai/dsh-bash-sandbox'
+  name: "@deepseek-ai/dsh-bash-sandbox"
 ```
 
 ## 模型体验

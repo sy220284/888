@@ -9,12 +9,12 @@
 在 `tmp/cordis-tutorial` 目录中（参见[环境设置](index.zh.md#setup)）创建 `hello.ts`：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'hello'
+export const name = "hello";
 
 export function apply(ctx: Context) {
-  console.log('hello from my first plugin')
+  console.log("hello from my first plugin");
 }
 ```
 
@@ -25,7 +25,7 @@ export function apply(ctx: Context) {
 本教程的启动器通过配置组装应用。创建 `cordis.yml`：
 
 ```yaml
-- name: './hello.ts'
+- name: "./hello.ts"
 ```
 
 该文件是一组 Cordis 配置项的列表。`name` 是模块指定符，可以是相对路径或 NPM 包名；loader 会挂载每个配置项。各项会并发启动，因此它们在列表中的位置不保证插件的加载先后；顺序由服务依赖（`inject`，参见[第 3 章](03-services.zh.md)）决定，而非文件中的位置。
@@ -55,21 +55,21 @@ hello from my first plugin
 函数是最常见的形式，但 Cordis 接受三种形式：
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
 // 1. Function plugin (what you just wrote).
 export function apply(ctx: Context) {}
 
 // 2. Object plugin: an object with an `apply` method.
 export const objectPlugin = {
-  name: 'object-plugin',
+  name: "object-plugin",
   apply(ctx: Context) {},
-}
+};
 
 // 3. Class plugin: a Service subclass (covered in chapter 3).
 export class MyService extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'myTutorialService')
+    super(ctx, "myTutorialService");
   }
 }
 ```
@@ -82,7 +82,7 @@ export class MyService extends Service {
 
 ```ts ignore-check
 export function apply(ctx: Context) {
-  throw new Error('apply exploded')
+  throw new Error("apply exploded");
 }
 ```
 

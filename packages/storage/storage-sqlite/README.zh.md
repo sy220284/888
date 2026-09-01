@@ -14,8 +14,8 @@
 
 ```ts
 interface Config {
-  path: string   // SQLite database file path, or ':memory:' for an in-process DB
-  journalMode?: 'wal' | 'delete' | 'truncate' | 'persist'   // journal_mode pragma; default 'wal'
+  path: string; // SQLite database file path, or ':memory:' for an in-process DB
+  journalMode?: "wal" | "delete" | "truncate" | "persist"; // journal_mode pragma; default 'wal'
 }
 ```
 

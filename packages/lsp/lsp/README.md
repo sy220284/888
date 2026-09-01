@@ -6,20 +6,20 @@ The **LSP capability seam**: an abstract `LspService` (`ctx.lsp`) defining WHAT 
 
 This package owns the Service Definition role of the LSP capability:
 
-| Package | Role |
-|---|---|
+| Package                       | Role                                                                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@deepseek-ai/dsh-lsp` (this) | Service Definition: the service, provider registry keyed by branded id + extension mapping, per-query selection, request/result vocabulary, the `LspError` taxonomy |
-| `@deepseek-ai/dsh-lsp-stdio` | Service Provider: a generic local backend that registers configured stdio language-server providers |
-| `@deepseek-ai/dsh-tool-lsp` | Consumer: the model-facing `lsp` tool over `ctx.lsp` |
+| `@deepseek-ai/dsh-lsp-stdio`  | Service Provider: a generic local backend that registers configured stdio language-server providers                                                                 |
+| `@deepseek-ai/dsh-tool-lsp`   | Consumer: the model-facing `lsp` tool over `ctx.lsp`                                                                                                                |
 
 The seam exposes exactly four semantic operations — `goToDefinition`, `findReferences`, `goToImplementation`, `hover` — and no generic JSON-RPC escape hatch, so no protocol payload or unreviewed command/mutation reaches a provider through `ctx.lsp`.
 
 ## Service API (`ctx.lsp`)
 
-| Member | Semantics |
-|---|---|
+| Member                       | Semantics                                                                                                                                                                                                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `registerProvider(provider)` | Register a backend, atomically reserving its branded `id` and every normalized file extension. Any invalid input or conflict publishes nothing and throws `LspError` (`LSP_INVALID_PROVIDER` / `LSP_CONFLICT`). Returns a disposer releasing all reservations. Disposed with the calling fiber. |
-| `query(request, signal?)` | Select the provider by the file's final extension, derive the `languageId` from that provider's mapping, and run one query. No match throws `LspError` `LSP_UNAVAILABLE`. |
+| `query(request, signal?)`    | Select the provider by the file's final extension, derive the `languageId` from that provider's mapping, and run one query. No match throws `LspError` `LSP_UNAVAILABLE`.                                                                                                                       |
 
 Selection is per query and order-independent: a provider owns a set of extensions exclusively, so registration and HMR order never change routing. Extension keys normalize to lowercase, leading-dot form; the `languageId` only synchronizes the transient document, never participates in selection. The first version has no glob, language-id, or explicit route selector.
 

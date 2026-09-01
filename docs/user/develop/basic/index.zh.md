@@ -17,9 +17,9 @@ mkdir -p scratch-plugin/src
 在 Harness 中，插件是一个导出 `apply` 函数的 TypeScript 模块。框架在加载时调用 `apply`，传入一个 `ctx`（上下文对象），你通过 `ctx` 注册能力：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'my-plugin'
+export const name = "my-plugin";
 
 export function apply(ctx: Context) {
   // Register capabilities here.
@@ -33,13 +33,13 @@ export function apply(ctx: Context) {
 创建 `scratch-plugin/src/my-plugin.ts`：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'hello-plugin'
+export const name = "hello-plugin";
 
 export function apply(ctx: Context) {
   // Required dependencies are ready before apply runs.
-  console.log('[hello-plugin] plugin loaded!')
+  console.log("[hello-plugin] plugin loaded!");
 }
 ```
 
@@ -50,7 +50,7 @@ export function apply(ctx: Context) {
 ```yaml
 - insert:
     - id: hello
-      name: '/absolute/path/to/deepseek-harness/scratch-plugin/src/my-plugin.ts'
+      name: "/absolute/path/to/deepseek-harness/scratch-plugin/src/my-plugin.ts"
 ```
 
 插件路径必须是绝对路径。patch 文件只贡献配置，不会改变 loader 解析模块路径时使用的 profile 目录。
@@ -70,17 +70,17 @@ pnpm dsh web --patch ./scratch-plugin/cordis.yml
 如果你有需要手动清理的资源（比如一个网络连接），用 `ctx.effect()` 告诉框架怎么清理：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
 export function apply(ctx: Context) {
   ctx.effect(() => {
     const timer = setInterval(() => {
-      console.log('heartbeat')
-    }, 5000)
+      console.log("heartbeat");
+    }, 5000);
 
     // The returned function runs when the plugin unloads.
-    return () => clearInterval(timer)
-  })
+    return () => clearInterval(timer);
+  });
 }
 ```
 
@@ -89,14 +89,14 @@ export function apply(ctx: Context) {
 如果你的插件需要使用其他服务（如 `tools`、`llm`），需要声明 `inject`：
 
 ```ts ignore-check
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'my-tool-plugin'
-export const inject = ['tools']
+export const name = "my-tool-plugin";
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
   // ctx.tools is ready here.
-  ctx.tools.register(/* ... */)
+  ctx.tools.register(/* ... */);
 }
 ```
 
@@ -109,27 +109,27 @@ export function apply(ctx: Context) {
 ### 对象形式
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
 export default {
-  name: 'my-plugin',
-  inject: ['tools'],
+  name: "my-plugin",
+  inject: ["tools"],
   apply(ctx: Context) {
     // ...
   },
-}
+};
 ```
 
 ### 类形式
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
 export default class MyService extends Service {
-  static inject = ['tools']
+  static inject = ["tools"];
 
   constructor(ctx: Context) {
-    super(ctx, 'myService')
+    super(ctx, "myService");
     // Perform synchronous initialization in the constructor.
   }
 }

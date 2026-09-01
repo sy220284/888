@@ -24,14 +24,14 @@ interface ProjectionDefinition<
   S extends SessionProjectionStateMap[K] = SessionProjectionStateMap[K],
 > {
   /** The projection key this unit owns (its `SessionProjectionStateMap` entry). */
-  key: K
+  key: K;
   /** Validates persisted state before it seeds a fold. */
-  stateSchema: ZodType<S>
+  stateSchema: ZodType<S>;
   /**
    * State for the empty log.
    * @returns the initial state.
    */
-  init(): NoInfer<S>
+  init(): NoInfer<S>;
   /**
    * Pure transition: previous state + one committed event → next state. A
    * unit uninterested in an event MUST return the same state reference — an
@@ -40,25 +40,27 @@ interface ProjectionDefinition<
    * @param event - the next committed session event.
    * @returns the next state (same reference when the event is not the unit's).
    */
-  apply(state: NoInfer<S>, event: SessionEvent): NoInfer<S>
+  apply(state: NoInfer<S>, event: SessionEvent): NoInfer<S>;
   /** Client view. Omit for host-only units. */
-  wire?: K extends keyof SessionProjectionMap ? {
-    /** Validates the wire payload before it leaves the host. */
-    viewSchema: ZodType<SessionProjectionMap[K]>
-    /**
-     * State → wire payload (the read-side projection).
-     * @param state - the current state.
-     * @returns the whole current value for this unit's key.
-     */
-    view(state: NoInfer<S>): SessionProjectionMap[K]
-  } : never
+  wire?: K extends keyof SessionProjectionMap
+    ? {
+        /** Validates the wire payload before it leaves the host. */
+        viewSchema: ZodType<SessionProjectionMap[K]>;
+        /**
+         * State → wire payload (the read-side projection).
+         * @param state - the current state.
+         * @returns the whole current value for this unit's key.
+         */
+        view(state: NoInfer<S>): SessionProjectionMap[K];
+      }
+    : never;
   /**
    * Persisted-cache invalidation version: bump whenever the serialized state fields or the
    * fold semantics change, so persisted `(sessionId, key, ver, seq, val)`
    * rows from an older unit are discarded instead of being forward-applied
    * into garbage. Non-negative integer.
    */
-  stateVersion: number
+  stateVersion: number;
 }
 ```
 
@@ -74,9 +76,9 @@ interface ProjectionDefinition<
  */
 interface ProjectionSnapshot {
   /** Seq of the last event the values reflect; -1 for an empty log. */
-  asOfSeq: number
+  asOfSeq: number;
   /** Whole current client value per registered key. */
-  values: Partial<SessionProjectionMap>
+  values: Partial<SessionProjectionMap>;
 }
 ```
 
@@ -91,7 +93,7 @@ type ProjectionChangeListener = (
   key: Extract<keyof SessionProjectionMap, string>,
   value: unknown,
   seq: number,
-) => void
+) => void;
 ```
 
 `snapshot(session)` 完全同步：载体在切出页面切片的同一 tick 内读取它，因此 `asOfSeq` 使两次读取使用同一个序号。它只返回客户端视图，并在返回前通过各单元的 `viewSchema` 校验。`stateOf(session, key)` 可在不计算无关视图的情况下读取一份实时 host 状态；调用方不得修改这一借用引用。对于每个已提交事件，变更流会为每个状态*引用*已变化的客户端可见单元触发一次；状态未变时，`apply` 必须返回同一引用。

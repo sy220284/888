@@ -15,8 +15,8 @@
    theme background at 60% — glides over the row content from off-left to
    off-right, washing glyphs and icon toward the background as it passes.
    ease-out with a 10% end hold gives each pass a beat before the next. */
-.root[data-state='running'] .row::after {
-  content: '';
+.root[data-state="running"] .row::after {
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
@@ -33,8 +33,13 @@
 }
 
 @keyframes dsh-tool-row-sweep {
-  0% { left: -300px; }
-  90%, 100% { left: 100%; }
+  0% {
+    left: -300px;
+  }
+  90%,
+  100% {
+    left: 100%;
+  }
 }
 
 .leading {
@@ -43,16 +48,16 @@
 
 /* Cordis lifecycle tools retain their generic row mechanics while carrying a
    shared product accent and tool-owned action title. */
-.root[data-tool^='cordis_'] .leading,
-.root[data-tool^='cordis_'] .title {
+.root[data-tool^="cordis_"] .leading,
+.root[data-tool^="cordis_"] .title {
   color: var(--dsw-alias-state-business-primary);
 }
 
-.root[data-tool^='cordis_'] .title {
+.root[data-tool^="cordis_"] .title {
   font-weight: 500;
 }
 
-.root[data-tool^='cordis_'] .sep {
+.root[data-tool^="cordis_"] .sep {
   background: var(--dsw-alias-state-business-primary);
 }
 

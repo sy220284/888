@@ -24,33 +24,33 @@ Provider 不宣告任何启动期能力（`outputSchema`/`depthLimit`/`toolFilte
 
 ## 配置
 
-| 键 | 默认 | 含义 |
-|---|---|---|
-| `providerName` | `dsh-sdk` | `ctx.subagents` 上的注册名。 |
-| `command` | 必填 | 每次运行时 spawn 的可执行文件（子运行时 bin 或打包后的可执行文件）。 |
-| `args` | `[]` | 命令参数（通常是子进程的 `cordis.yml` 路径）。 |
-| `cwd` | 父会话 cwd | 工作目录覆盖；校验规则与 [`subagent-acp`](../subagent-acp/README.zh.md) 相同。 |
-| `provider` | `deepseek-official` | 写入子进程 `initialize` 的提供方路由。 |
-| `model` | `deepseek-v4-flash` | 写入子进程 `initialize` 的模型。 |
-| `maxTokens` | 适配器／提供方路由默认值 | 写入子进程 `initialize` 的单次请求输出 token 上限；对子运行时的根 agent 及其进程内后代生效。 |
-| `env` | `{}` | 在凭据擦除后的父环境之上叠加的显式子环境（例如子进程自己的 `DEEPSEEK_API_KEY`，或 `DSH_CORDIS_CONFIG`）。 |
-| `shutdownTimeoutMs` | `1000` | dispose 期间协议 `shutdown` 交换的时限。 |
-| `disposeEofGraceMs` | `6000` | stdin EOF 之后、平台终止之前的宽限。 |
-| `disposeGraceMs` | `3000` | 终止后的退出确认窗口；POSIX 在 SIGTERM 之后、SIGKILL 之前也等待同样时长。 |
+| 键                  | 默认                     | 含义                                                                                                      |
+| ------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `providerName`      | `dsh-sdk`                | `ctx.subagents` 上的注册名。                                                                              |
+| `command`           | 必填                     | 每次运行时 spawn 的可执行文件（子运行时 bin 或打包后的可执行文件）。                                      |
+| `args`              | `[]`                     | 命令参数（通常是子进程的 `cordis.yml` 路径）。                                                            |
+| `cwd`               | 父会话 cwd               | 工作目录覆盖；校验规则与 [`subagent-acp`](../subagent-acp/README.zh.md) 相同。                            |
+| `provider`          | `deepseek-official`      | 写入子进程 `initialize` 的提供方路由。                                                                    |
+| `model`             | `deepseek-v4-flash`      | 写入子进程 `initialize` 的模型。                                                                          |
+| `maxTokens`         | 适配器／提供方路由默认值 | 写入子进程 `initialize` 的单次请求输出 token 上限；对子运行时的根 agent 及其进程内后代生效。              |
+| `env`               | `{}`                     | 在凭据擦除后的父环境之上叠加的显式子环境（例如子进程自己的 `DEEPSEEK_API_KEY`，或 `DSH_CORDIS_CONFIG`）。 |
+| `shutdownTimeoutMs` | `1000`                   | dispose 期间协议 `shutdown` 交换的时限。                                                                  |
+| `disposeEofGraceMs` | `6000`                   | stdin EOF 之后、平台终止之前的宽限。                                                                      |
+| `disposeGraceMs`    | `3000`                   | 终止后的退出确认窗口；POSIX 在 SIGTERM 之后、SIGKILL 之前也等待同样时长。                                 |
 
 ```yaml
 - id: subagent-dsh-sdk
-  name: '@deepseek-ai/dsh-subagent-dsh-sdk'
+  name: "@deepseek-ai/dsh-subagent-dsh-sdk"
   config:
     providerName: dsh-sdk
     command: node
-    args: ['./packages/examples/jsonrpc-demo/lib/bin.js', './examples/jsonrpc-agent/cordis.yml']
+    args: ["./packages/examples/jsonrpc-demo/lib/bin.js", "./examples/jsonrpc-agent/cordis.yml"]
     maxTokens: 49152
     env:
       DEEPSEEK_API_KEY: !!js process.env.DEEPSEEK_API_KEY
 - id: tool-subagent
-  name: '@deepseek-ai/dsh-tool-subagent'
-  config: { provider: dsh-sdk, toolName: subagent, maxDepth: 'provider-managed' }
+  name: "@deepseek-ai/dsh-tool-subagent"
+  config: { provider: dsh-sdk, toolName: subagent, maxDepth: "provider-managed" }
 ```
 
 ## 进程边界

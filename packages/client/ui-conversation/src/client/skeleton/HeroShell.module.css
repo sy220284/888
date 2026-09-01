@@ -77,7 +77,8 @@
 }
 
 @keyframes hero-fish-swim {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) rotate(0deg);
   }
 
@@ -143,7 +144,7 @@
 }
 
 .workspace:not(:disabled):hover,
-.workspace[aria-expanded='true'] {
+.workspace[aria-expanded="true"] {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 

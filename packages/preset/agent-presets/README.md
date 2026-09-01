@@ -83,11 +83,11 @@ Every read failure degrades to no metadata — absent, malformed, wrongly typed,
 
 ## Config
 
-| Field | Default | Meaning |
-|---|---|---|
-| `default` | required | Preset id mounted when a caller names none |
-| `roots` | `[]` | Scanned directories in precedence order; each supplies `path` (a leading `~` expands) and `trust` (defaults to `user`) |
-| `includeUserRoot` | `true` | Append `<dshHome>/.agent-presets` as a `user` root, after every configured root |
+| Field             | Default  | Meaning                                                                                                                |
+| ----------------- | -------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `default`         | required | Preset id mounted when a caller names none                                                                             |
+| `roots`           | `[]`     | Scanned directories in precedence order; each supplies `path` (a leading `~` expands) and `trust` (defaults to `user`) |
+| `includeUserRoot` | `true`   | Append `<dshHome>/.agent-presets` as a `user` root, after every configured root                                        |
 
 An absent root supplies no presets rather than failing: the user root does not exist until the first locally authored preset, and naming a default no root supplies already fails loud at resolution.
 

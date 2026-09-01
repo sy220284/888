@@ -22,7 +22,7 @@ The only append point while an agent is running is a prepended `agent/pre-step` 
 /** Deployment-owned plan guidance. */
 interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
-  section: string
+  section: string;
 }
 ```
 

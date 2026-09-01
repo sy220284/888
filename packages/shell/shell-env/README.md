@@ -10,9 +10,9 @@ The package root exports the Cordis plugin contract (`name`, `inject`, `Config`,
 
 ```yaml
 - id: shell-env
-  name: '@deepseek-ai/dsh-shell-env'
+  name: "@deepseek-ai/dsh-shell-env"
   config:
-    dshHome: C:\Users\me\.dsh   # default: $DSH_HOME, then ~/.dsh
+    dshHome: C:\Users\me\.dsh # default: $DSH_HOME, then ~/.dsh
 ```
 
 ## Managed environment
@@ -22,17 +22,17 @@ Every foreground and background model shell call receives a newly collected trus
 `ctx.shellEnv` owns collection. Other plugins can register an effect-scoped contributor with a stable name, declared keys/descriptions, and `resolve(execution: ToolExecution)`; duplicate ownership and undeclared runtime keys fail loudly, while `list()` enumerates declarations without executing providers. Harness built-ins reserve `DSH_HOME`, `DSH_SHELL`, and `DSH_SESSION_ID`; this plugin's persistence translator owns `DSH_SESSION_JSONL` by reading the backend-neutral `sessionPersistence.locate()` seam.
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-shell-env'
+import type { Context } from "@deepseek-ai/cordis";
+import type {} from "@deepseek-ai/dsh-shell-env";
 
-export const inject = ['shellEnv']
+export const inject = ["shellEnv"];
 
 export function apply(ctx: Context): void {
   ctx.shellEnv.register({
-    name: 'deployment-region',
-    variables: { DSH_DEPLOYMENT_REGION: { description: 'Current deployment region.' } },
-    resolve: execution => execution.agent === undefined ? {} : { DSH_DEPLOYMENT_REGION: 'cn-north' },
-  })
+    name: "deployment-region",
+    variables: { DSH_DEPLOYMENT_REGION: { description: "Current deployment region." } },
+    resolve: (execution) => (execution.agent === undefined ? {} : { DSH_DEPLOYMENT_REGION: "cn-north" }),
+  });
 }
 ```
 

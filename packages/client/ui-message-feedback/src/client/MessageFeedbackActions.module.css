@@ -51,7 +51,7 @@
 }
 
 .noteOpen:hover,
-.noteOpen[aria-expanded='true'] {
+.noteOpen[aria-expanded="true"] {
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-secondary);
 }

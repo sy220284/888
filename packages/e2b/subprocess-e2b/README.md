@@ -6,9 +6,9 @@ E2B implementation of the [`@deepseek-ai/dsh-subprocess`](../../subprocess/subpr
 
 ## Configuration
 
-| Key | Default | Meaning |
-| --- | --- | --- |
-| `pollMs` | `20` | Remote status/liveness poll cadence in milliseconds; each tick is one control-plane request, so a larger value trades exit-observation latency for fewer requests. |
+| Key      | Default | Meaning                                                                                                                                                            |
+| -------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pollMs` | `20`    | Remote status/liveness poll cadence in milliseconds; each tick is one control-plane request, so a larger value trades exit-observation latency for fewer requests. |
 
 ## Behavior
 

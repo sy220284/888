@@ -9,27 +9,29 @@ This tutorial adds a `greet` tool to the Web UI. Complete [Your first plugin](./
 Replace `scratch-plugin/src/my-plugin.ts` with:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
+import type { Context } from "@deepseek-ai/cordis";
+import { defineTool } from "@deepseek-ai/dsh-tools";
 
-export const name = 'greet-tool'
-export const inject = ['tools']
+export const name = "greet-tool";
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
-  ctx.tools.register(defineTool({
-    name: 'greet',
-    description: 'Greet someone by name.',
-    parameters: {
-      name: { type: 'string', required: true, description: 'The name to greet' },
-    },
-    output: {
-      schema: { type: 'string' },
-      render: (_args, value) => [{ type: 'text', text: value }],
-    },
-    async execute(args) {
-      return `Hello, ${args.name}!`
-    },
-  }))
+  ctx.tools.register(
+    defineTool({
+      name: "greet",
+      description: "Greet someone by name.",
+      parameters: {
+        name: { type: "string", required: true, description: "The name to greet" },
+      },
+      output: {
+        schema: { type: "string" },
+        render: (_args, value) => [{ type: "text", text: value }],
+      },
+      async execute(args) {
+        return `Hello, ${args.name}!`;
+      },
+    }),
+  );
 }
 ```
 

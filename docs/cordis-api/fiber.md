@@ -40,7 +40,7 @@ Register a cleanup-aware effect on this fiber.
 
 ```ts cordis-catalog
 /** The fiber (plugin runtime instance) that owns this context. */
-fiber: Fiber
+fiber: Fiber;
 ```
 
 The fiber (plugin runtime instance) that owns this context.
@@ -152,7 +152,7 @@ The plugin's display name, inherited from the nearest named ancestor, else `'roo
  * @returns nothing when the fiber is still active.
  * @throws {CordisError} `INACTIVE_EFFECT` when the fiber's uid has been cleared.
  */
-assertActive()
+assertActive();
 ```
 
 Throw if the fiber has already been disposed.
@@ -200,7 +200,7 @@ Register a cleanup-aware effect on this fiber.
  *
  * @returns one {@link EffectMeta} tree per labeled live effect.
  */
-getEffects()
+getEffects();
 ```
 
 Return metadata for currently registered effects.
@@ -287,9 +287,7 @@ Either a single disposer, a promise of one, or a (possibly async) iterable yield
  * yielding several — generator effects register each yielded disposer as it
  * is produced.
  */
-type Effect<T = any> =
-  | SyncEffect<T>
-  | AsyncEffect<T>
+type Effect<T = any> = SyncEffect<T> | AsyncEffect<T>;
 ```
 
 [Source](../../vendor/cordis/src/fiber.ts#L83)
@@ -307,7 +305,7 @@ Disposers run in reverse registration order when the owning fiber unloads; they 
  * Disposers run in reverse registration order when the owning fiber unloads;
  * they may be async, in which case unloading awaits them.
  */
-type Disposable<T = any> = () => T
+type Disposable<T = any> = () => T;
 ```
 
 [Source](../../vendor/cordis/src/fiber.ts#L74)
@@ -320,9 +318,9 @@ Tree node used to expose nested effect labels for diagnostics.
 /** Tree node used to expose nested effect labels for diagnostics. */
 interface EffectMeta {
   /** Human-readable effect label, e.g. `ctx.on("event")` or `ctx.provide("name")`. */
-  label: string
+  label: string;
   /** Metadata of nested effects registered while this effect ran. */
-  children: EffectMeta[]
+  children: EffectMeta[];
 }
 ```
 
@@ -361,14 +359,14 @@ Error raised when plugin configuration fails standard-schema validation.
 ```ts cordis-catalog
 /** Error raised when plugin configuration fails standard-schema validation. */
 class ValidationError extends TypeError {
-  name = 'ValidationError'
+  name = "ValidationError";
 
   /**
    * Build the aggregated message from schema issues.
    *
    * @param issues — the standard-schema issues, one message line each.
    */
-  constructor(issues: readonly StandardSchemaV1.Issue[])
+  constructor(issues: readonly StandardSchemaV1.Issue[]);
 }
 ```
 

@@ -18,7 +18,7 @@ Function plugin registering the `sessionStats` projection unit: whole-log conver
 
 ```yaml
 - id: session-stats
-  name: '@deepseek-ai/dsh-session-stats'
+  name: "@deepseek-ai/dsh-session-stats"
 ```
 
 Injects `sessionProjections` — the plugin's whole purpose; in assemblies without the registry the fiber stays pending and nothing registers.

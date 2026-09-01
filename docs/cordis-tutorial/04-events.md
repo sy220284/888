@@ -9,35 +9,35 @@ Services support direct calls; **events** let a plugin announce something withou
 Create `stats.ts` in `tmp/cordis-tutorial` — a service that counts things and announces each change:
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    stats: StatsService
+    stats: StatsService;
   }
   interface Events {
-    'stats/report'(name: string, count: number): void
+    "stats/report"(name: string, count: number): void;
   }
 }
 
 export class StatsService extends Service {
-  private counts = new Map<string, number>()
+  private counts = new Map<string, number>();
 
   constructor(ctx: Context) {
-    super(ctx, 'stats')
+    super(ctx, "stats");
   }
 
   bump(name: string) {
-    const next = (this.counts.get(name) ?? 0) + 1
-    this.counts.set(name, next)
-    this.ctx.emit('stats/report', name, next)
+    const next = (this.counts.get(name) ?? 0) + 1;
+    this.counts.set(name, next);
+    this.ctx.emit("stats/report", name, next);
   }
 }
 
-export const name = 'stats'
+export const name = "stats";
 
 export function apply(ctx: Context) {
-  ctx.plugin(StatsService)
+  ctx.plugin(StatsService);
 }
 ```
 
@@ -46,27 +46,27 @@ The `interface Events` merge is the event-system twin of the `interface Context`
 Create `reporter.ts`:
 
 ```ts ignore-check
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from './stats.ts'
+import type { Context } from "@deepseek-ai/cordis";
+import type {} from "./stats.ts";
 
-export const name = 'reporter'
-export const inject = ['stats']
+export const name = "reporter";
+export const inject = ["stats"];
 
 export function apply(ctx: Context) {
-  ctx.on('stats/report', (name, count) => {
-    console.log(`[stats] ${name} -> ${count}`)
-  })
-  ctx.stats.bump('tool_call')
-  ctx.stats.bump('tool_call')
-  ctx.stats.bump('prompt')
+  ctx.on("stats/report", (name, count) => {
+    console.log(`[stats] ${name} -> ${count}`);
+  });
+  ctx.stats.bump("tool_call");
+  ctx.stats.bump("tool_call");
+  ctx.stats.bump("prompt");
 }
 ```
 
 The `import type {} from './stats.ts'` line imports nothing at runtime; it exists so TypeScript sees the declaration merges. Compose and run:
 
 ```yaml
-- name: './stats.ts'
-- name: './reporter.ts'
+- name: "./stats.ts"
+- name: "./reporter.ts"
 ```
 
 ```
@@ -81,13 +81,13 @@ Because `ctx.on()` is an effect, the listener disappears with the plugin — no 
 
 `emit` is one of five dispatch modes. Which one an event uses is part of its contract — it decides whether listeners can return values, run concurrently, or short-circuit each other:
 
-| Mode | Call | Semantics |
-|---|---|---|
-| emit | `ctx.emit(name, ...args)` | Synchronous broadcast; returned promises and values are not awaited or collected. |
-| parallel | `await ctx.parallel(name, ...args)` | All listeners run concurrently; awaited together. |
-| serial | `await ctx.serial(name, ...args)` | Listeners run in order, awaited; the first non-`null`/`false`/`undefined` return wins and stops the rest. |
-| bail | `ctx.bail(name, ...args)` | Synchronous version of serial. |
-| waterfall | `ctx.waterfall(name, ...args, next)` | Around-middleware; see below. |
+| Mode      | Call                                 | Semantics                                                                                                 |
+| --------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| emit      | `ctx.emit(name, ...args)`            | Synchronous broadcast; returned promises and values are not awaited or collected.                         |
+| parallel  | `await ctx.parallel(name, ...args)`  | All listeners run concurrently; awaited together.                                                         |
+| serial    | `await ctx.serial(name, ...args)`    | Listeners run in order, awaited; the first non-`null`/`false`/`undefined` return wins and stops the rest. |
+| bail      | `ctx.bail(name, ...args)`            | Synchronous version of serial.                                                                            |
+| waterfall | `ctx.waterfall(name, ...args, next)` | Around-middleware; see below.                                                                             |
 
 Every harness event documents its mode in the generated reference on its owning [subsystem page](../subsystems/core.md).
 
@@ -96,33 +96,33 @@ Every harness event documents its mode in the generated reference on its owning 
 Waterfall is the mode that powers interception. Each listener receives the arguments plus a `next()` continuation; it can transform what `next()` returns, or return without calling `next()` and short-circuit the rest of the chain — what the Cordis docs call the veto. Create `waterfall-demo.ts`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Events {
-    'demo/transform'(input: string, next: () => Promise<string>): Promise<string>
+    "demo/transform"(input: string, next: () => Promise<string>): Promise<string>;
   }
 }
 
-export const name = 'waterfall-demo'
+export const name = "waterfall-demo";
 
 export function apply(ctx: Context) {
   // Listener 1: wrap the downstream result.
-  ctx.on('demo/transform', async (input, next) => {
-    const downstream = await next()
-    return downstream.toUpperCase()
-  })
+  ctx.on("demo/transform", async (input, next) => {
+    const downstream = await next();
+    return downstream.toUpperCase();
+  });
 
   // Listener 2: short-circuit when it owns the decision.
-  ctx.on('demo/transform', async (input, next) => {
-    if (input.includes('blocked')) return '** blocked **'
-    return next()
-  })
+  ctx.on("demo/transform", async (input, next) => {
+    if (input.includes("blocked")) return "** blocked **";
+    return next();
+  });
 
   void (async () => {
-    console.log(await ctx.waterfall('demo/transform', 'hello', async () => 'hello'))
-    console.log(await ctx.waterfall('demo/transform', 'blocked words', async () => 'blocked words'))
-  })()
+    console.log(await ctx.waterfall("demo/transform", "hello", async () => "hello"));
+    console.log(await ctx.waterfall("demo/transform", "blocked words", async () => "blocked words"));
+  })();
 }
 ```
 

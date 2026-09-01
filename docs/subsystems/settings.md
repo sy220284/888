@@ -12,7 +12,7 @@ A namespace names one plugin-owned section of the user document. The brand preve
 
 ```ts type-equiv
 /** Nominal id of one registered settings namespace. */
-type SettingsNamespace = Branded<'SettingsNamespace'>
+type SettingsNamespace = Branded<"SettingsNamespace">;
 ```
 
 ## Registration
@@ -23,9 +23,9 @@ Registration binds a schemastery schema to a namespace on the calling plugin's f
 /** Registration options beyond the namespace schema. */
 interface SettingsRegisterOptions<T> {
   /** Composition-layer values resolved below the user layer (entry-config subset). */
-  base?: Partial<T>
+  base?: Partial<T>;
   /** Owner's effect timing, surfaced to configuration UIs; defaults to `live`. */
-  applies?: SettingsApplies
+  applies?: SettingsApplies;
   /**
    * Reject a resolved section the owner could not act on, for constraints its
    * schema cannot express — a cross-field requirement, or one field's validity
@@ -45,7 +45,7 @@ interface SettingsRegisterOptions<T> {
    * failure does.
    * @param value - the resolved section, schema-valid by construction.
    */
-  validate?: (value: T) => void
+  validate?: (value: T) => void;
 }
 ```
 
@@ -55,7 +55,7 @@ interface SettingsRegisterOptions<T> {
 
 ```ts type-equiv
 /** When a namespace's changes take effect for its owner. */
-type SettingsApplies = 'live' | 'restart'
+type SettingsApplies = "live" | "restart";
 ```
 
 ## Owner scope
@@ -66,7 +66,7 @@ The scope is the owner-facing handle. `update` merges a sparse patch over the us
 /** Owner-facing handle for one registered namespace. */
 interface SettingsScope<T> {
   /** Current resolved value: schema defaults, then `base`, then the user layer. */
-  get(): T
+  get(): T;
   /**
    * Observe committed changes to this namespace's resolved value. Invocations
    * of one callback run asynchronously, one at a time, in commit order; a
@@ -76,20 +76,20 @@ interface SettingsScope<T> {
    * @param callback - invoked after each commit with the next and previous values.
    * @returns the disposer removing this observer.
    */
-  watch(callback: (next: T, prev: T) => void | Promise<void>): () => void
+  watch(callback: (next: T, prev: T) => void | Promise<void>): () => void;
   /**
    * Merge a partial patch into this namespace's user layer and persist it.
    * @param patch - plain-object patch over the user section; JSON-compatible data
    * only (non-JSON values reject with their path before anything persists).
    */
-  update(patch: object): Promise<void>
+  update(patch: object): Promise<void>;
   /**
    * Replace this namespace's user section wholesale; absent keys re-inherit
    * the composition `base` and schema defaults (`replace({})` resets all).
    * @param section - the complete next user section; JSON-compatible data only,
    * as for {@link update}.
    */
-  replace(section: object): Promise<void>
+  replace(section: object): Promise<void>;
 }
 ```
 
@@ -101,31 +101,32 @@ interface SettingsScope<T> {
 /** One registered namespace as surfaced to configuration UIs. */
 interface SettingsDescriptor {
   /** The registered namespace. */
-  ns: SettingsNamespace
+  ns: SettingsNamespace;
   /** Serialized schemastery schema (`schema.toJSON()`). */
-  schema: unknown
+  schema: unknown;
   /** Current resolved value. */
-  value: unknown
+  value: unknown;
   /**
    * Monotonic revision of the raw user section this descriptor was read at.
    * Send it back as `expectedRevision` on a write to refuse a stale one.
    */
-  revision: number
+  revision: number;
   /** Registrant's composition `base` layer (detached), when one was declared. */
-  base?: unknown
+  base?: unknown;
   /**
    * Raw user section from the stored document (detached), when one exists and
    * is well-formed; a field's presence here is what marks it user-overridden.
    */
-  user?: unknown
+  user?: unknown;
   /** Owner's declared effect timing. */
-  applies: SettingsApplies
+  applies: SettingsApplies;
   /** Schema-declared secret positions; present only under `redactSecrets`. */
-  secrets?: RedactedSecret[]
+  secrets?: RedactedSecret[];
 }
 ```
 
 A caller that holds only the redacted descriptor cannot safely rebuild a section, so removals travel as path ops instead. Each descriptor also carries a `revision` over the raw section; a write may send it back as `expectedRevision`, and one that no longer matches is refused rather than applied over the writer that landed first.
+
 ```ts type-equiv
 /**
  * One path-addressed edit to a namespace's user section. Path mutation exists
@@ -135,9 +136,7 @@ A caller that holds only the redacted descriptor cannot safely rebuild a section
  * restating the section: a wholesale `replace` rebuilt from a redacted
  * document silently deletes every secret the wire never returned.
  */
-type SettingsPathOp =
-  | { op: 'set'; path: readonly string[]; value: unknown }
-  | { op: 'unset'; path: readonly string[] }
+type SettingsPathOp = { op: "set"; path: readonly string[]; value: unknown } | { op: "unset"; path: readonly string[] };
 ```
 
 ```ts type-equiv
@@ -148,7 +147,7 @@ interface SettingsDescribeOptions {
    * them in each descriptor's `secrets`. Every wire surface MUST pass this;
    * the verbatim default exists for same-process configuration UIs only.
    */
-  redactSecrets?: boolean
+  redactSecrets?: boolean;
 }
 ```
 
@@ -158,7 +157,7 @@ Every committed change — an in-process write or an externally observed provide
 
 ```ts type-equiv
 /** Origin of one committed settings change. */
-type SettingsUpdateSource = 'update' | 'provider'
+type SettingsUpdateSource = "update" | "provider";
 ```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->

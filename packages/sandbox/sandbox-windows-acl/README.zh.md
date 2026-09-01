@@ -11,13 +11,13 @@
 ## 用法
 
 ```ts
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { AclSandbox, tempWriteSid, workspaceWriteSid } from '@deepseek-ai/dsh-sandbox-windows-acl'
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { AclSandbox, tempWriteSid, workspaceWriteSid } from "@deepseek-ai/dsh-sandbox-windows-acl";
 
-const workspaceRoot = process.cwd()
-const tempDir = mkdtempSync(join(tmpdir(), 'dsh-'))
+const workspaceRoot = process.cwd();
+const tempDir = mkdtempSync(join(tmpdir(), "dsh-"));
 
 // mode selects the token's restricting-SID list (see Modes below) and must
 // match the grant shape. workspace-write requires distinct workspace and
@@ -27,15 +27,15 @@ const sandbox = new AclSandbox({
   tempDir,
   writeSid: workspaceWriteSid(workspaceRoot),
   tempWriteSid: tempWriteSid(tempDir),
-  mode: 'workspace-write',
-})
-await sandbox.init() // throws on ANY Win32 failure — never spawns unrestricted
+  mode: "workspace-write",
+});
+await sandbox.init(); // throws on ANY Win32 failure — never spawns unrestricted
 
-const child = sandbox.spawn({ command: 'pwsh', args: ['-NoProfile', '-Command', '...'], cwd: workspaceRoot })
-const { stdout, stderr, exitCode } = await child.wait()
+const child = sandbox.spawn({ command: "pwsh", args: ["-NoProfile", "-Command", "..."], cwd: workspaceRoot });
+const { stdout, stderr, exitCode } = await child.wait();
 
-sandbox.dispose() // revokes the revocable (temp) grant, keeps the standing workspace ACE; reports every cleanup failure
-rmSync(tempDir, { recursive: true, force: true })
+sandbox.dispose(); // revokes the revocable (temp) grant, keeps the standing workspace ACE; reports every cleanup failure
+rmSync(tempDir, { recursive: true, force: true });
 ```
 
 直接使用 `AclSandbox` 时，必须显式提供私有临时目录（或通过 `tempDir: null` 禁用临时写入；环境临时根目录绝不会被隐式授权），工作区 ACE 以**常驻**方式授予（`dispose()` 保留它们——它们是跨实例的复用缓存），不同的临时 SID 则以**可回收**方式授予。服务端复用则是 `AclWriteGrant` 类：每个目录一次 `add(path, standing)`，`dispose()` 撤销可回收路径并释放 SID——见下方 runner 契约。本包中的每个 Win32 API 调用都有检查；失败抛出 `Win32Error`，携带 API 名、精确 Win32 错误码、`FormatMessageW` 系统文本和失败的路径/上下文。这是刻意的：POC 忽略每个返回值，当 `CreateRestrictedToken` 失败时用完整无限制令牌静默运行子进程（fail-open）。本移植从构造上 fail-closed。
@@ -55,6 +55,7 @@ runner 创建受限令牌，在它之下 spawn 包装后的 argv，调用者的 
 **工作区复用与临时隔离**：seam 先把确定性工作区 SID 的 ACE **常驻**物化（每个工作区每服务器生命周期一次，绝不撤销——它就是复用缓存），再为每个活跃的会话/工作区对创建随机私有临时目录和不同的可回收 SID。它把两种身份作为必须成对出现的 `--write-sid`/`--temp-write-sid` 传入；runner 对照各自所属路径验证二者，既不授权也不撤销（`manageDacls: false`）。fork 获得不同的临时能力；即使恢复的是同一会话，新的提供方也会给出新的路径和 SID，因此崩溃残留只是失效垃圾，而非冲突或继承的能力。如果不带这一对标志，`--temp` 指定的是根目录：无 agent（智能体）/独立的 workspace-write runner 会创建随机私有子目录，自行管理其临时 SID，重写 TMP/TEMP，并在退出时移除该子目录。工作区若等于或包含该根目录，会在任何授权前被拒绝，因为否则其可继承的工作区 ACE 会向每个私有子目录授权；直接 API 同样拒绝任何可写根目录与实际私有临时目录重叠。重启后重新授权常驻工作区 ACE 是幂等的：`grantWrite` 读取当前 DACL，当完全相同的 ACE 已存在时跳过 `SetNamedSecurityInfoW`（应用该 ACE 会把相同的 ACE 急切地重新传播到整棵树——大型工作区上以分钟计）。已知代价：大型工作区树的首次授权会阻塞整次急切传播，每台机器每个工作区一次。
 
 模式（令牌的 restricting-SID 列表随模式而变；保活组登录 SID + Everyone 在**两种**模式下都存在——没有它们早期 DLL 初始化会以 `0xC0000142` 死亡、CNG 会让 pwsh 以 `0xE0434352` 崩溃）：
+
 - `workspace-write`（登录 SID、Everyone、工作区 SID、临时 SID）：工作区与会话的**私有**临时子目录分别携带 Write 授权；受 ACL 管辖的其他写入都会被拒绝，已记录的 Everyone 与硬链接边界除外。
 - `read-only`（登录 SID、Everyone——**不含**写入 SID）：不存在显式的写入 SID 授权。写入 SID 有意留在列表**之外**：先前 workspace-write 时期留下的常驻授权 ACE（`/permission` 降级，或崩溃后恢复的会话）在 read-only 下保持**失效**，因为 write-restricted 的 pass-2 检查只授予 restricting 列表所携带的内容——而常驻 ACE 让重新升级免于重新传播。Everyone 的环境权限仍构成已记录的部分强制执行边界。NUL 写入是**环境性**的、不是被授权的：设备 DACL 授予 Everyone 读+写+执行（`0x1201BF`），因此访问掩码落在其内的打开者（cmd 的 `> NUL`、node 的 `\\.\NUL`）在**两种**模式下都能写——只要 Everyone 还在保活组里，沙盒就无法把 NUL 设备归零。`Set-Content NUL` 在两种模式下都失败（PowerShell/.NET 层效应，由 read-only 套件钉住——拒绝方不是设备 DACL）；PowerShell 的 `> $null` 重定向不受影响（它直接丢弃、不打开 NUL）。
 

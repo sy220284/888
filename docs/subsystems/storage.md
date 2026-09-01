@@ -33,14 +33,14 @@ interface StorageForms {}
  */
 interface StorageBackend {
   /** Key-value operations; absent when this backend cannot serve them. */
-  readonly kv?: KvFacet
+  readonly kv?: KvFacet;
 
   /**
    * Drain in-flight writes across all open units and release the medium.
    * Idempotent; concurrent and repeated calls resolve once teardown finishes.
    * @returns resolution after the medium is released.
    */
-  close(): Promise<void>
+  close(): Promise<void>;
 }
 ```
 
@@ -54,13 +54,13 @@ A domain is declared once by its owning package as a spec object — the single 
 /** Static declaration of one domain: identity, version, and record layout. */
 interface DomainSpec {
   /** Domain name; must match `UNIT_NAME_RE` (doubles as the backend unit name). */
-  readonly name: string
+  readonly name: string;
   /** Domain format version; a medium stamped with a different version rejects at open. */
-  readonly version: number
+  readonly version: number;
   /** Optional global singleton slot. */
-  readonly global?: DomainGlobalSpec<unknown>
+  readonly global?: DomainGlobalSpec<unknown>;
   /** Table declarations keyed by table name; each name must match `UNIT_NAME_RE`. */
-  readonly tables: Record<string, DomainTableSpec>
+  readonly tables: Record<string, DomainTableSpec>;
 }
 ```
 
@@ -72,16 +72,16 @@ interface DomainSpec {
 /** One open domain, typed by its spec. */
 interface Domain<S extends DomainSpec> {
   /** Domain name from the spec. */
-  readonly name: string
+  readonly name: string;
   /** Global singleton handle; a spec without `global` has no usable handle (`never`). */
-  readonly global: DomainGlobalHandleOf<S>
+  readonly global: DomainGlobalHandleOf<S>;
   /**
    * Resolve one declared table handle. Handles are stable — repeated calls
    * return the same instance.
    * @param name - Declared table name.
    * @returns the typed table handle.
    */
-  table<N extends keyof S['tables'] & string>(name: N): KvTable<TableKeyOf<S, N>, TableValueOf<S, N>>
+  table<N extends keyof S["tables"] & string>(name: N): KvTable<TableKeyOf<S, N>, TableValueOf<S, N>>;
 
   /**
    * Close this domain: reject new writes immediately, drain already-queued
@@ -91,7 +91,7 @@ interface Domain<S extends DomainSpec> {
    * disposer); the facility closes any domain left open when it unmounts.
    * @returns resolution after the unit is released.
    */
-  close(): Promise<void>
+  close(): Promise<void>;
 }
 ```
 
@@ -109,17 +109,17 @@ Every durable write emits one event strictly after the backend acknowledged dura
 /** Shared location fields of one durable domain change. */
 interface DomainChangedBase {
   /** Owning domain name. */
-  readonly domain: string
+  readonly domain: string;
   /** Table name; `''` for a global-singleton write. */
-  readonly table: string
+  readonly table: string;
   /** Record key; `''` for a global-singleton write. */
-  readonly key: string
+  readonly key: string;
 }
 ```
 
 ```ts type-equiv
 /** One durable domain change; a closed union — switch on `operation`. */
-type DomainChanged = DomainChangedPut | DomainChangedDeleted
+type DomainChanged = DomainChangedPut | DomainChangedDeleted;
 ```
 
 `put` (inserts, overwrites, and global writes) carries the new snapshot in `value` — never the old value; a diffing consumer keeps its own previous snapshot. `deleted` is a tombstone with no value. The event is a notification, not a transaction participant: the commit point has passed at emission, so a synchronously throwing listener is contained with a logged warning rather than rejecting the already-durable write, and emitted values equal the in-memory state at emission. The event is in-process only; cross-process change push is a recorded limitation ([package README](../../packages/storage/storage-domain/README.md)).

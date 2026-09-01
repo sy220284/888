@@ -4,14 +4,14 @@ English | [中文](README.zh.md)
 
 File-backed [credentials](../credentials/README.md) provider: four layers, one honest precedence.
 
-| Layer | Source id | Writable | Wins |
-|---|---|---|---|
-| Inherited process environment | `env` | no | always |
-| `$DSH_HOME/.credentials.yaml` document | `file` | yes (`set`/`unset`) | over both `.env` layers |
-| `<invocation cwd>/.env` | `project-env` | not here | over the user `.env` |
-| `$DSH_HOME/.env` | `user-env` | not here | otherwise |
+| Layer                                  | Source id     | Writable            | Wins                    |
+| -------------------------------------- | ------------- | ------------------- | ----------------------- |
+| Inherited process environment          | `env`         | no                  | always                  |
+| `$DSH_HOME/.credentials.yaml` document | `file`        | yes (`set`/`unset`) | over both `.env` layers |
+| `<invocation cwd>/.env`                | `project-env` | not here            | over the user `.env`    |
+| `$DSH_HOME/.env`                       | `user-env`    | not here            | otherwise               |
 
-The launching environment wins because a per-run override (`DEEPSEEK_API_KEY=… dsh`, a CI secret, a container `-e`) is operator intent for this run — and because it cannot be edited from inside, it must be *visibly* read-only: `describe()` reports `source: 'env', writable: false`, and `set`/`unset` reject instead of writing a change the reader would never see.
+The launching environment wins because a per-run override (`DEEPSEEK_API_KEY=… dsh`, a CI secret, a container `-e`) is operator intent for this run — and because it cannot be edited from inside, it must be _visibly_ read-only: `describe()` reports `source: 'env', writable: false`, and `set`/`unset` reject instead of writing a change the reader would never see.
 
 Everything below it loses to the managed store, so a key written by the Models page takes effect immediately even when an older key sits in a `.env`. Those two layers still resolve when nothing is stored, and `describe()` names them `project-env` or `user-env` with `writable: true` — storing a key replaces them as the effective source.
 
@@ -19,12 +19,12 @@ Under the product CLI, resolution reads the launcher's frozen [environment snaps
 
 ## Config
 
-| Field | Default | Meaning |
-|---|---|---|
-| `path` | `<harness home>/.credentials.yaml` | Credentials document location. |
-| `dshHome` | `$DSH_HOME` or `~/.dsh` | Harness home used when `path` is omitted. |
-| `watch` | `true` | Hot-publish external edits. |
-| `debounceMs` | `100` | Watcher write-settle window. |
+| Field        | Default                            | Meaning                                   |
+| ------------ | ---------------------------------- | ----------------------------------------- |
+| `path`       | `<harness home>/.credentials.yaml` | Credentials document location.            |
+| `dshHome`    | `$DSH_HOME` or `~/.dsh`            | Harness home used when `path` is omitted. |
+| `watch`      | `true`                             | Hot-publish external edits.               |
+| `debounceMs` | `100`                              | Watcher write-settle window.              |
 
 ## The document
 
@@ -40,17 +40,17 @@ refs:
 records:
   llm-pi-ai/openai-codex:
     kind: grant
-    payload:                    # written verbatim; this provider does not interpret it
+    payload: # written verbatim; this provider does not interpret it
       type: oauth
       access: eyJhbGciOi…
       refresh: rft_9f8e7d…
       expires: 1786000000000
   llm-pi-ai/amazon-bedrock:
-    kind: api-key               # environment values, no key: this route uses an AWS profile
+    kind: api-key # environment values, no key: this route uses an AWS profile
     env:
       AWS_PROFILE: prod
   llm-pi-ai/amazon-bedrock-dev:
-    kind: api-key               # neither: the owner confirmed the ambient credential chain
+    kind: api-key # neither: the owner confirmed the ambient credential chain
 ```
 
 The document holds credentials only, so every deviation is a rejection rather than a skipped entry — a silently ignored key would read as "the credential I stored has no effect". A non-mapping root, an unknown top-level key, a key that is not addressable in its space, a wrong-typed value, an empty string, an unknown record tag or field, a duplicate key, and malformed YAML all fail: loud at boot, and warn-and-keep-the-last-good-snapshot on a live reload.
@@ -65,7 +65,7 @@ Any string value round-trips, multi-line values included, so no entry is unwrita
 
 ## Permissions
 
-The provider creates the directory `0700` and creates or atomically replaces the document `0600`. It holds what it *reads* to that same bound: on POSIX a document carrying any group or other permission bit fails before its contents are parsed — at boot and on every reload — and the error names the `chmod 600` repair. Windows has no mode to inspect, so the check is skipped there rather than faked.
+The provider creates the directory `0700` and creates or atomically replaces the document `0600`. It holds what it _reads_ to that same bound: on POSIX a document carrying any group or other permission bit fails before its contents are parsed — at boot and on every reload — and the error names the `chmod 600` repair. Windows has no mode to inspect, so the check is skipped there rather than faked.
 
 ## Hot reload
 

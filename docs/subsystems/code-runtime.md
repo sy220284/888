@@ -24,15 +24,15 @@ interface CodeRunRequest {
    * are available, and the completion value becomes
    * {@link CodeRunResult.value}.
    */
-  program: string
+  program: string;
   /** Host functions exposed to the program, one global object per namespace. */
-  bindings: CodeBindingNamespace[]
+  bindings: CodeBindingNamespace[];
   /**
    * Abort the run: the runtime stops the program (hard, even mid-loop) and
    * resolves with a {@link CodeRunFailure} of kind `'abort'`. In-flight
    * binding calls are the CALLER's to settle — the runtime only stops asking.
    */
-  signal?: AbortSignal
+  signal?: AbortSignal;
 }
 ```
 
@@ -51,11 +51,11 @@ interface CodeRunResult {
    * Invalid or over-limit completions fail the run instead of substituting a
    * rendered string; a failed or value-less run leaves this absent.
    */
-  value?: CodeJsonValue
+  value?: CodeJsonValue;
   /** Text the program emitted, in order, bounded only as part of the outer result. */
-  logs: string[]
+  logs: string[];
   /** Present iff the run failed; see {@link CodeRunFailure} for the taxonomy. */
-  error?: CodeRunFailure
+  error?: CodeRunFailure;
 }
 ```
 
@@ -73,14 +73,14 @@ Each `CodeBindingNamespace` becomes one global object of async callables inside 
  */
 interface CodeBindingErrorClass {
   /** Constructor global and resulting `Error.name`; same portable identifier rule as {@link CodeBindingNamespace.global}. */
-  name: string
+  name: string;
   /**
    * Non-empty own property for the member name. The portable exclusion set is
    * `RESERVED_ERROR_MEMBERS` plus dunder-form names (`__x__`, non-empty
    * middle), enforced identically by every backend; any other name —
    * identifiers or not — is accepted everywhere.
    */
-  memberNameProperty: string
+  memberNameProperty: string;
 }
 ```
 
@@ -103,17 +103,17 @@ interface CodeBindingNamespace {
    * `__dsh_main__`) are also refused everywhere; see its declaration for the
    * exact set and why each entry is reserved.
    */
-  global: string
+  global: string;
   /** The callable members, keyed by the exact name the program calls. */
-  functions: Record<string, CodeBindingFunction>
+  functions: Record<string, CodeBindingFunction>;
   /** Optional program-visible typed rejection contract for this namespace. */
-  errorClass?: CodeBindingErrorClass
+  errorClass?: CodeBindingErrorClass;
 }
 ```
 
 ```ts type-equiv
 /** A lossless JSON value transferable through the dependency-light Service Definition. */
-type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | { [key: string]: CodeJsonValue }
+type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | { [key: string]: CodeJsonValue };
 ```
 
 ```ts type-equiv
@@ -126,7 +126,7 @@ type CodeJsonValue = null | boolean | number | string | CodeJsonValue[] | { [key
  * of this function surfaces inside the program as a rejection of the
  * corresponding call.
  */
-type CodeBindingFunction = (args: unknown) => Promise<CodeJsonValue>
+type CodeBindingFunction = (args: unknown) => Promise<CodeJsonValue>;
 ```
 
 ## Captured output and the failure taxonomy
@@ -150,9 +150,9 @@ Failure kinds are **orthogonal outcomes reported independently** (per [defensive
  */
 interface CodeRunFailure {
   /** The failure class (see the interface doc for each kind's meaning). */
-  kind: 'exception' | 'timeout' | 'abort' | 'worker-exit' | 'invalid-output' | 'output-limit'
+  kind: "exception" | "timeout" | "abort" | "worker-exit" | "invalid-output" | "output-limit";
   /** Human-readable detail, suitable for feeding back to a model to self-correct. */
-  message: string
+  message: string;
 }
 ```
 

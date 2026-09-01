@@ -101,7 +101,7 @@ intercept(name: string, config: any): this
 
 ```ts cordis-catalog
 /** The root context of the application (every child context shares it). @experimental */
-root: this
+root: this;
 ```
 
 应用的根上下文，所有子上下文均共享它。@experimental
@@ -123,7 +123,7 @@ baseUrl?: string
 
 ```ts cordis-catalog
 /** The event bus. Its methods are also mixed onto `ctx` (`ctx.on`, `ctx.emit`, ...). */
-events: EventsService
+events: EventsService;
 ```
 
 事件总线。它的方法也会混入 `ctx`（`ctx.on`、`ctx.emit` 等）。
@@ -134,7 +134,7 @@ events: EventsService
 
 ```ts cordis-catalog
 /** The logging service. Call `ctx.logger(name)` for a named logger. */
-logger: LoggerService
+logger: LoggerService;
 ```
 
 日志服务。调用 `ctx.logger(name)` 可获取具名 logger。
@@ -145,7 +145,7 @@ logger: LoggerService
 
 ```ts cordis-catalog
 /** The reflection layer backing the context proxy (`ctx.get`, `ctx.provide`, ...). */
-reflect: ReflectService
+reflect: ReflectService;
 ```
 
 为上下文代理提供支持的反射层（`ctx.get`、`ctx.provide` 等）。
@@ -156,7 +156,7 @@ reflect: ReflectService
 
 ```ts cordis-catalog
 /** The plugin registry. Its methods are mixed onto `ctx` (`ctx.plugin`, `ctx.inject`). */
-registry: RegistryService
+registry: RegistryService;
 ```
 
 插件注册表。它的方法会混入 `ctx`（`ctx.plugin`、`ctx.inject`）。

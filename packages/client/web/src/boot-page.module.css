@@ -54,7 +54,7 @@
 }
 
 .spinner::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: -2px;
   border-radius: inherit;
@@ -67,7 +67,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .failed {
@@ -87,15 +89,15 @@
 .failedItem {
   font-family: var(
     --ds-font-family-code,
-    'SF Mono',
-    'JetBrains Mono',
-    'Fira Code',
+    "SF Mono",
+    "JetBrains Mono",
+    "Fira Code",
     Consolas,
-    'Liberation Mono',
+    "Liberation Mono",
     Menlo,
     Courier,
-    'PingFang SC',
-    'Microsoft YaHei'
+    "PingFang SC",
+    "Microsoft YaHei"
   );
   font-size: 12px;
   line-height: 18px;

@@ -17,14 +17,14 @@ Source: [`packages/sandbox/sandbox/src/index.ts`](../../packages/sandbox/sandbox
  * backend-defined temp area; `danger-full-access` bypasses confinement. Network
  * and process visibility are outside this vocabulary.
  */
-type SandboxMode = 'read-only' | 'workspace-write' | 'danger-full-access'
+type SandboxMode = "read-only" | "workspace-write" | "danger-full-access";
 ```
 
 Only the first two modes can be sent to a provider. A `danger-full-access` consumer spawns its original argv and does not call `ctx.sandbox`.
 
 ```ts type-equiv
 /** A confining (non-`danger-full-access`) mode — the modes a {@link SandboxPolicy} can carry. */
-type ConfinedSandboxMode = Exclude<SandboxMode, 'danger-full-access'>
+type ConfinedSandboxMode = Exclude<SandboxMode, "danger-full-access">;
 ```
 
 Enforcement is a reported fact. `full` means the backend governs every file effect promised by the mode; `partial` means an active backend or older kernel ABI governs only a subset, so consumers that require the absolute promise must reject or surface that distinction. Older Landlock ABIs and the Windows ACL runner's Everyone/hard-link boundaries are current partial cases.
@@ -35,7 +35,7 @@ Enforcement is a reported fact. `full` means the backend governs every file effe
  * older kernel ABI cannot govern every promised file effect; callers requiring
  * an absolute boundary must not treat it as `full`.
  */
-type SandboxEnforcement = 'full' | 'partial'
+type SandboxEnforcement = "full" | "partial";
 ```
 
 ## Per-call policy
@@ -50,9 +50,9 @@ The complete execution policy is resolved and carried per capability call. It in
  */
 interface SandboxExecutionPolicy {
   /** The file-effect mode this execution runs under. */
-  mode: SandboxMode
+  mode: SandboxMode;
   /** Absolute root directory `workspace-write` may write under. */
-  workspaceRoot: string
+  workspaceRoot: string;
   /**
    * Opaque identity of the calling session (the branded `dsh-session`
    * SessionId). Backends key per-session state off it (e.g. windows-acl gives
@@ -60,7 +60,7 @@ interface SandboxExecutionPolicy {
    * while the workspace SID and standing grant remain per-workspace); absent
    * for agentless calls, which fall back to per-call backend state.
    */
-  sessionId?: SessionId
+  sessionId?: SessionId;
 }
 ```
 
@@ -70,9 +70,9 @@ interface SandboxExecutionPolicy {
 /** Inputs that select the sandbox policy for one capability call. */
 interface SandboxPolicyRequest {
   /** Calling session; its immutable cwd becomes the workspace boundary. */
-  session?: Session
+  session?: Session;
   /** Explicit approved mode override, which outranks session policy. */
-  mode?: SandboxMode
+  mode?: SandboxMode;
 }
 ```
 
@@ -89,7 +89,7 @@ Only a confined execution reaches `ctx.sandbox`; its provider policy narrows the
  */
 interface SandboxPolicy extends SandboxExecutionPolicy {
   /** The file-effect mode this execution runs under. */
-  mode: ConfinedSandboxMode
+  mode: ConfinedSandboxMode;
 }
 ```
 
@@ -107,11 +107,11 @@ interface SandboxPolicy extends SandboxExecutionPolicy {
  */
 interface RunnerFailureRule {
   /** Nonzero process exit codes on which this rule may match; omitted permits any nonzero exit. */
-  allowedExitCodes?: readonly number[]
+  allowedExitCodes?: readonly number[];
   /** Non-empty substrings identifying a fatal runner diagnostic on one stderr line. */
-  fatalSignatures: readonly string[]
+  fatalSignatures: readonly string[];
   /** Benign stderr lines excluded by exact full-line equality before fatal matching. */
-  informationalLines?: readonly string[]
+  informationalLines?: readonly string[];
 }
 ```
 
@@ -125,9 +125,9 @@ interface RunnerFailureRule {
  */
 interface ConfinedArgv {
   /** The wrapped argv (runner, profile, separator, then the caller's argv). */
-  argv: string[]
+  argv: string[];
   /** How completely the selected backend enforces the policy's file effects. */
-  enforcement: SandboxEnforcement
+  enforcement: SandboxEnforcement;
   /**
    * The selected backend's denial DIALECT: the case-insensitive stderr
    * substrings a file effect denied by THIS backend produces (EROFS text
@@ -136,14 +136,14 @@ interface ConfinedArgv {
    * matches against exactly these rather than a cross-backend union — the
    * union claims denials a given backend never produces.
    */
-  denialSignatures: readonly string[]
+  denialSignatures: readonly string[];
   /**
    * Structured runner-failure evidence rules. Consumers require a matching
    * fatal stderr line (after informational exclusions) and any rule-specific
    * exit-code gate before checking denial signatures: runner failure means the
    * command never ran, while denial means confinement worked and blocked it.
    */
-  runnerFailureRules: readonly RunnerFailureRule[]
+  runnerFailureRules: readonly RunnerFailureRule[];
 }
 ```
 

@@ -8,7 +8,7 @@
 
 ```yaml
 - id: goal
-  name: '@deepseek-ai/dsh-goal'
+  name: "@deepseek-ai/dsh-goal"
   config:
     defaultMaxGoalRounds: 256
 ```

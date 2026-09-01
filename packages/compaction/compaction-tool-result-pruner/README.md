@@ -20,22 +20,22 @@ Every emitted result has exactly the configured head budget, fixed marker, and t
 
 Unrecognized keys fail at plugin construction. Resolved config is detached and deeply immutable.
 
-| Key | Required | Meaning |
-|---|---|---|
+| Key              | Required            | Meaning                                                         |
+| ---------------- | ------------------- | --------------------------------------------------------------- |
 | `thresholdChars` | no (default `8192`) | Prune when combined text exceeds this many Unicode code points. |
-| `headChars` | no (default `4096`) | Leading Unicode code points retained. |
-| `tailChars` | no (default `1024`) | Trailing Unicode code points retained. |
+| `headChars`      | no (default `4096`) | Leading Unicode code points retained.                           |
+| `tailChars`      | no (default `1024`) | Trailing Unicode code points retained.                          |
 
 All values are integers; the threshold is positive and head/tail are non-negative. `headChars + marker + tailChars` must fit within `thresholdChars`, so a valid configuration can prune every over-budget result without growth or repeated rewriting.
 
 ## Usage
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import ToolResultPruner from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+import type { Context } from "@deepseek-ai/cordis";
+import ToolResultPruner from "@deepseek-ai/dsh-compaction-tool-result-pruner";
 
 export function apply(ctx: Context): void {
-  ctx.plugin(ToolResultPruner)
+  ctx.plugin(ToolResultPruner);
 }
 ```
 

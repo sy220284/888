@@ -8,17 +8,17 @@ This is an **implementation** package: it registers a provider into `ctx.web`, i
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---|---|
-| `apiKey` | `$PERPLEXITY_API_KEY` | Perplexity API key. Empty/absent makes the provider unavailable. |
-| `baseURL` | `https://api.perplexity.ai` | Endpoint base; `/chat/completions` is appended. An unparseable value makes the provider unavailable. |
-| `model` | `sonar` | Search model name. |
-| `maxTokens` | `1024` | Upper bound on generated answer tokens (`max_tokens`). Must be a positive integer. |
-| `searchRecency` | (unset) | Recency window sent as `search_recency_filter`: `day`, `week`, `month`, or `year`. Unset sends no filter. |
+| Key             | Default                     | Meaning                                                                                                   |
+| --------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `apiKey`        | `$PERPLEXITY_API_KEY`       | Perplexity API key. Empty/absent makes the provider unavailable.                                          |
+| `baseURL`       | `https://api.perplexity.ai` | Endpoint base; `/chat/completions` is appended. An unparseable value makes the provider unavailable.      |
+| `model`         | `sonar`                     | Search model name.                                                                                        |
+| `maxTokens`     | `1024`                      | Upper bound on generated answer tokens (`max_tokens`). Must be a positive integer.                        |
+| `searchRecency` | (unset)                     | Recency window sent as `search_recency_filter`: `day`, `week`, `month`, or `year`. Unset sends no filter. |
 
 ```yaml
 - id: web-search-perplexity
-  name: '@deepseek-ai/dsh-web-search-perplexity'
+  name: "@deepseek-ai/dsh-web-search-perplexity"
   config:
     apiKey: !!js process.env.PERPLEXITY_API_KEY
 ```

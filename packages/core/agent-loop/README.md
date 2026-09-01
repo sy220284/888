@@ -37,15 +37,15 @@ The optional `@deepseek-ai/dsh-agent-loop/invariant` companion registers request
 
 ```ts
 interface Config {
-  maxParallelToolCalls?: number // default 10; 1 is serial
+  maxParallelToolCalls?: number; // default 10; 1 is serial
   agents: Array<{
-    id: string                 // required
-    provider?: string
-    model?: string
-    maxTokens?: number         // positive per-request output-token cap
-    resumeSessionId?: string   // load this persisted session instead of creating one
-    cwd?: string               // optional workspace cwd for the fresh session
-  }>
+    id: string; // required
+    provider?: string;
+    model?: string;
+    maxTokens?: number; // positive per-request output-token cap
+    resumeSessionId?: string; // load this persisted session instead of creating one
+    cwd?: string; // optional workspace cwd for the fresh session
+  }>;
 }
 ```
 
@@ -74,6 +74,7 @@ Within a step, exclusive calls form barriers; parallel-safe calls use a bounded 
 ### What belongs to plugins
 
 Everything that goes beyond "call the model, run the tools, repeat" belongs to plugins listening on the event taxonomy:
+
 - Hooks and policy: the relevant `agent/*` checkpoints plus the guarded `tools/pre-execute` → `tools/execute` → `tools/post-execute` → definition-owned `finalizeContent` → `tools/result` pipeline; exact event signatures and modes live in the generated regions of [core.md](../../../docs/subsystems/core.md#cordis-surface) and [tools.md](../../../docs/subsystems/tools.md#cordis-surface)
 - Compaction: pressure on `agent/pre-step`; canonical overflow repair on `agent/request-error`
 - Model-request recovery: `dsh-llm-retry` records and waits exact-provider normal or unbounded backoff on `agent/request-error`, emits non-surface `llm/retry` status, then returns a retry action

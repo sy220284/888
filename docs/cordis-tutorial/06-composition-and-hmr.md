@@ -9,11 +9,11 @@ Every capability built so far is a plugin, and `cordis.yml` selects the applicat
 A config entry accepts metadata beyond `name` and `config`:
 
 ```yaml
-- id: greeter          # stable identity for this entry
-  name: './greeter.ts'
+- id: greeter # stable identity for this entry
+  name: "./greeter.ts"
 - id: consumer
-  name: './consumer.ts'
-  disabled: true       # keep the entry, skip mounting it
+  name: "./consumer.ts"
+  disabled: true # keep the entry, skip mounting it
 ```
 
 `id` gives the entry a stable identity so the loader can tell an edit to an existing entry apart from a removal plus an addition. `disabled: true` unmounts a plugin without deleting its entry — flip it back and the plugin (and everything PENDING on its services) loads again.
@@ -28,15 +28,15 @@ In `tmp/cordis-tutorial`, write `cordis.yml`:
 
 ```yaml
 - id: logger
-  name: '@deepseek-ai/cordis-plugin-logger-console'
+  name: "@deepseek-ai/cordis-plugin-logger-console"
 - id: timer
-  name: '@deepseek-ai/cordis-plugin-timer'
+  name: "@deepseek-ai/cordis-plugin-timer"
 - id: hmr
-  name: '@deepseek-ai/cordis-plugin-hmr'
+  name: "@deepseek-ai/cordis-plugin-hmr"
   config:
-    root: ['.']
+    root: ["."]
 - id: hello
-  name: './hello.ts'
+  name: "./hello.ts"
 ```
 
 Two support plugins joined the list: HMR logs through the Cordis logger service, so without a console exporter you would not see its messages, and it `inject`s the `timer` service for debouncing — without `@deepseek-ai/cordis-plugin-timer` it sits in PENDING forever, silently. That silence is the subject of the next section.
@@ -65,39 +65,39 @@ The flip side of dependency-driven loading: a plugin whose `inject` names a serv
 You can see the states directly. Every context can enumerate the plugin registry; create `diagnose.ts`:
 
 ```ts
-import { FiberState, type Context } from '@deepseek-ai/cordis'
+import { FiberState, type Context } from "@deepseek-ai/cordis";
 
-export const name = 'diagnose'
+export const name = "diagnose";
 
 export function apply(ctx: Context) {
   setTimeout(() => {
     for (const runtime of ctx.registry.values()) {
       for (const fiber of runtime.fibers) {
         if (fiber.state === FiberState.PENDING) {
-          console.log(`${fiber.name} is PENDING — a required service is missing`)
+          console.log(`${fiber.name} is PENDING — a required service is missing`);
         }
       }
     }
-  }, 500)
+  }, 500);
 }
 ```
 
 And a plugin with an unsatisfiable dependency, `needs-timer.ts`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'needs-timer'
-export const inject = ['timer']
+export const name = "needs-timer";
+export const inject = ["timer"];
 
 export function apply(ctx: Context) {
-  console.log('needs-timer loaded')
+  console.log("needs-timer loaded");
 }
 ```
 
 ```yaml
-- name: './needs-timer.ts'
-- name: './diagnose.ts'
+- name: "./needs-timer.ts"
+- name: "./diagnose.ts"
 ```
 
 Run it (plain `node --import tsx ../../vendor/cordis/bin.js`; stop with Ctrl-C):

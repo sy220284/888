@@ -182,7 +182,7 @@ Working-language fragments and session separators are transcription residue. The
 
 **Keep:** "The cap applies to the complete rendered value, wrappers included (issue #1470 owns the follow-up)."
 
-An unaided pass deleted this, reasoning that issue citations belong in Agent Notes. Wrong direction: issues resolve at HEAD from any surface, and "#N owns the follow-up" is the sanctioned home for deferred work in a README. What Agent Notes and postmortems additionally sanction is citing *merged PRs* as evidence.
+An unaided pass deleted this, reasoning that issue citations belong in Agent Notes. Wrong direction: issues resolve at HEAD from any surface, and "#N owns the follow-up" is the sanctioned home for deferred work in a README. What Agent Notes and postmortems additionally sanction is citing _merged PRs_ as evidence.
 
 ### Dead name-drops are not "naming the owner"
 

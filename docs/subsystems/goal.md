@@ -12,9 +12,9 @@ Types shared by the event-sourced goal service and its policy consumers. The [go
 /** Compare-and-set identity for one exact goal revision. */
 interface GoalRef {
   /** Stable goal identity. */
-  readonly id: GoalId
+  readonly id: GoalId;
   /** Positive revision; every durable mutation increments it. */
-  readonly revision: number
+  readonly revision: number;
 }
 ```
 
@@ -22,11 +22,7 @@ The durable phase answers what happened to the objective. Process-local activati
 
 ```ts type-equiv
 /** Durable continuation phase. Activation is process-local and separate. */
-type GoalPhase =
-  | 'active'
-  | 'paused'
-  | 'blocked'
-  | 'complete'
+type GoalPhase = "active" | "paused" | "blocked" | "complete";
 ```
 
 Blocking is the single durable stopped-by-a-problem state. Its policy-owned reason carries a stable lower-kebab-case code for routing and a free-form explanation for humans and models.
@@ -35,9 +31,9 @@ Blocking is the single durable stopped-by-a-problem state. Its policy-owned reas
 /** Machine-routable and human-readable explanation for a blocked goal. */
 interface GoalBlockReason {
   /** Stable lower-kebab-case classification chosen by the blocking policy. */
-  readonly code: string
+  readonly code: string;
   /** Non-empty explanation shown to humans and models. */
-  readonly message: string
+  readonly message: string;
 }
 ```
 
@@ -45,13 +41,13 @@ interface GoalBlockReason {
 /** Full durable state written by every non-clear goal mutation. */
 interface GoalSnapshot extends GoalRef {
   /** Human-requested completion objective. */
-  readonly objective: string
+  readonly objective: string;
   /** Durable lifecycle phase. */
-  readonly phase: GoalPhase
+  readonly phase: GoalPhase;
   /** Present exactly while `phase` is `blocked`. */
-  readonly blockedReason?: GoalBlockReason
+  readonly blockedReason?: GoalBlockReason;
   /** Total admitted goal-round cap. */
-  readonly maxGoalRounds: number
+  readonly maxGoalRounds: number;
 }
 ```
 
@@ -59,13 +55,13 @@ interface GoalSnapshot extends GoalRef {
 /** Current goal projection, including values derived from the session log. */
 interface GoalView extends GoalSnapshot {
   /** Highest admitted round number for this goal. */
-  readonly roundsStarted: number
+  readonly roundsStarted: number;
   /** Epoch milliseconds of the create mutation. */
-  readonly createdAt: number
+  readonly createdAt: number;
   /** Epoch milliseconds of the latest mutation. */
-  readonly updatedAt: number
+  readonly updatedAt: number;
   /** Process-local continuation eligibility; never persisted. */
-  readonly activation: GoalActivation
+  readonly activation: GoalActivation;
 }
 ```
 
@@ -76,24 +72,24 @@ Every mutation is a durable `goal/change` session event whose payload is either 
 ```ts type-equiv
 /** Full-snapshot goal mutation committed by a durable `goal/change` event. */
 interface GoalSnapshotChangeMeta {
-  readonly kind: 'goal/change'
-  readonly version: 1
-  readonly operation: Exclude<GoalOperation, 'clear'>
-  readonly goal: GoalSnapshot
-  readonly roundsStarted: number
-  readonly createdAt: number
-  readonly updatedAt: number
+  readonly kind: "goal/change";
+  readonly version: 1;
+  readonly operation: Exclude<GoalOperation, "clear">;
+  readonly goal: GoalSnapshot;
+  readonly roundsStarted: number;
+  readonly createdAt: number;
+  readonly updatedAt: number;
 }
 ```
 
 ```ts type-equiv
 /** Tombstone retained when the current goal is cleared. */
 interface GoalClearChangeMeta {
-  readonly kind: 'goal/change'
-  readonly version: 1
-  readonly operation: 'clear'
-  readonly cleared: GoalRef
-  readonly clearedAt: number
+  readonly kind: "goal/change";
+  readonly version: 1;
+  readonly operation: "clear";
+  readonly cleared: GoalRef;
+  readonly clearedAt: number;
 }
 ```
 
@@ -102,11 +98,11 @@ A continuation consumer attributes each admitted user-message turn with a positi
 ```ts type-equiv
 /** Message attribution for admitted continuation rounds. */
 interface GoalMessageSource {
-  readonly kind: 'goal'
-  readonly goalId: GoalId
-  readonly revision: number
+  readonly kind: "goal";
+  readonly goalId: GoalId;
+  readonly revision: number;
   /** Positive admitted continuation round. */
-  readonly round: number
+  readonly round: number;
 }
 ```
 
@@ -117,26 +113,26 @@ Creation separates caller omission from the deployment choice, which `create()` 
 ```ts type-equiv
 /** Input whose omitted round cap is resolved by the service configuration. */
 interface CreateGoalRequest {
-  readonly objective: string
-  readonly maxGoalRounds?: number
+  readonly objective: string;
+  readonly maxGoalRounds?: number;
 }
 ```
 
 ```ts type-equiv
 /** Fields changed by an edit; at least one must be present. */
 interface EditGoalRequest {
-  readonly objective?: string
-  readonly maxGoalRounds?: number
+  readonly objective?: string;
+  readonly maxGoalRounds?: number;
 }
 ```
 
 ```ts type-equiv
 /** Live notification after one durable goal mutation commits. */
 interface GoalChanged {
-  readonly operation: GoalOperation
-  readonly ref: GoalRef
+  readonly operation: GoalOperation;
+  readonly ref: GoalRef;
   /** Absent for a clear tombstone. */
-  readonly goal?: GoalView
+  readonly goal?: GoalView;
 }
 ```
 

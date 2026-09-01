@@ -22,20 +22,20 @@ bash 执行 seam 分为 Service Definition（[dsh-shell](../../packages/shell/sh
  * fully-resolved {@link ShellExecSpec}.
  */
 interface ShellExecRequest {
-  command: string
+  command: string;
   /** Working directory override (default: implementation-configured). */
-  workdir?: string | undefined
+  workdir?: string | undefined;
   /** Timeout override in milliseconds (implementations cap it). */
-  timeoutMs?: number | undefined
+  timeoutMs?: number | undefined;
   /**
    * Foreground stdout capture budget in bytes. Absent uses the executor's
    * default output cap. Trusted in-process consumers use this when they must
    * parse complete stdout up to their own bounded limit; the model-facing bash
    * tool does not expose it as a parameter.
    */
-  stdoutMaxBytes?: number | undefined
+  stdoutMaxBytes?: number | undefined;
   /** Abort signal — implementations kill the command when it fires. */
-  signal?: AbortSignal | undefined
+  signal?: AbortSignal | undefined;
   /**
    * Bytes to write to the command's stdin, then close it. Absent leaves stdin
    * closed/empty (the default for model-driven tool calls). Set by in-process
@@ -43,7 +43,7 @@ interface ShellExecRequest {
    * to its stdin); the model-facing bash tool does not expose it as a parameter
    * (a model that needs stdin uses shell syntax like a heredoc or a pipe).
    */
-  stdin?: string | undefined
+  stdin?: string | undefined;
   /**
    * Ordinary environment entries for the command, merged after the credential
    * scrub. Managed facts belong in {@link dshEnv}, which merges after this
@@ -51,7 +51,7 @@ interface ShellExecRequest {
    * (the hooks bridges set `CLAUDE_PROJECT_DIR`, `CLAUDE_PLUGIN_ROOT`, …); the
    * model-facing bash tool does not expose it as a parameter.
    */
-  env?: Record<string, string> | undefined
+  env?: Record<string, string> | undefined;
   /**
    * Harness-owned `DSH_*` variables for this execution (typed to managed
    * keys). Executors discard ambient `DSH_*` entries before merging this
@@ -59,9 +59,9 @@ interface ShellExecRequest {
    * value from the harness process and a caller {@link env} entry cannot
    * displace a managed one.
    */
-  dshEnv?: DshEnvironment | undefined
+  dshEnv?: DshEnvironment | undefined;
   /** Fully resolved per-call sandbox policy; sandboxing executors default it. */
-  sandboxPolicy?: SandboxExecutionPolicy | undefined
+  sandboxPolicy?: SandboxExecutionPolicy | undefined;
 }
 ```
 
@@ -72,29 +72,29 @@ interface ShellExecRequest {
  * background processes have no executor timeout.
  */
 interface ShellExecSpec {
-  command: string
-  workdir: string
-  timeoutMs: number
+  command: string;
+  workdir: string;
+  timeoutMs: number;
   /**
    * Resolved foreground stdout capture budget in bytes. `run()` uses it for
    * stdout; background jobs and stderr keep the executor's own output cap.
    */
-  stdoutMaxBytes: number
+  stdoutMaxBytes: number;
   /** Abort signal — implementations kill the command when it fires. */
-  signal?: AbortSignal | undefined
+  signal?: AbortSignal | undefined;
   /** Bytes to write to stdin before closing it; absent means no stdin. */
-  stdin?: string | undefined
+  stdin?: string | undefined;
   /**
    * Ordinary environment entries carried through from
    * {@link ShellExecRequest.env}; {@link dshEnv} still merges after them.
    * OPTIONAL on the spec for the same reason as `stdin`: absent means no
    * ordinary extra environment.
    */
-  env?: Record<string, string> | undefined
+  env?: Record<string, string> | undefined;
   /** Managed `DSH_*` snapshot (typed to managed keys); merges after {@link env}. */
-  dshEnv?: DshEnvironment | undefined
+  dshEnv?: DshEnvironment | undefined;
   /** Resolved sandbox policy; ignored by executors that do not confine. */
-  sandboxPolicy: SandboxExecutionPolicy | undefined
+  sandboxPolicy: SandboxExecutionPolicy | undefined;
 }
 ```
 
@@ -110,9 +110,9 @@ interface ShellExecSpec {
 /** The outcome of one completed (or killed) foreground run. */
 interface ShellRunResult {
   /** Exit code; null when the process died from a signal. */
-  exitCode: number | null
+  exitCode: number | null;
   /** Terminating signal (e.g. 'SIGTERM'); null on normal exit. */
-  signal: NodeJS.Signals | null
+  signal: NodeJS.Signals | null;
   /**
    * True when the executor's own timeout was the FIRST cause to cut the command
    * short. Mutually exclusive with {@link aborted}: one fused deadline drives
@@ -120,19 +120,19 @@ interface ShellRunResult {
    * racing before process close report the single first-abort cause, not both
    * (see the [timeout-library Agent Note](../../../../.agents/notes/implemented/architecture/2026-07-06-timeout-deadline-library.md)).
    */
-  timedOut: boolean
+  timedOut: boolean;
   /**
    * True when the caller's `AbortSignal` was the FIRST cause to kill the command
    * (and it was not the executor's own timeout). Mutually exclusive with
    * {@link timedOut} — see there for the first-cause classification.
    */
-  aborted: boolean
+  aborted: boolean;
   /** The effective timeout applied to this run (after defaulting/capping). */
-  timeoutMs: number
-  stdout: CollectedOutput
-  stderr: CollectedOutput
+  timeoutMs: number;
+  stdout: CollectedOutput;
+  stderr: CollectedOutput;
   /** Sandbox execution facts, absent for an unsandboxed executor. */
-  sandbox?: ShellSandboxInfo
+  sandbox?: ShellSandboxInfo;
 }
 ```
 
@@ -152,13 +152,13 @@ interface ShellRunResult {
  */
 interface ShellSandboxInfo {
   /** The mode the command actually ran under. */
-  mode: SandboxMode
+  mode: SandboxMode;
   /** Whether the sandbox denied a file operation. */
-  denied: boolean
+  denied: boolean;
   /** How completely the selected runner enforced the requested mode. */
-  enforcement?: SandboxEnforcement
+  enforcement?: SandboxEnforcement;
   /** Whether the sandbox runner failed before the command could run. */
-  runnerFailed?: boolean
+  runnerFailed?: boolean;
 }
 ```
 
@@ -177,26 +177,26 @@ interface ShellSandboxInfo {
  */
 interface ShellProcess {
   /** Process lifecycle state (settled exactly once). */
-  status: ShellProcessStatus
+  status: ShellProcessStatus;
   /** Exit code once finished (null = killed by signal / still running). */
-  exitCode: number | null
+  exitCode: number | null;
   /** Terminating signal name, when signal-killed. */
-  signal: NodeJS.Signals | null
+  signal: NodeJS.Signals | null;
   /** Resolves when the underlying process closes (never rejects — a spawn failure settles as `killed` with the error on stderr). */
-  readonly done: Promise<void>
+  readonly done: Promise<void>;
   /** Sandbox facts, stamped once a confined process settles. */
-  sandbox?: ShellSandboxInfo
+  sandbox?: ShellSandboxInfo;
   /**
    * Read output produced since the previous read (consuming — consecutive
    * reads never re-deliver). Reads that lost data flag `lossy` and point at
    * full-stream spill files when available.
    */
-  readOutput(): ShellProcessRead
+  readOutput(): ShellProcessRead;
   /**
    * Kill the process group. Returns false when it had already finished
    * (no-op); idempotent.
    */
-  kill(): boolean
+  kill(): boolean;
 }
 ```
 
@@ -206,13 +206,13 @@ interface ShellProcess {
 /** One incremental {@link ShellProcess.readOutput} read. */
 interface ShellProcessRead {
   /** Output produced since the previous read (stderr in a marked section). */
-  delta: string
+  delta: string;
   /** True when truncation dropped unread bytes the delta cannot include. */
-  lossy: boolean
+  lossy: boolean;
   /** Full stdout spill file, when stdout truncation occurred and a safe path is available. */
-  stdoutSpillPath?: string
+  stdoutSpillPath?: string;
   /** Full stderr spill file, when stderr truncation occurred and a safe path is available. */
-  stderrSpillPath?: string
+  stderrSpillPath?: string;
 }
 ```
 

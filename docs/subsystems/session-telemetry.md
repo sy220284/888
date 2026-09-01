@@ -17,7 +17,7 @@ Source: [`packages/session/session-telemetry/src/index.ts`](../../packages/sessi
  * `info`; `warn` remains available to `session-telemetry/record` policies and
  * backends.
  */
-type SessionTelemetrySeverity = 'info' | 'warn' | 'error'
+type SessionTelemetrySeverity = "info" | "warn" | "error";
 ```
 
 ```ts type-equiv
@@ -30,11 +30,11 @@ type SessionTelemetrySeverity = 'info' | 'warn' | 'error'
  */
 interface SessionTelemetryRecord {
   /** Ledger (session-log mirror) or ops (operational signal) channel; backends keep the two under separate instrumentation scopes. */
-  channel: 'ledger' | 'ops'
+  channel: "ledger" | "ops";
   /** Unix epoch milliseconds — the source event's append time for ledger records, the emission time for ops records. */
-  time: number
+  time: number;
   /** Pre-mapped alerting severity; see {@link SessionTelemetrySeverity}. */
-  severity: SessionTelemetrySeverity
+  severity: SessionTelemetrySeverity;
   /**
    * Identity attributes, deliberately minimal: ledger records carry
    * `session.id`, `event.type`, `event.seq`, plus `session.cwd` /
@@ -43,14 +43,14 @@ interface SessionTelemetryRecord {
    * `agent.id`, `turn`, `step`, `error.name`. Anything recoverable from the
    * body is intentionally NOT duplicated here.
    */
-  attributes: Record<string, string | number>
+  attributes: Record<string, string | number>;
   /**
    * The complete payload: a deep copy of the session event's `data` for
    * ledger records (JSON-serializable by `Session.append`'s own
    * validation), or the op payload for ops records. Never mutated after
    * handoff.
    */
-  body: unknown
+  body: unknown;
 }
 ```
 
@@ -68,7 +68,7 @@ The seam's acknowledgement contract (owned by the [Service Definition README's s
  * any backend can disclose a policy without depending on the OTel package;
  * the values mirror the OTel backend's serialized `SessionTelemetryMode` choices.
  */
-type SessionTelemetrySharingStatus = 'full' | 'feedback-only' | 'disabled'
+type SessionTelemetrySharingStatus = "full" | "feedback-only" | "disabled";
 ```
 
 ## The backend contract
@@ -89,7 +89,7 @@ interface SessionTelemetrySink {
    * never reach the loop.
    * @param record - the logical record to report; owned by the backend after the call.
    */
-  emit(record: SessionTelemetryRecord): void
+  emit(record: SessionTelemetryRecord): void;
   /**
    * Optional hint that a turn ended. A backend may forward it to its SDK's
    * flush so records are exported after each turn. Called
@@ -101,7 +101,7 @@ interface SessionTelemetrySink {
    * backend leaves it unimplemented for exactly that hazard — see the
    * revival Agent Note).
    */
-  flush?(): void
+  flush?(): void;
   /**
    * Forward the fiber's disposal to the SDK: flush whatever is queued and
    * reach quiescence, per the SDK's own shutdown contract. Everything
@@ -115,7 +115,7 @@ interface SessionTelemetrySink {
    * this call for live capture; on-demand capture creates no ops records.
    * @returns resolves when the backend's pipeline has quiesced.
    */
-  shutdown(): Promise<void>
+  shutdown(): Promise<void>;
 }
 ```
 

@@ -10,14 +10,14 @@ The package root exports the default and named `LocalBashExecutor` plugin plus i
 
 ```yaml
 - id: bash
-  name: '@deepseek-ai/dsh-bash-local'
+  name: "@deepseek-ai/dsh-bash-local"
   config:
-    cwd: /path/to/workspace   # default: process.cwd()
-    timeoutMs: 120000          # default foreground timeout
-    maxTimeoutMs: 600000       # cap for per-call overrides
-    maxOutputBytes: 64000      # per-stream in-memory cap; overflow spills to disk
-    maxSpillBytes: 67108864    # per-stream full-output spill cap
-    graceMs: 3000              # kill escalation and post-exit pipe-drain grace
+    cwd: /path/to/workspace # default: process.cwd()
+    timeoutMs: 120000 # default foreground timeout
+    maxTimeoutMs: 600000 # cap for per-call overrides
+    maxOutputBytes: 64000 # per-stream in-memory cap; overflow spills to disk
+    maxSpillBytes: 67108864 # per-stream full-output spill cap
+    graceMs: 3000 # kill escalation and post-exit pipe-drain grace
 ```
 
 ## Behavior

@@ -73,36 +73,36 @@ flowchart LR
   cfg --> plugin_acp_hooks_codex
 ```
 
-| Plugin id | Package / module |
-| --- | --- |
-| `llm-deepseek` | `@deepseek-ai/dsh-llm-deepseek` |
-| `sandbox` | `@deepseek-ai/dsh-sandbox-local` |
-| `sandbox-policy` | `@deepseek-ai/dsh-sandbox-policy` |
-| `subprocess` | `@deepseek-ai/dsh-subprocess-local` |
-| `bash` | `@deepseek-ai/dsh-bash-sandbox` |
-| `approval` | `@deepseek-ai/dsh-user-approval` |
-| `acp-agent` | `@deepseek-ai/dsh-acp-demo` |
-| `token-meter` | `@deepseek-ai/dsh-token-meter` |
-| `compaction-basic` | `@deepseek-ai/dsh-compaction-basic` |
-| `session-projection` | `@deepseek-ai/dsh-session-projection` |
-| `subagent` | `@deepseek-ai/dsh-subagent` |
-| `subagent-spawn-in-process` | `@deepseek-ai/dsh-subagent-spawn-in-process` |
-| `subagent-fork-in-process` | `@deepseek-ai/dsh-subagent-fork-in-process` |
-| `tool-subagent-control` | `@deepseek-ai/dsh-tool-subagent-control` |
+| Plugin id                   | Package / module                                     |
+| --------------------------- | ---------------------------------------------------- |
+| `llm-deepseek`              | `@deepseek-ai/dsh-llm-deepseek`                      |
+| `sandbox`                   | `@deepseek-ai/dsh-sandbox-local`                     |
+| `sandbox-policy`            | `@deepseek-ai/dsh-sandbox-policy`                    |
+| `subprocess`                | `@deepseek-ai/dsh-subprocess-local`                  |
+| `bash`                      | `@deepseek-ai/dsh-bash-sandbox`                      |
+| `approval`                  | `@deepseek-ai/dsh-user-approval`                     |
+| `acp-agent`                 | `@deepseek-ai/dsh-acp-demo`                          |
+| `token-meter`               | `@deepseek-ai/dsh-token-meter`                       |
+| `compaction-basic`          | `@deepseek-ai/dsh-compaction-basic`                  |
+| `session-projection`        | `@deepseek-ai/dsh-session-projection`                |
+| `subagent`                  | `@deepseek-ai/dsh-subagent`                          |
+| `subagent-spawn-in-process` | `@deepseek-ai/dsh-subagent-spawn-in-process`         |
+| `subagent-fork-in-process`  | `@deepseek-ai/dsh-subagent-fork-in-process`          |
+| `tool-subagent-control`     | `@deepseek-ai/dsh-tool-subagent-control`             |
 | `tool-subagent-list-agents` | `@deepseek-ai/dsh-tool-subagent-control/list-agents` |
-| `tool-subagent-report` | `@deepseek-ai/dsh-tool-subagent-report` |
-| `tool-subagent` | `@deepseek-ai/dsh-tool-subagent` |
-| `tool-subagent-fork` | `@deepseek-ai/dsh-tool-subagent` |
-| `workflow-worker-thread` | `@deepseek-ai/dsh-workflow-worker-thread` |
-| `tool-workflow` | `@deepseek-ai/dsh-tool-workflow` |
-| `tool-ralph` | `@deepseek-ai/dsh-tool-ralph` |
-| `tool-todo` | `@deepseek-ai/dsh-tool-todo` |
-| `repeat-tool-reminder` | `@deepseek-ai/dsh-repeat-tool-reminder` |
-| `fs-sandbox` | `@deepseek-ai/dsh-fs-sandbox` |
-| `fs-observation-policy` | `@deepseek-ai/dsh-fs-observation-policy` |
-| `tool-fs` | `@deepseek-ai/dsh-tool-fs` |
-| `hooks-claude-code` | `@deepseek-ai/dsh-hooks-claude-code` |
-| `hooks-codex` | `@deepseek-ai/dsh-hooks-codex` |
+| `tool-subagent-report`      | `@deepseek-ai/dsh-tool-subagent-report`              |
+| `tool-subagent`             | `@deepseek-ai/dsh-tool-subagent`                     |
+| `tool-subagent-fork`        | `@deepseek-ai/dsh-tool-subagent`                     |
+| `workflow-worker-thread`    | `@deepseek-ai/dsh-workflow-worker-thread`            |
+| `tool-workflow`             | `@deepseek-ai/dsh-tool-workflow`                     |
+| `tool-ralph`                | `@deepseek-ai/dsh-tool-ralph`                        |
+| `tool-todo`                 | `@deepseek-ai/dsh-tool-todo`                         |
+| `repeat-tool-reminder`      | `@deepseek-ai/dsh-repeat-tool-reminder`              |
+| `fs-sandbox`                | `@deepseek-ai/dsh-fs-sandbox`                        |
+| `fs-observation-policy`     | `@deepseek-ai/dsh-fs-observation-policy`             |
+| `tool-fs`                   | `@deepseek-ai/dsh-tool-fs`                           |
+| `hooks-claude-code`         | `@deepseek-ai/dsh-hooks-claude-code`                 |
+| `hooks-codex`               | `@deepseek-ai/dsh-hooks-codex`                       |
 
 Source config: [`examples/acp-agent/cordis.yml`](cordis.yml).
 

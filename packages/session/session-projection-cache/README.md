@@ -17,12 +17,12 @@ A stored row `(key → {ver, seq, val})` is a fold shortcut, never an authority:
 
 Two mandatory points, throttled in between:
 
-| Trigger | Nature |
-|---|---|
-| `turn/end` | Mandatory — the turn-final value is what cold reads want. |
-| Session disposal (detach) | Mandatory — the live-to-cold moment; after it the cold ladder serves this session. |
-| `writeEveryEvents` committed events | Config throttle (count). |
-| `writeIntervalMs` since the first dirty event | Config throttle (interval). |
+| Trigger                                       | Nature                                                                             |
+| --------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `turn/end`                                    | Mandatory — the turn-final value is what cold reads want.                          |
+| Session disposal (detach)                     | Mandatory — the live-to-cold moment; after it the cold ladder serves this session. |
+| `writeEveryEvents` committed events           | Config throttle (count).                                                           |
+| `writeIntervalMs` since the first dirty event | Config throttle (interval).                                                        |
 
 Both `Config` fields are required (no defaults): flush cadence is a deployment choice with no universally correct value, stated in cordis.yml.
 
@@ -40,7 +40,7 @@ The read ladder, zero full-log load on the happy path: cached rows → `sessionP
 
 ```yaml
 - id: session-projection-cache
-  name: '@deepseek-ai/dsh-session-projection-cache'
+  name: "@deepseek-ai/dsh-session-projection-cache"
   config:
     writeEveryEvents: 200
     writeIntervalMs: 5000

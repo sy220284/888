@@ -16,8 +16,8 @@ spawn 声明 `{ outputSchema: true, depthLimit: true, toolFilter: true, persona:
 
 ## 配置
 
-| 键 | 含义 |
-|---|---|
+| 键             | 含义                                             |
+| -------------- | ------------------------------------------------ |
 | `providerName` | `ctx.subagents` 上的注册表名称（默认 `spawn`）。 |
 
 ## 模型体验

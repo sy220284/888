@@ -24,16 +24,16 @@
 
 ## 配置
 
-| 键 | 默认值 | 约定 |
-|---|---:|---|
-| `path` | 必填 | 专用派生索引 SQLite 路径；支持 `:memory:`。在 POSIX 文件系统上，缺失的文件系统路径会以仅所有者可访问的方式创建。 |
-| `openAt` | `startup` | `startup` 会在服务激活完成前打开；`first-search` 把 SQLite 模块与句柄推迟到搜索时再加载和打开；`never` 关闭全文搜索（以类型化的 `SESSION_QUERY_SEARCH_DISABLED` 失败），继承的读取保持可用。 |
-| `journalMode` | `wal` | `wal`、`delete`、`truncate` 或 `persist`。 |
-| `defaultLimit` | `20` | 请求省略 `limit` 时的分页大小；最多为 `Number.MAX_SAFE_INTEGER - 1`。 |
-| `maxLimit` | `100` | 接受的最大请求分页大小；最多为 `Number.MAX_SAFE_INTEGER - 1`。 |
-| `snippetChars` | `240` | 按 Unicode 码点计算的最大 snippet 长度。 |
-| `readWindowMax` | `50` | `before` 或 `after` 的最大原始事件数，用于继承的 `readEvent()`。 |
-| `persistedInspectConcurrency` | `4` | 继承批量读取的最大并发持久化日志检查数；必须是正安全整数。 |
+| 键                            |    默认值 | 约定                                                                                                                                                                                         |
+| ----------------------------- | --------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                        |      必填 | 专用派生索引 SQLite 路径；支持 `:memory:`。在 POSIX 文件系统上，缺失的文件系统路径会以仅所有者可访问的方式创建。                                                                             |
+| `openAt`                      | `startup` | `startup` 会在服务激活完成前打开；`first-search` 把 SQLite 模块与句柄推迟到搜索时再加载和打开；`never` 关闭全文搜索（以类型化的 `SESSION_QUERY_SEARCH_DISABLED` 失败），继承的读取保持可用。 |
+| `journalMode`                 |     `wal` | `wal`、`delete`、`truncate` 或 `persist`。                                                                                                                                                   |
+| `defaultLimit`                |      `20` | 请求省略 `limit` 时的分页大小；最多为 `Number.MAX_SAFE_INTEGER - 1`。                                                                                                                        |
+| `maxLimit`                    |     `100` | 接受的最大请求分页大小；最多为 `Number.MAX_SAFE_INTEGER - 1`。                                                                                                                               |
+| `snippetChars`                |     `240` | 按 Unicode 码点计算的最大 snippet 长度。                                                                                                                                                     |
+| `readWindowMax`               |      `50` | `before` 或 `after` 的最大原始事件数，用于继承的 `readEvent()`。                                                                                                                             |
+| `persistedInspectConcurrency` |       `4` | 继承批量读取的最大并发持久化日志检查数；必须是正安全整数。                                                                                                                                   |
 
 ## 分词器与限制
 

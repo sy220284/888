@@ -22,18 +22,18 @@ The provider advertises no optional start-time capabilities and reports `inherit
 
 ## Configuration
 
-| Key | Default | Meaning |
-|---|---|---|
-| `providerName` | `codex` | Non-empty registry name on `ctx.subagents`; each mounted instance needs a unique value. |
-| `env` | `{}` | Explicit child environment layered over the subprocess seam's credential-scrubbed parent environment. |
-| `permissionMode` | `never` | Native non-interactive approval and sandbox mode fixed for every thread from this Provider instance. |
-| `disposeGraceMs` | `3000` | Positive finite grace in milliseconds, no greater than [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md), between the shared process-tree owner's termination tiers; disposal then waits for whole-tree exit. |
+| Key              | Default | Meaning                                                                                                                                                                                                          |
+| ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `providerName`   | `codex` | Non-empty registry name on `ctx.subagents`; each mounted instance needs a unique value.                                                                                                                          |
+| `env`            | `{}`    | Explicit child environment layered over the subprocess seam's credential-scrubbed parent environment.                                                                                                            |
+| `permissionMode` | `never` | Native non-interactive approval and sandbox mode fixed for every thread from this Provider instance.                                                                                                             |
+| `disposeGraceMs` | `3000`  | Positive finite grace in milliseconds, no greater than [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.md), between the shared process-tree owner's termination tiers; disposal then waits for whole-tree exit. |
 
-| `permissionMode` value | `thread/start` fields | Native behavior |
-|---|---|---|
-| `never` | `approvalPolicy: never`; sandbox omitted | Never ask for approval; execution failures return to the model under the native sandbox. |
-| `approve-for-me` | `approvalPolicy: on-request`, `approvalsReviewer: auto_review`, `sandbox: workspace-write` | Route permission requests through Codex automatic review without a human. |
-| `dangerously-bypass-approvals-and-sandbox` | `approvalPolicy: never`, `sandbox: danger-full-access` | Skip approval and sandbox enforcement; this value must be selected explicitly. |
+| `permissionMode` value                     | `thread/start` fields                                                                      | Native behavior                                                                          |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `never`                                    | `approvalPolicy: never`; sandbox omitted                                                   | Never ask for approval; execution failures return to the model under the native sandbox. |
+| `approve-for-me`                           | `approvalPolicy: on-request`, `approvalsReviewer: auto_review`, `sandbox: workspace-write` | Route permission requests through Codex automatic review without a human.                |
+| `dangerously-bypass-approvals-and-sandbox` | `approvalPolicy: never`, `sandbox: danger-full-access`                                     | Skip approval and sandbox enforcement; this value must be selected explicitly.           |
 
 Production resolves the `codex` bin declared by its pinned `@openai/codex@0.147.0` dependency and launches that JavaScript wrapper with the current Node executable. The wrapper selects the matching native platform payload; the provider neither inspects nor falls back to a host `codex` on `PATH`. Native Codex configuration and authentication remain authoritative through the parent cwd, `HOME`, and `CODEX_HOME`, while the Provider overrides only the selected thread approval/reviewer/sandbox fields. All other project, model, provider, MCP, hook, skill, and account settings remain native. The plugin does not select a model, create `CODEX_HOME`, log in, or probe an account. Credential-shaped ambient variables are removed by the subprocess seam before the explicit `env` overlay is applied.
 
@@ -51,7 +51,7 @@ The standalone composition below shows the complete explicit capability. A Profi
 
 ```yaml
 - id: subagent-codex-safe
-  name: '@deepseek-ai/dsh-subagent-codex'
+  name: "@deepseek-ai/dsh-subagent-codex"
   config:
     providerName: codex-safe
     permissionMode: never
@@ -59,7 +59,7 @@ The standalone composition below shows the complete explicit capability. A Profi
       OPENAI_API_KEY: !!js process.env.OPENAI_API_KEY
 
 - id: subagent-codex-bypass
-  name: '@deepseek-ai/dsh-subagent-codex'
+  name: "@deepseek-ai/dsh-subagent-codex"
   config:
     providerName: codex-bypass
     permissionMode: dangerously-bypass-approvals-and-sandbox
@@ -69,13 +69,13 @@ The standalone composition below shows the complete explicit capability. A Profi
 
 ```yaml
 - id: jobs
-  name: '@deepseek-ai/dsh-jobs-local'
+  name: "@deepseek-ai/dsh-jobs-local"
 
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: "@deepseek-ai/dsh-tool-jobs"
 
 - id: tool-subagent-codex-safe
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   disabled: true
   config:
     provider: codex-safe
@@ -84,7 +84,7 @@ The standalone composition below shows the complete explicit capability. A Profi
     maxDepth: provider-managed
 
 - id: tool-subagent-codex-bypass
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   config:
     provider: codex-bypass
     toolName: subagent_codex_bypass

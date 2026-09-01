@@ -14,8 +14,8 @@
  * the registry treats every value as an opaque id namespace.
  */
 interface JobKindMap {
-  bash: 'bash'
-  subagent: 'subagent'
+  bash: "bash";
+  subagent: "subagent";
 }
 ```
 
@@ -33,27 +33,27 @@ interface JobKindMap {
  */
 interface JobStart {
   /** Producer kind — also the id prefix (`bash`, `subagent`, …). */
-  kind: JobKind
+  kind: JobKind;
   /** One-line model-facing label (the command; the delegation description). */
-  label: string
+  label: string;
   /**
    * Optional UTF-8 byte cap for each complete model-facing completion notice or
    * output read, including controller status metadata.
    */
-  outputLimitBytes?: number
+  outputLimitBytes?: number;
   /**
    * Owning live agent. Access is fenced by its session id, and agent disposal
    * cancels and awaits the job. The instance must be the one currently
    * registered under its agent id. Omitting the owner creates an unowned job,
    * open to any caller until service disposal.
    */
-  owner?: Agent
+  owner?: Agent;
   /**
    * Start the work after preflight and synchronously return its hooks. Called
    * once; a throw leaves nothing registered, and the producer must clean up any
    * partially started resources.
    */
-  run(): JobHooks
+  run(): JobHooks;
 }
 ```
 
@@ -66,20 +66,20 @@ interface JobHooks {
    * Request termination. Must be synchronous, idempotent, and eventually settle
    * {@link done}; throws propagate. The optional reason is forwarded verbatim.
    */
-  cancel(reason?: string): void
+  cancel(reason?: string): void;
   /**
    * Resolves after the producer releases its resources, not merely when work
    * finishes. Must not reject; the runtime converts a rejection to `failed`.
    * If teardown cancellation throws, the runtime may force-fail only the
    * registry record without claiming that the work stopped.
    */
-  done: Promise<JobOutcome>
+  done: Promise<JobOutcome>;
   /**
    * Consume output produced since the previous call. The producer formats
    * truncation and spill notices. Absence marks a final-output-only job; each
    * job has one consuming cursor.
    */
-  readOutput?(): string
+  readOutput?(): string;
 }
 ```
 
@@ -87,11 +87,11 @@ interface JobHooks {
 /** Terminal result supplied by a producer through {@link JobHooks.done}. */
 interface JobOutcome {
   /** How the job ended: finished (`completed`), cancelled (`killed`), or broke (`failed`). */
-  status: 'completed' | 'killed' | 'failed'
+  status: "completed" | "killed" | "failed";
   /** Kind-specific detail rendered into status lines ('exit code: 3', 'max-tokens'). */
-  detail?: string
+  detail?: string;
   /** Final output for jobs without `readOutput`; stream jobs leave it unset. */
-  output?: string
+  output?: string;
 }
 ```
 
@@ -106,27 +106,27 @@ interface JobOutcome {
  */
 interface JobSnapshot {
   /** The registry-issued id (`<kind>-N`). */
-  id: JobId
+  id: JobId;
   /** The producer kind the job was registered with. */
-  kind: JobKind
+  kind: JobKind;
   /** The producer-supplied one-line label. */
-  label: string
+  label: string;
   /** Producer-owned cap for complete model-facing notices and output reads. */
-  outputLimitBytes?: number
+  outputLimitBytes?: number;
   /**
    * Owner session id used for authorization and correlation; absent for
    * unowned jobs. Completion listeners receive the exact {@link Agent}
    * separately through {@link JobDoneListener}.
    */
-  ownerSession?: SessionId
+  ownerSession?: SessionId;
   /** Current lifecycle state. */
-  status: JobStatus
+  status: JobStatus;
   /** Kind-specific status detail, present once the producer supplied one (usually terminal). */
-  detail?: string
+  detail?: string;
   /** Epoch ms when the job was registered. */
-  startedAt: number
+  startedAt: number;
   /** Epoch ms when the job settled; absent while `running`/`stopping`. */
-  finishedAt?: number
+  finishedAt?: number;
   /**
    * True when a kill, read, wait, or teardown cancel has reported or committed
    * to report the terminal state. Completion reporters suppress redundant
@@ -134,7 +134,7 @@ interface JobSnapshot {
    * destroyed leaves no reader: a reporter that opens a turn on notice would
    * otherwise spend a model request per teardown layer.
    */
-  reported: boolean
+  reported: boolean;
 }
 ```
 
@@ -146,9 +146,9 @@ interface JobRead {
    * kinds: empty while live, the terminal {@link JobOutcome.output} (or
    * empty) once settled — idempotent, never consumed.
    */
-  text: string
+  text: string;
   /** The job's state at read time. */
-  snapshot: JobSnapshot
+  snapshot: JobSnapshot;
 }
 ```
 

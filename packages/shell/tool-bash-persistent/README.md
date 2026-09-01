@@ -6,12 +6,12 @@ Model-facing `bash(command)` backed by one owner-scoped `ctx.terminals` shell. T
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---:|---|
-| `backendType` | `shell` | Registered PTY backend used for each Agent shell. |
-| `timeoutMs` | `300000` | Wall-clock limit for one command; timeout closes the shell. |
-| `maxOutputChars` | `16000` | Maximum retained command-output characters; fixed diagnostics are added afterward. |
-| `description` | Persistent-shell description | Model-facing environment contract. |
+| Key              |                      Default | Meaning                                                                            |
+| ---------------- | ---------------------------: | ---------------------------------------------------------------------------------- |
+| `backendType`    |                      `shell` | Registered PTY backend used for each Agent shell.                                  |
+| `timeoutMs`      |                     `300000` | Wall-clock limit for one command; timeout closes the shell.                        |
+| `maxOutputChars` |                      `16000` | Maximum retained command-output characters; fixed diagnostics are added afterward. |
+| `description`    | Persistent-shell description | Model-facing environment contract.                                                 |
 
 ## Model Experience
 

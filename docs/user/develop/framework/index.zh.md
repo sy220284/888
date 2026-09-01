@@ -14,21 +14,21 @@ PENDING → LOADING → ACTIVE
 ACTIVE → UNLOADING → DISPOSED
 ```
 
-| 状态 | 含义 |
-|------|------|
-| PENDING | 已声明，但所需依赖未就绪 |
-| LOADING | 依赖就绪，正在执行 `apply` |
-| ACTIVE | 插件运行中 |
-| FAILED | `apply` 抛出异常 |
-| UNLOADING | 插件正在卸载并释放资源 |
-| DISPOSED | 已完全卸载 |
+| 状态      | 含义                       |
+| --------- | -------------------------- |
+| PENDING   | 已声明，但所需依赖未就绪   |
+| LOADING   | 依赖就绪，正在执行 `apply` |
+| ACTIVE    | 插件运行中                 |
+| FAILED    | `apply` 抛出异常           |
+| UNLOADING | 插件正在卸载并释放资源     |
+| DISPOSED  | 已完全卸载                 |
 
 ## 依赖驱动的加载
 
 声明了 `inject` 的插件会等待所有必需服务就绪：
 
 ```ts ignore-check
-export const inject = ['tools', 'llm']
+export const inject = ["tools", "llm"];
 
 export function apply(ctx: Context) {
   // ctx.tools and ctx.llm are ready here.
@@ -44,17 +44,18 @@ export function apply(ctx: Context) {
 ```ts ignore-check
 export function apply(ctx: Context) {
   // Event listener: removed automatically on unload.
-  ctx.on('some-event', handler)
+  ctx.on("some-event", handler);
 
   // Custom resource: the returned disposer runs on unload.
   ctx.effect(() => {
-    const connection = createConnection()
-    return () => connection.close()
-  })
+    const connection = createConnection();
+    return () => connection.close();
+  });
 }
 ```
 
 以下操作都会被自动追踪和清理：
+
 - `ctx.on(event, handler)` — 事件监听
 - `ctx.tools.register(tool)` — 工具注册
 - `ctx.llm.registerAdapter(names, adapter)` — LLM（大语言模型）适配器注册
@@ -69,7 +70,7 @@ export function apply(ctx: Context) {
 ```ts ignore-check
 export function apply(ctx: Context) {
   // Register a child plugin.
-  ctx.plugin(childPlugin)
+  ctx.plugin(childPlugin);
 
   // The child has its own Fiber and unloads with its parent.
 }
@@ -80,18 +81,19 @@ export function apply(ctx: Context) {
 当你需要提前终止一个插件实例：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-declare const ctx: Context
-declare function myPlugin(ctx: Context): void
+declare const ctx: Context;
+declare function myPlugin(ctx: Context): void;
 
-const fiber = ctx.plugin(myPlugin)
+const fiber = ctx.plugin(myPlugin);
 
 // Dispose it manually later.
-await fiber.dispose()
+await fiber.dispose();
 ```
 
 `dispose` 保证：
+
 1. 该插件拥有的所有注册均被移除
 2. 它的子插件也被递归卸载
 3. 返回的 Promise 会在所有异步清理完成后兑现
@@ -110,22 +112,24 @@ await fiber.dispose()
 
 ```ts ignore-check
 export function apply(ctx: Context) {
-  console.log('plugin loading')
+  console.log("plugin loading");
 
   ctx.effect(() => {
-    console.log('effect registered')
-    return () => console.log('effect cleaned up')
-  })
+    console.log("effect registered");
+    return () => console.log("effect cleaned up");
+  });
 }
 ```
 
 加载时输出：
+
 ```
 plugin loading
 effect registered
 ```
 
 卸载时输出：
+
 ```
 effect cleaned up
 ```

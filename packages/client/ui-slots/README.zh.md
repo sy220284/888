@@ -6,12 +6,12 @@ Slot 注册表纯核心、slot 终端设计：SlotMap 声明合并、SlotCore �
 
 一次 `register({ name, children?, store?, inject?, ...kind }, Component)` 调用会向已声明 slot 贡献一个组件，同时声明子 slot（声明 = 渲染授权 = 运行时规范，三者共用一张表）、store seat 以及注册方的业务表层。组件会在调用点依据 `ComposedProps` 接受类型检查；该类型是四个 share 的交集，每个 share 都从各自的唯一真源派生：
 
-| share | 类型 | 来源 |
-|---|---|---|
-| 运行时 | `PropsRuntime<K>` | SlotMap 条目：`owner`（父级 renderSlot 调用点）+ 会话标准工具包 + 全局 seat |
-| child render | `PropsRenderSlots<S>` | register 调用的 `children` key 集合（静态缩窄的 `renderSlot`） |
-| store | `PropsStore<H>` | 已声明 handle：`useStore` selector 钩子 + 移除 draft 的 `actions` |
-| business | `I` | 从 `inject` factory 返回值推断 |
+| share        | 类型                  | 来源                                                                        |
+| ------------ | --------------------- | --------------------------------------------------------------------------- |
+| 运行时       | `PropsRuntime<K>`     | SlotMap 条目：`owner`（父级 renderSlot 调用点）+ 会话标准工具包 + 全局 seat |
+| child render | `PropsRenderSlots<S>` | register 调用的 `children` key 集合（静态缩窄的 `renderSlot`）              |
+| store        | `PropsStore<H>`       | 已声明 handle：`useStore` selector 钩子 + 移除 draft 的 `actions`           |
+| business     | `I`                   | 从 `inject` factory 返回值推断                                              |
 
 chain-kind slot 会反转键控路由：条目自行提名，而不是由分发点选择 `entryKey`。每次注册都携带一个纯 `ChainSelect` selector（另有可选的升序 `priority`，相同值按注册顺序处理）；第一个非 null 返回值选中其条目，并成为组件的 `matched` prop；全部返回 null 时则使用 owner 的 `renderSlotChain` fallback（`ChainRenderOpts`）。
 

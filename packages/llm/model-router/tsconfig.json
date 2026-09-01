@@ -4,17 +4,15 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
-    {"path": "../../../vendor/cosmokit"},
-    {"path": "../../../vendor/schemastery"},
-    {"path": "../../../vendor/cordis"},
-    {"path": "../../core/session"},
-    {"path": "../../core/agent"},
-    {"path": "../llm"},
-    {"path": "../recovery"},
-    {"path": "../../runtime-diagnostics/invariants"}
+    { "path": "../../../vendor/cosmokit" },
+    { "path": "../../../vendor/schemastery" },
+    { "path": "../../../vendor/cordis" },
+    { "path": "../../core/session" },
+    { "path": "../../core/agent" },
+    { "path": "../llm" },
+    { "path": "../recovery" },
+    { "path": "../../runtime-diagnostics/invariants" }
   ]
 }

@@ -74,14 +74,14 @@ worker 错误、消息失败或提前退出会在清理前关闭消息接纳，�
 
 ## 配置
 
-| 键 | 默认值 | 含义 |
-|---|---|---|
-| `provider` | `spawn` | `agent()` 使用的宿主侧 subagent 提供方。 |
-| `maxConcurrentAgents` | `0` | 并发 `agent()` 上限；`0` 会根据可用 CPU 并行度解析。 |
-| `maxTotalAgents` | `1000` | 一次运行中的 `agent()` 调用总数。 |
-| `maxItemsPerCall` | `4096` | 一次 `parallel()` 或 `pipeline()` 调用接受的条目数。 |
-| `syncTimeoutMs` | `5000` | 脚本最初同步片段的 VM 超时时间。 |
-| `disposeGraceMs` | `5000` | 强制结算/终止之前的期限，也是公开 dispose 的期限。 |
+| 键                    | 默认值  | 含义                                                 |
+| --------------------- | ------- | ---------------------------------------------------- |
+| `provider`            | `spawn` | `agent()` 使用的宿主侧 subagent 提供方。             |
+| `maxConcurrentAgents` | `0`     | 并发 `agent()` 上限；`0` 会根据可用 CPU 并行度解析。 |
+| `maxTotalAgents`      | `1000`  | 一次运行中的 `agent()` 调用总数。                    |
+| `maxItemsPerCall`     | `4096`  | 一次 `parallel()` 或 `pipeline()` 调用接受的条目数。 |
+| `syncTimeoutMs`       | `5000`  | 脚本最初同步片段的 VM 超时时间。                     |
+| `disposeGraceMs`      | `5000`  | 强制结算/终止之前的期限，也是公开 dispose 的期限。   |
 
 负责该引擎的消费方可以为一次运行设置 `WorkflowStartRequest.subagentProvider` 和 `WorkflowStartRequest.maxTotalAgents`。它们属于引擎级策略，不是脚本钩子或面向模型的选项；普通 `workflow` 工具不会设置两者。每次运行的子 agent 总数上限可以降低、但绝不能提高已配置的 `maxTotalAgents` 上限。
 

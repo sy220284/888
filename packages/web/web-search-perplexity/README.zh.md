@@ -8,17 +8,17 @@
 
 ## 配置
 
-| 配置键 | 默认值 | 含义 |
-|---|---|---|
-| `apiKey` | `$PERPLEXITY_API_KEY` | Perplexity API 密钥。为空或缺失时提供方不可用。 |
-| `baseURL` | `https://api.perplexity.ai` | 端点基址；追加 `/chat/completions`。无法解析时提供方不可用。 |
-| `model` | `sonar` | 搜索模型名称。 |
-| `maxTokens` | `1024` | 生成答案 token 上限（`max_tokens`）。必须是正整数。 |
-| `searchRecency` | （未设置） | 以 `search_recency_filter` 发送的新近程度窗口：`day`、`week`、`month` 或 `year`。未设置时不发送过滤条件。 |
+| 配置键          | 默认值                      | 含义                                                                                                      |
+| --------------- | --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `apiKey`        | `$PERPLEXITY_API_KEY`       | Perplexity API 密钥。为空或缺失时提供方不可用。                                                           |
+| `baseURL`       | `https://api.perplexity.ai` | 端点基址；追加 `/chat/completions`。无法解析时提供方不可用。                                              |
+| `model`         | `sonar`                     | 搜索模型名称。                                                                                            |
+| `maxTokens`     | `1024`                      | 生成答案 token 上限（`max_tokens`）。必须是正整数。                                                       |
+| `searchRecency` | （未设置）                  | 以 `search_recency_filter` 发送的新近程度窗口：`day`、`week`、`month` 或 `year`。未设置时不发送过滤条件。 |
 
 ```yaml
 - id: web-search-perplexity
-  name: '@deepseek-ai/dsh-web-search-perplexity'
+  name: "@deepseek-ai/dsh-web-search-perplexity"
   config:
     apiKey: !!js process.env.PERPLEXITY_API_KEY
 ```

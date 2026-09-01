@@ -14,21 +14,21 @@ PENDING → LOADING → ACTIVE
 ACTIVE → UNLOADING → DISPOSED
 ```
 
-| State | Meaning |
-|------|------|
-| PENDING | Declared, but required dependencies are not ready |
-| LOADING | Dependencies are ready and `apply` is running |
-| ACTIVE | The plugin is running |
-| FAILED | `apply` threw an error |
-| UNLOADING | The plugin is unloading and disposing resources |
-| DISPOSED | The plugin is fully unloaded |
+| State     | Meaning                                           |
+| --------- | ------------------------------------------------- |
+| PENDING   | Declared, but required dependencies are not ready |
+| LOADING   | Dependencies are ready and `apply` is running     |
+| ACTIVE    | The plugin is running                             |
+| FAILED    | `apply` threw an error                            |
+| UNLOADING | The plugin is unloading and disposing resources   |
+| DISPOSED  | The plugin is fully unloaded                      |
 
 ## Dependency-driven loading
 
 A plugin with `inject` waits for every required service before loading:
 
 ```ts ignore-check
-export const inject = ['tools', 'llm']
+export const inject = ["tools", "llm"];
 
 export function apply(ctx: Context) {
   // ctx.tools and ctx.llm are ready here.
@@ -44,17 +44,18 @@ Every registration made through `ctx` is undone when the plugin unloads:
 ```ts ignore-check
 export function apply(ctx: Context) {
   // Event listener: removed automatically on unload.
-  ctx.on('some-event', handler)
+  ctx.on("some-event", handler);
 
   // Custom resource: the returned disposer runs on unload.
   ctx.effect(() => {
-    const connection = createConnection()
-    return () => connection.close()
-  })
+    const connection = createConnection();
+    return () => connection.close();
+  });
 }
 ```
 
 The framework tracks and disposes all of these operations:
+
 - `ctx.on(event, handler)` — event listener
 - `ctx.tools.register(tool)` — tool registration
 - `ctx.llm.registerAdapter(names, adapter)` — LLM adapter registration
@@ -69,7 +70,7 @@ During unload, disposer invocation starts in reverse registration order, but mul
 ```ts ignore-check
 export function apply(ctx: Context) {
   // Register a child plugin.
-  ctx.plugin(childPlugin)
+  ctx.plugin(childPlugin);
 
   // The child has its own Fiber and unloads with its parent.
 }
@@ -80,18 +81,19 @@ export function apply(ctx: Context) {
 To stop a plugin instance early:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-declare const ctx: Context
-declare function myPlugin(ctx: Context): void
+declare const ctx: Context;
+declare function myPlugin(ctx: Context): void;
 
-const fiber = ctx.plugin(myPlugin)
+const fiber = ctx.plugin(myPlugin);
 
 // Dispose it manually later.
-await fiber.dispose()
+await fiber.dispose();
 ```
 
 `dispose` guarantees:
+
 1. All registrations owned by the plugin are removed.
 2. Child plugins are recursively unloaded.
 3. The returned promise resolves after all asynchronous cleanup finishes.
@@ -110,22 +112,24 @@ Because plugin registrations clean themselves up, hot replacement does not retai
 
 ```ts ignore-check
 export function apply(ctx: Context) {
-  console.log('plugin loading')
+  console.log("plugin loading");
 
   ctx.effect(() => {
-    console.log('effect registered')
-    return () => console.log('effect cleaned up')
-  })
+    console.log("effect registered");
+    return () => console.log("effect cleaned up");
+  });
 }
 ```
 
 Loading prints:
+
 ```
 plugin loading
 effect registered
 ```
 
 Unloading prints:
+
 ```
 effect cleaned up
 ```

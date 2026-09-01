@@ -3,13 +3,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "lib/types",
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../directory-picker"

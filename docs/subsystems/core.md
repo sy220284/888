@@ -8,14 +8,14 @@ The **core** subsystem is [`packages/core`](../../packages/core/README.md) — t
 
 A turn flows through the six packages in one loop: the driver in [`agent-loop`](../../packages/core/agent-loop) claims a queued prompt, opens a turn on the [session log](session.md) (`ctx.sessions`), assembles the request prefix through [system-prompt](system-prompt.md) (`ctx.systemPrompt`) and derives history from the log, streams the model response through the [LLM seam](llm-streaming.md), dispatches tool calls through the [tool registry](tools.md) (`ctx.tools`), and appends every model-visible fact back onto the log before the next step derives from it. The conversation vocabulary the loop moves — `Message`, `ContentBlock`, `StreamChunk`, the model request — is declared by [`packages/llm`](../../packages/llm/README.md) and documented on [llm-streaming.md](llm-streaming.md).
 
-| Package | Owns | Page |
-|---|---|---|
-| `session/` | The append-only `SessionEvent` log and in-memory store — the single source of truth (`ctx.sessions`) | [session.md](session.md) |
-| `system-prompt/` | Prompt-section and tool-schema assembly (`ctx.systemPrompt`) | [system-prompt.md](system-prompt.md) |
-| `tools/` | The scoped tool registry and guarded execution pipeline (`ctx.tools`) | [tools.md](tools.md) |
-| `agent/` | The `Agent` interface, live registry, initiator scope, and `agent/*` event vocabulary (`ctx.agents`) | this page |
-| `agent-loop/` | The concrete driver implementing the public `Agent` contract (`ctx.agentLoop`) | this page |
-| `scope/` | The scoped-registration primitive the registries and loop build per-agent scoping on | [scope.md](scope.md) |
+| Package          | Owns                                                                                                 | Page                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `session/`       | The append-only `SessionEvent` log and in-memory store — the single source of truth (`ctx.sessions`) | [session.md](session.md)             |
+| `system-prompt/` | Prompt-section and tool-schema assembly (`ctx.systemPrompt`)                                         | [system-prompt.md](system-prompt.md) |
+| `tools/`         | The scoped tool registry and guarded execution pipeline (`ctx.tools`)                                | [tools.md](tools.md)                 |
+| `agent/`         | The `Agent` interface, live registry, initiator scope, and `agent/*` event vocabulary (`ctx.agents`) | this page                            |
+| `agent-loop/`    | The concrete driver implementing the public `Agent` contract (`ctx.agentLoop`)                       | this page                            |
+| `scope/`         | The scoped-registration primitive the registries and loop build per-agent scoping on                 | [scope.md](scope.md)                 |
 
 `scope/` is the one non-service package: a dependency-free library (`createScope`/`scopeOf`/`scopeTarget`) that sits below `session/` and `system-prompt/` in the module graph precisely so they can consume it without a cycle. `agent-loop` is the one concrete implementation of the public `Agent` contract and lives here because it is the harness's default product loop; it runs each driver inside `ctx.agents.withInitiator()`. Extension plugins depend on `agent` — including when they need the initiating Agent — and never on `agent-loop` directly, so the loop stays swappable. The default composition that wires this spine into a runnable agent is [`examples/agent-spine-demo`](../../packages/examples/agent-spine-demo/README.md).
 
@@ -41,8 +41,8 @@ Source: [`packages/core/agent/src/index.ts`](../../packages/core/agent/src/index
  * startup) are owned by the loop fiber and never need a handle.
  */
 interface AgentHandle {
-  agent: Agent
-  dispose(): Promise<void>
+  agent: Agent;
+  dispose(): Promise<void>;
 }
 ```
 
@@ -60,17 +60,17 @@ Source: [`packages/core/agent/src/types.ts`](../../packages/core/agent/src/types
 /** Public live-agent handle. */
 interface Agent {
   /** The single identity shared with {@link session}. */
-  readonly id: SessionId
+  readonly id: SessionId;
   /** The provider route and model this agent's requests use. */
-  readonly options: AgentOptions
+  readonly options: AgentOptions;
   /** The live session this agent drives; its log is the durable source of truth. */
-  readonly session: Session
+  readonly session: Session;
   /** The agent-owned projection of durable pending work. */
-  readonly inbox: Inbox
+  readonly inbox: Inbox;
   /** The current lifecycle state, mirrored on every `agent/status` transition. */
-  readonly status: AgentStatus
+  readonly status: AgentStatus;
   /** Agent-scoped context; its contributions are agent-local, unwind on disposal, and reject registration afterward. */
-  readonly ctx: Context
+  readonly ctx: Context;
 
   /**
    * Clear queued and steering work — unless `keepInbox` — and abort the active
@@ -79,7 +79,7 @@ interface Agent {
    * @param cause - the stable caller intent carried by the active operation signal.
    * @param options - cancellation options; `keepInbox` preserves pending work.
    */
-  cancel(cause: AgentCancelCause, options?: CancelOptions): void
+  cancel(cause: AgentCancelCause, options?: CancelOptions): void;
 
   /**
    * Resolve after the current whole-agent activity reaches quiescence. This
@@ -87,7 +87,7 @@ interface Agent {
    * but does not identify the settlement of any particular message.
    * @returns fulfillment after no active driver or maintenance task remains.
    */
-  whenIdle(): Promise<void>
+  whenIdle(): Promise<void>;
 
   /**
    * Run one non-turn maintenance task from the true idle phase. The task starts
@@ -98,7 +98,7 @@ interface Agent {
    * @throws synchronously when turn-driving or another maintenance task already owns the agent.
    * @returns the task promise.
    */
-  runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>
+  runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;
 
   /**
    * Route identified input to an inbox boundary and optionally wake the driver.
@@ -111,14 +111,14 @@ interface Agent {
    * @param target - the preferred next-turn or next-step inbox boundary.
    * @param wakeup - whether delivery may wake the driver.
    */
-  send(message: UserMessage, target: InboxTarget, wakeup: boolean): void
+  send(message: UserMessage, target: InboxTarget, wakeup: boolean): void;
 
   /**
    * Queue an ordinary follow-up turn and wake the driver. The item becomes the
    * sole ordinary message of its own turn.
    * @param message - identified prompt content and the source that supplied it.
    */
-  followup(message: UserMessage): void
+  followup(message: UserMessage): void;
 
   /**
    * Submit steering for the nearest step. An idle driver starts a turn;
@@ -127,7 +127,7 @@ interface Agent {
    * wake; cancellation or disposal may discard pending steering.
    * @param message - identified steering content and the source that supplied it.
    */
-  steer(message: UserMessage): void
+  steer(message: UserMessage): void;
 
   /**
    * Queue model-facing context for the next pre-step without waking the
@@ -137,7 +137,7 @@ interface Agent {
    * batch. Cancellation or disposal may discard pending context.
    * @param message - identified injected context and the source that supplied it.
    */
-  inject(message: UserMessage): void
+  inject(message: UserMessage): void;
 }
 ```
 
@@ -149,7 +149,7 @@ interface Agent {
  * closes, or checkpoints turns. Disposal removes the agent from its registry;
  * it is not a third observable status.
  */
-type AgentStatus = 'idle' | 'running'
+type AgentStatus = "idle" | "running";
 ```
 
 `running` describes the driver-wide drain interval and may span consecutive queued turns; it does not prove a turn is still open. Disposal removes the agent from the registry and emits `agent/disposed`; it is not a terminal status value. `followup()` returns no handle: its `MessageId` identifies durable inbox insertion, claim, and discard facts, not a later assistant output or turn ending. `whenIdle()` observes the whole agent, so callers may call a receipt-to-idle interval a run only when they explicitly own that interval ([decision](../../.agents/notes/implemented/architecture/2026-07-30-followup-enqueue-and-owned-runs.md)).
@@ -158,11 +158,11 @@ type AgentStatus = 'idle' | 'running'
 /** Merge-extensible agent creation options. Persona belongs to system-prompt sections. */
 interface AgentOptions {
   /** Provider route (must have a registered adapter at call time). */
-  provider?: string
+  provider?: string;
   /** Model id interpreted by the selected provider adapter. */
-  model?: string
+  model?: string;
   /** Maximum output tokens for each conversation-model request. */
-  maxTokens?: number
+  maxTokens?: number;
 }
 ```
 
@@ -172,7 +172,7 @@ The inbox is the delivery vocabulary — two ordered pending-message lists the a
 
 ```ts type-equiv
 /** One of the two ordered pending-message lists owned by an agent. */
-type InboxTarget = 'next-turn' | 'next-step'
+type InboxTarget = "next-turn" | "next-step";
 ```
 
 Every pending occurrence is its `UserMessage`; `MessageId` is the sole identity. `Inbox.append`, `prepend`, `replace`, `remove`, `clear`, `splice`, and `claim` record normalized durable `agent/inbox/spliced` mutations and reject duplicate pending ids. `replace(messageId, newMessage)` and `remove(messageId)` locate the pending message across both lists; replacement may change identity and emits the old message as discarded followed by the new message as inserted. Ordinary removals and `clear()` are cancellations. `claim(target)` removes the proposed step batch — all `next-step` input plus, at a turn boundary, one `next-turn` message — through pure deletion splices without emitting discarded notifications, and the loop separately emits per-message claimed notifications. Whole-queue consumers such as UI projections reconstruct `nextTurn` and `nextStep` from the durable splices, while consumers following one message use the exact `agent/inbox/inserted`, `claimed`, and `discarded` notifications.
@@ -187,17 +187,17 @@ interface CancelOptions {
    * active turn is still aborted, but un-started and pending work survives for a
    * later turn and no canceled inbox splice is logged.
    */
-  keepInbox?: boolean | undefined
+  keepInbox?: boolean | undefined;
 }
 ```
 
 ```ts type-equiv
 /** Why an active agent driver was cancelled. */
 type AgentCancelCause =
-  | { readonly kind: 'user' }
-  | { readonly kind: 'parent' }
-  | { readonly kind: 'hook'; readonly reason: string }
-  | { readonly kind: 'disposed' }
+  | { readonly kind: "user" }
+  | { readonly kind: "parent" }
+  | { readonly kind: "hook"; readonly reason: string }
+  | { readonly kind: "disposed" };
 ```
 
 The cause is a TypeScript-enforced same-process input. An active cancellation holder copies it into the runtime-only `AbortSignal.reason`; a signal grants cooperating listeners no classification authority. Durable `turn/end` retains the coarse `{ kind: 'aborted' }` outcome; recording who requested cancellation would require a separate durable event rather than overloading the terminal result.
@@ -220,16 +220,14 @@ It returns a `PreStepDecision`. Reject opens no step. Enter supplies the complet
 
 ```ts type-equiv
 /** Whether and with which messages the loop enters a proposed step. */
-type PreStepDecision =
-  | { kind: 'reject' }
-  | { kind: 'enter'; messages: UserMessage[] }
+type PreStepDecision = { kind: "reject" } | { kind: "enter"; messages: UserMessage[] };
 ```
 
 `agent/request-error` runs after a failed model step closes and before its turn closes. Listeners can repair durable state or await policy work while the failed turn's signal is still live. A handling listener returns `{ kind: 'retry' }` without calling `next()`; the default `undefined` leaves the failure terminal.
 
 ```ts type-equiv
 /** Action returned by a listener that owns model-request recovery. */
-type RequestErrorAction = { kind: 'retry' } | undefined
+type RequestErrorAction = { kind: "retry" } | undefined;
 ```
 
 `agent/pre-step` is the only serial listener chain before request derivation. `agent/turn-stopping` runs when a turn has no tool or steering continuation, before one final steering drain.
@@ -238,18 +236,18 @@ type RequestErrorAction = { kind: 'retry' } | undefined
 
 ```ts type-equiv
 /** Why a session lifecycle began; seeded creates are `startup`, while persisted loads are `resume`. */
-type SessionStartSource = 'startup' | 'resume' | 'clear' | 'compact'
+type SessionStartSource = "startup" | "resume" | "clear" | "compact";
 ```
 
 ## Sessions
 
-A `Session` is an **append-only log** of typed `SessionEvent`s — the single source of truth. The LLM message history is *derived* from the log (`deriveMessages()`), not stored separately. Every entry carries a monotonic `seq`, a `time`, and a `type`-discriminated `data` payload; surface variants may also list cited earlier events in `sourceEventSeqs` and carry a `surfaceOp`.
+A `Session` is an **append-only log** of typed `SessionEvent`s — the single source of truth. The LLM message history is _derived_ from the log (`deriveMessages()`), not stored separately. Every entry carries a monotonic `seq`, a `time`, and a `type`-discriminated `data` payload; surface variants may also list cited earlier events in `sourceEventSeqs` and carry a `surfaceOp`.
 
 The `SessionEvent` envelope's exact conditional fields, the twelve event variants (`turn/start`, `turn/end`, `step/start`, `step/end`, `user/message`, `assistant/chunk`, `assistant/message`, `tool/call`, `tool/result`, `steering/message`, `todo/write`, `request/header`), the `deriveMessages()` projection rules, the `TurnTrigger`/`TurnEndReason` reasons, and the execution-enclosure and standalone-event rules are on **[session.md](session.md)**. How the log is made durable — the `SessionPersistence` interface, JSONL/SQLite backends, the `session/flush` checkpoint, crash recovery, and `SessionHeader` — is on **[persistence.md](persistence.md)**.
 
 ## `ToolDefinition`
 
-The one pipeline-authoring type that is core: what every registered tool *is* — a model-facing `ToolSchema` plus an `execute` function and optional final-content and UI callbacks. A tool author rarely constructs it by hand (the `defineTool` DSL builds it with typed arguments), but it is the contract the registry holds and the loop dispatches through.
+The one pipeline-authoring type that is core: what every registered tool _is_ — a model-facing `ToolSchema` plus an `execute` function and optional final-content and UI callbacks. A tool author rarely constructs it by hand (the `defineTool` DSL builds it with typed arguments), but it is the contract the registry holds and the loop dispatches through.
 
 Its full fields, the `defineTool`/`ValueSchemaSpec`/`ParameterSchemaSpec` typed schema DSL, the `ToolExecution`/`ToolExecutionResult` waterfall types, and the tool-presentation UI types are on **[tools.md](tools.md)**.
 
@@ -266,30 +264,30 @@ Almost every extensible sum type in the harness follows one pattern: an interfac
 ```ts ignore-check
 // The pattern, schematically:
 interface ThingMap {
-  'a': { kind: 'a'; /* … */ }
-  'b': { kind: 'b'; /* … */ }
+  a: { kind: "a" /* … */ };
+  b: { kind: "b" /* … */ };
 }
-type ThingKind = keyof ThingMap          // 'a' | 'b'
-type Thing = ThingMap[keyof ThingMap]    // the discriminated union
+type ThingKind = keyof ThingMap; // 'a' | 'b'
+type Thing = ThingMap[keyof ThingMap]; // the discriminated union
 
 // A plugin extends it without touching the source package:
-declare module '@deepseek-ai/dsh-llm' {
+declare module "@deepseek-ai/dsh-llm" {
   interface ThingMap {
-    'c': { kind: 'c'; /* … */ }
+    c: { kind: "c" /* … */ };
   }
 }
 ```
 
 Six canonical maps use this pattern; a plugin author extends these:
 
-| Map | Package | Derives | Catalog |
-|---|---|---|---|
-| `ContentBlockMap` | dsh-llm | `ContentBlock` | [llm-streaming.md](llm-streaming.md#content-blocks-and-messages) |
-| `MessageSourceMap` | dsh-llm | `MessageSource` | [llm-streaming.md](llm-streaming.md#content-blocks-and-messages) |
-| `FinishReasonMap` | dsh-llm | `FinishReason` | [llm-streaming.md](llm-streaming.md#the-model-request-and-result) |
-| `TurnTriggerMap` | dsh-session | `TurnTrigger` | [session.md](session.md) |
-| `TurnEndReasonMap` | dsh-session | `TurnEndReason` | [session.md](session.md) |
-| `SessionEventMap` | dsh-session | `SessionEvent` | [session.md](session.md) |
+| Map                | Package     | Derives         | Catalog                                                           |
+| ------------------ | ----------- | --------------- | ----------------------------------------------------------------- |
+| `ContentBlockMap`  | dsh-llm     | `ContentBlock`  | [llm-streaming.md](llm-streaming.md#content-blocks-and-messages)  |
+| `MessageSourceMap` | dsh-llm     | `MessageSource` | [llm-streaming.md](llm-streaming.md#content-blocks-and-messages)  |
+| `FinishReasonMap`  | dsh-llm     | `FinishReason`  | [llm-streaming.md](llm-streaming.md#the-model-request-and-result) |
+| `TurnTriggerMap`   | dsh-session | `TurnTrigger`   | [session.md](session.md)                                          |
+| `TurnEndReasonMap` | dsh-session | `TurnEndReason` | [session.md](session.md)                                          |
+| `SessionEventMap`  | dsh-session | `SessionEvent`  | [session.md](session.md)                                          |
 
 Two large discriminated unions are the ones consumers `switch` over most: **`StreamChunk`** (the streaming protocol) and **`SessionEvent`** (the log entry). Per the repo convention, `switch` on the tag — don't chain `if`s — so each arm narrows and a typo'd tag fails to compile.
 
@@ -303,7 +301,7 @@ Source: [`packages/util/brand/src/index.ts`](../../packages/util/brand/src/index
 
 ```ts type-equiv
 /** A string carrying a compile-time-only brand `B`. */
-type Branded<B extends string> = string & { readonly [BRAND]: B }
+type Branded<B extends string> = string & { readonly [BRAND]: B };
 ```
 
 The two core IDs are `CallId` (correlates a tool call with its result; dsh-llm) and `SessionId` (the shared live agent and durable session identity; dsh-session). Capability packages brand their own ids too, such as `JobId` in [jobs.md](jobs.md).
@@ -554,7 +552,7 @@ Source: [`packages/preset/agent-presets/src/index.ts`](../../packages/preset/age
 
 ### `ctx.agents` — `AgentRegistry`
 
-Agent service (`ctx.agents`): tracks live agents and carries the initiating Agent through one process-local asynchronous driver chain. Agent *creation* is provided by whichever plugin implements the AgentFactory (`@deepseek-ai/dsh-agent-loop`), registered via setFactory.
+Agent service (`ctx.agents`): tracks live agents and carries the initiating Agent through one process-local asynchronous driver chain. Agent _creation_ is provided by whichever plugin implements the AgentFactory (`@deepseek-ai/dsh-agent-loop`), registered via setFactory.
 
 Initiator methods provide same-process causal attribution only. Ambient presence is neither liveness proof nor authorization; subjects and owners remain explicit, as does identity at worker, process, persistence, and wire boundaries. Returned Promise boundaries drain during teardown, except a nested lineage that starts an owning-fiber unload is excluded from its own drain.
 

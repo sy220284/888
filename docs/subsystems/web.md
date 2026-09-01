@@ -22,7 +22,7 @@ Each seam request carries exactly one `query`. The `dsh-tool-web` consumer accep
  * back by the seam (see {@link WebSearchResult}).
  */
 interface WebSearchRequest {
-  readonly query: string
+  readonly query: string;
   /**
    * Upper bound on returned sources; the seam truncates to it. Omitted = no
    * bound. `dsh-tool-web` always sets it. A provider whose API supports a
@@ -30,7 +30,7 @@ interface WebSearchRequest {
    * layer as a cost/latency optimization; the seam enforces the bound
    * regardless.
    */
-  readonly maxResults?: number
+  readonly maxResults?: number;
 }
 ```
 
@@ -44,11 +44,11 @@ interface WebSearchRequest {
  */
 interface WebSearchResult {
   /** Optional provider-generated answer text, search context, or summary. */
-  readonly content?: string
+  readonly content?: string;
   /** Citeable sources, already truncated to the request's `maxResults`. */
-  readonly sources: readonly WebSearchSource[]
+  readonly sources: readonly WebSearchSource[];
   /** True when the seam dropped sources to honor `maxResults`. */
-  readonly truncated: boolean
+  readonly truncated: boolean;
 }
 ```
 
@@ -60,11 +60,11 @@ interface WebSearchResult {
  * URL-only). `dsh-tool-web` renders `title ?? hostname(url)` for display.
  */
 interface WebSearchSource {
-  readonly url: string
-  readonly title?: string
-  readonly snippet?: string
+  readonly url: string;
+  readonly title?: string;
+  readonly snippet?: string;
   /** Publication/crawl timestamp as a provider-supplied ISO-8601 string. */
-  readonly publishedAt?: string
+  readonly publishedAt?: string;
 }
 ```
 
@@ -78,7 +78,7 @@ interface WebSearchSource {
  * belong outside safe retrieval.
  */
 interface WebFetchRequest {
-  readonly url: string
+  readonly url: string;
 }
 ```
 
@@ -93,13 +93,13 @@ HTTP status is part of the fetched resource state, not automatically a failure: 
  */
 interface WebFetchResult {
   /** The final URL after allowed redirects (the request URL is in the request). */
-  readonly url: string
+  readonly url: string;
   /** HTTP status code of the fetched response. */
-  readonly statusCode: number
+  readonly statusCode: number;
   /** Decoded body, classified by content kind. */
-  readonly body: WebFetchBody
+  readonly body: WebFetchBody;
   /** True when the provider capped the decoded body. */
-  readonly truncated: boolean
+  readonly truncated: boolean;
 }
 ```
 
@@ -114,8 +114,7 @@ interface WebFetchResult {
  * fields the others lack.
  */
 type WebFetchBody =
-  | { readonly kind: 'html'; readonly content: string }
-  | { readonly kind: 'text'; readonly content: string }
+  { readonly kind: "html"; readonly content: string } | { readonly kind: "text"; readonly content: string };
 ```
 
 ## Provider availability

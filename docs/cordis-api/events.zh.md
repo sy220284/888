@@ -180,9 +180,9 @@ once<K extends keyof Events>(name: K, listener: Events[K], options?: boolean | E
 /** Options accepted by `ctx.on()` and `ctx.once()`. */
 interface EventOptions {
   /** Add the listener before existing listeners for the same event. */
-  prepend?: boolean
+  prepend?: boolean;
   /** Receive the event regardless of context filter checks. */
-  global?: boolean
+  global?: boolean;
 }
 ```
 
@@ -203,7 +203,7 @@ interface EventOptions {
  * `bail` stops on the first synchronous bail value, and `waterfall` composes
  * listeners around a final `next` callback.
  */
-type DispatchMode = 'emit' | 'parallel' | 'serial' | 'bail' | 'waterfall'
+type DispatchMode = "emit" | "parallel" | "serial" | "bail" | "waterfall";
 ```
 
 [源码](../../vendor/cordis/src/events.ts#L32)

@@ -5,12 +5,12 @@
   max-width: 100%;
 }
 
-.gallery[data-align='end'] {
+.gallery[data-align="end"] {
   justify-content: flex-end;
   align-self: flex-end;
 }
 
-.gallery[data-align='start'] {
+.gallery[data-align="start"] {
   justify-content: flex-start;
   align-self: flex-start;
 }
@@ -29,7 +29,7 @@
   cursor: zoom-in;
 }
 
-.frame[data-variant='tile'] {
+.frame[data-variant="tile"] {
   width: 64px;
   height: 64px;
   min-width: 64px;
@@ -60,7 +60,7 @@
 }
 
 /* A failed tile keeps the 64px grid cell instead of growing to its copy. */
-.error[data-variant='tile'] {
+.error[data-variant="tile"] {
   width: 64px;
   height: 64px;
   padding: 4px;
