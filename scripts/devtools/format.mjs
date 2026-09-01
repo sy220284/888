@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync } from 'node:fs'
 import { extname, relative, resolve } from 'node:path'
 import { projectToolPath, repoRoot } from './tool-paths.mjs'
 
@@ -14,7 +14,7 @@ const scopes = requested.length === 0 ? allScopes : requested
 for (const scope of scopes) if (!allScopes.includes(scope)) throw new Error(`unknown format scope: ${scope}`)
 
 const ignoredPrefixes = [
-  '.agents/notes/archived/',
+  '.agents/notes/',
   'native/landlock-run/',
   'vendor/',
   'website/.generated/',
@@ -47,8 +47,19 @@ function isIgnored(file) {
   return ignoredFiles.has(file) || ignoredPrefixes.some(prefix => file.startsWith(prefix))
 }
 
+function isFormatTarget(file) {
+  const path = resolve(repoRoot, file)
+  if (!existsSync(path)) return false
+  try {
+    const stat = lstatSync(path)
+    return stat.isFile() && !stat.isSymbolicLink()
+  } catch {
+    return false
+  }
+}
+
 function hasShellShebang(file) {
-  if (extname(file) !== '' || !existsSync(resolve(repoRoot, file))) return false
+  if (extname(file) !== '' || !isFormatTarget(file)) return false
   try {
     const firstLine = readFileSync(resolve(repoRoot, file), 'utf8').split(/\r?\n/, 1)[0]
     return /^#!.*\b(?:ba|z|k)?sh\b/.test(firstLine)
@@ -83,7 +94,7 @@ function chunks(items, size = 64) {
 
 const files = (explicitFiles.length > 0 ? explicitFiles : trackedFiles())
   .map(normalizeFile)
-  .filter(file => file !== '' && !file.startsWith('../') && !isIgnored(file) && existsSync(resolve(repoRoot, file)))
+  .filter(file => file !== '' && !file.startsWith('../') && !isIgnored(file) && isFormatTarget(file))
 
 if (scopes.includes('prettier')) {
   const selected = files.filter(file => prettierExtensions.has(extname(file).toLowerCase()) && validJson(file))
