@@ -8,7 +8,7 @@
 
 ```yaml
 - id: agent-team
-  name: '@deepseek-ai/dsh-experimental-agent-team'
+  name: "@deepseek-ai/dsh-experimental-agent-team"
   config:
     maxMembers: 8
     maxTasks: 256

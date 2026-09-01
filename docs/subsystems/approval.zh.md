@@ -15,7 +15,7 @@
  * Pairs one `approval/asked` audit event with its `approval/decided`.
  * Service-issued (one fresh id per {@link ApprovalService.request} call).
  */
-type ApprovalRequestId = Branded<'ApprovalRequestId'>
+type ApprovalRequestId = Branded<"ApprovalRequestId">;
 ```
 
 `ApprovalOutcome` 是闭合的，且失败时拒绝。`allowed-once` 仅授权所询问的那一个操作；调用方对 `rejected`、`cancelled` 和 `unavailable` 均执行拒绝。缺失、不负责该请求、抛异常或不合规的应答者会产生 `unavailable`，而非放行。
@@ -25,7 +25,7 @@ type ApprovalRequestId = Branded<'ApprovalRequestId'>
  * Closed approval outcomes: a one-shot grant, explicit rejection, withdrawn
  * request, or unavailable answerer. Callers fail closed on `unavailable`.
  */
-type ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
+type ApprovalOutcome = "allowed-once" | "rejected" | "cancelled" | "unavailable";
 ```
 
 ## 按会话策略
@@ -43,7 +43,7 @@ type ApprovalOutcome = 'allowed-once' | 'rejected' | 'cancelled' | 'unavailable'
  *   deterministically. The strict headless stance (CI, unattended runs) and
  *   the policy whose outcome is knowable without asking.
  */
-type ApprovalPolicy = 'ask' | 'never'
+type ApprovalPolicy = "ask" | "never";
 ```
 
 两种策略都会将各自完整的当前含义贡献给缓存安全的运行时上下文快照。带来源的 `user/message` 是持久化且模型可见的输入；审批状态变化时，会在保留的历史后追加一份新的完整快照，而不改写请求头中的系统提示词。
@@ -63,21 +63,21 @@ interface ApprovalRequest {
    * UI answerer only answers for agents it owns) and receives the audit
    * events on its session log.
    */
-  readonly agent: Agent
+  readonly agent: Agent;
   /** The tool the question is about (presentation and audit). */
-  readonly toolName: string
+  readonly toolName: string;
   /**
    * The exact tool call being decided, when the asker has one — lets a UI
    * attach the prompt to the tool call it already streamed.
    */
-  readonly callId?: CallId
+  readonly callId?: CallId;
   /** The asker's human-readable explanation of WHY it is asking. */
-  readonly reason?: string
+  readonly reason?: string;
   /**
    * Aborting withdraws the question: the request settles `'cancelled'`
    * immediately and a late answer from a still-pending answerer is discarded.
    */
-  readonly signal?: AbortSignal
+  readonly signal?: AbortSignal;
 }
 ```
 

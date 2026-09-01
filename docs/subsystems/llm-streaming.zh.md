@@ -20,11 +20,11 @@
  * with adapter, UI, and compaction support.
  */
 interface ContentBlockMap {
-  'text': TextBlock
-  'reasoning': ReasoningBlock
-  'image': ImageBlock
-  'tool-call': ToolCallBlock
-  'tool-result': ToolResultBlock
+  text: TextBlock;
+  reasoning: ReasoningBlock;
+  image: ImageBlock;
+  "tool-call": ToolCallBlock;
+  "tool-result": ToolResultBlock;
 }
 ```
 
@@ -38,15 +38,15 @@ interface ContentBlockMap {
 /** Provider/model identity and adapter-private replay data for an assistant message. */
 interface AssistantProvenance {
   /** Provider route that produced the message. */
-  provider: string
+  provider: string;
   /** Provider model id that produced the message. */
-  model: string
+  model: string;
   /**
    * Lossless-JSON adapter state needed to replay the provider response.
    * `LlmRuntime` exposes it to a target adapter only when that adapter instance
    * currently owns both this historical provider and the target provider.
    */
-  replayState?: unknown
+  replayState?: unknown;
 }
 ```
 
@@ -54,13 +54,13 @@ interface AssistantProvenance {
 /** One immutable message representation shared by delivery, durable history, and model requests. */
 interface Message {
   /** Stable identity preserved across every representation boundary. */
-  readonly id: MessageId
+  readonly id: MessageId;
   /** Provider-neutral conversation role. */
-  readonly role: 'system' | 'user' | 'assistant'
+  readonly role: "system" | "user" | "assistant";
   /** Exact model-facing blocks. */
-  readonly content: ContentBlock[]
+  readonly content: ContentBlock[];
   /** Required source fields supplied by the producer. */
-  readonly source: MessageSource
+  readonly source: MessageSource;
 }
 ```
 
@@ -72,10 +72,10 @@ interface Message {
  * Merge-extensible sum type — plugins add their own `kind`s.
  */
 interface MessageSourceMap {
-  user: { kind: 'user' }
-  plugin: { kind: 'plugin'; plugin: string } & ContextFormed
-  model: ModelMessageSource
-  tool: ToolMessageSource
+  user: { kind: "user" };
+  plugin: { kind: "plugin"; plugin: string } & ContextFormed;
+  model: ModelMessageSource;
+  tool: ToolMessageSource;
 }
 ```
 
@@ -100,26 +100,26 @@ interface MessageSourceMap {
  */
 type ContextForm =
   /** Instructions read out of workspace files the model is expected to follow. */
-  | 'instructions'
+  | "instructions"
   /** A catalog of items available in this session, republished as it changes. */
-  | 'catalog'
+  | "catalog"
   /** Current state, where a later snapshot from the same producer supersedes an earlier one. */
-  | 'snapshot'
+  | "snapshot"
   /** A one-off account of something that just happened; it supersedes nothing. */
-  | 'notice'
+  | "notice"
   /** A message another agent addressed to this one. */
-  | 'relay'
+  | "relay"
   /** Material lifted out of another session's log, possibly reduced on the way in. */
-  | 'recall'
+  | "recall";
 ```
 
 ```ts type-equiv
 /** One named contribution to a `snapshot`-form context, in assembly order. */
 interface ContextSnapshotSection {
   /** The contributing subsystem's name. */
-  readonly name: string
+  readonly name: string;
   /** That contribution's model-facing text, exactly as assembled. */
-  readonly text: string
+  readonly text: string;
 }
 ```
 
@@ -135,20 +135,20 @@ interface ContextSnapshotSection {
  */
 type ContextFormed =
   | { readonly form?: never }
-  | { readonly form: 'instructions' }
-  | { readonly form: 'catalog' }
+  | { readonly form: "instructions" }
+  | { readonly form: "catalog" }
   | {
-    readonly form: 'snapshot'
-    /** The named contributions this snapshot assembled, in order. */
-    readonly sections: readonly ContextSnapshotSection[]
-  }
+      readonly form: "snapshot";
+      /** The named contributions this snapshot assembled, in order. */
+      readonly sections: readonly ContextSnapshotSection[];
+    }
   | {
-    readonly form: 'notice'
-    /** One-line account of what happened, shown without expanding the row. */
-    readonly summary: string
-  }
-  | { readonly form: 'relay' }
-  | { readonly form: 'recall' }
+      readonly form: "notice";
+      /** One-line account of what happened, shown without expanding the row. */
+      readonly summary: string;
+    }
+  | { readonly form: "relay" }
+  | { readonly form: "recall" };
 ```
 
 <a id="streamchunk--the-raw-protocol"></a>
@@ -167,7 +167,7 @@ type ContextFormed =
  */
 interface ReplayEnvelope {
   /** Response-level adapter-private metadata (ids, native stop reason). */
-  response: unknown
+  response: unknown;
   /**
    * Per-block adapter-private metadata, one entry per emitted block in
    * first-seen stream order. When assembly drops a block it drops the entry at
@@ -176,7 +176,7 @@ interface ReplayEnvelope {
    * of block structure omits this field and the envelope passes through
    * assembly unchanged.
    */
-  blocks?: readonly unknown[]
+  blocks?: readonly unknown[];
 }
 ```
 
@@ -190,18 +190,18 @@ interface ReplayEnvelope {
  * `error` or `aborted` finish before exposing it to consumers.
  */
 type StreamChunk =
-  | { type: 'block-start'; index: number; blockType: ContentBlockType }
-  | { type: 'text-delta'; index: number; text: string }
-  | { type: 'reasoning-delta'; index: number; text: string }
-  | { type: 'tool-call-delta'; index: number; id: CallId; name?: string; argumentsDelta: string }
-  | { type: 'block-end'; index: number; block: ContentBlock }
-  | { type: 'usage'; usage: TokenUsage }
+  | { type: "block-start"; index: number; blockType: ContentBlockType }
+  | { type: "text-delta"; index: number; text: string }
+  | { type: "reasoning-delta"; index: number; text: string }
+  | { type: "tool-call-delta"; index: number; id: CallId; name?: string; argumentsDelta: string }
+  | { type: "block-end"; index: number; block: ContentBlock }
+  | { type: "usage"; usage: TokenUsage }
   | {
-    type: 'finish'
-    reason: FinishReason
-    /** Replay metadata for a successful response; see {@link ReplayEnvelope}. */
-    replayState?: ReplayEnvelope
-  }
+      type: "finish";
+      reason: FinishReason;
+      /** Replay metadata for a successful response; see {@link ReplayEnvelope}. */
+      replayState?: ReplayEnvelope;
+    };
 ```
 
 <a id="llmfailure"></a>
@@ -214,15 +214,15 @@ type StreamChunk =
 /** Serializable provider or transport failure facts; policy decides whether they are retryable. */
 interface LlmFailure {
   /** Human-readable provider or transport failure. */
-  readonly message: string
+  readonly message: string;
   /** Stable provider-neutral machine-routing code. */
-  readonly code: string
+  readonly code: string;
   /** HTTP status returned by the provider, when available. */
-  readonly status?: number
+  readonly status?: number;
   /** Provider-requested delay in milliseconds, when valid and available. */
-  readonly providerRetryAfterMs?: number
+  readonly providerRetryAfterMs?: number;
   /** Opaque provider-issued request identifier for diagnostics. */
-  readonly requestId?: ProviderRequestId
+  readonly requestId?: ProviderRequestId;
 }
 ```
 
@@ -258,11 +258,11 @@ interface LlmFailure {
  */
 interface AppIdentity {
   /** `User-Agent` product token (lowercase, hyphenated). */
-  product: string
+  product: string;
   /** Product version; sourced from package metadata, never hand-copied. */
-  version: string
+  version: string;
   /** Repository home URL of the app, used as the `User-Agent` comment. */
-  url: string
+  url: string;
 }
 ```
 
@@ -282,11 +282,11 @@ interface AppIdentity {
  * prompt count (DeepSeek's `prompt_tokens`) subtract them out.
  */
 interface TokenUsage {
-  inputTokens: number
-  outputTokens: number
-  cacheReadTokens?: number
-  cacheWriteTokens?: number
-  reasoningTokens?: number
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  reasoningTokens?: number;
 }
 ```
 
@@ -347,7 +347,7 @@ declare class BlockAssembler {
    * @param source - producer attribution for the assembled message.
    * @returns a frozen assistant-role message over `blocks()` (same open-block assembly rules).
    */
-  message(source: MessageSource = { kind: 'plugin', plugin: 'dsh-llm/assembler' }): Message;
+  message(source: MessageSource = { kind: "plugin", plugin: "dsh-llm/assembler" }): Message;
 }
 ```
 
@@ -370,7 +370,7 @@ declare class BlockAssembler {
  */
 interface AdapterRegistrationHandle {
   /** Release every route this registration currently holds. */
-  (): void
+  (): void;
   /**
    * Replace this registration's routes with `providers`, keeping the same
    * adapter instance. The candidate set is validated in full first — a
@@ -385,7 +385,7 @@ interface AdapterRegistrationHandle {
    * so anything registered afterwards would have no owner left to release it.
    * @param providers - the complete next route set for this registration.
    */
-  replace(providers: string[]): void
+  replace(providers: string[]): void;
 }
 ```
 
@@ -393,9 +393,9 @@ interface AdapterRegistrationHandle {
 /** Display metadata for one registered provider route. */
 interface LlmProviderInfo {
   /** Provider route key used by {@link GenerateOptions.provider}. */
-  id: string
+  id: string;
   /** Human-readable provider name for selectors and diagnostics. */
-  name: string
+  name: string;
 }
 ```
 
@@ -410,16 +410,16 @@ interface LlmProviderInfo {
  */
 interface LlmConfigurableProvider {
   /** Provider route key this entry activates when configured. */
-  provider: string
+  provider: string;
   /** Human-readable provider name for configuration surfaces. */
-  displayName: string
+  displayName: string;
   /** User-settings namespace whose section configures this provider. */
-  settingsNs: string
+  settingsNs: string;
   /**
    * Path from that namespace's section root to this provider's profile
    * object; empty when the whole section is the profile.
    */
-  settingsPath: readonly string[]
+  settingsPath: readonly string[];
   /**
    * Whether the owning adapter knows this route only because configuration
    * declared it — a gateway or self-hosted server it ships nothing about.
@@ -428,7 +428,7 @@ interface LlmConfigurableProvider {
    * profile is how a user-added route AND a corrected shipped one both look
    * from outside.
    */
-  declared?: boolean
+  declared?: boolean;
 }
 ```
 
@@ -436,15 +436,15 @@ interface LlmConfigurableProvider {
 /** One adapter-discovered model; catalog membership is advisory, not request validation. */
 interface LlmModelInfo {
   /** Provider route that owns this model entry. */
-  provider: string
+  provider: string;
   /** Model id passed to {@link GenerateOptions.model}. */
-  id: string
+  id: string;
   /** Human-readable model name for selectors. */
-  name: string
+  name: string;
   /** Optional user-facing distinction from otherwise similar models. */
-  description?: string
+  description?: string;
   /** Accepted request modalities; absent means unknown, while an explicit omission is negative capability. */
-  inputModalities?: readonly ModelModality[]
+  inputModalities?: readonly ModelModality[];
 }
 ```
 
@@ -454,7 +454,7 @@ interface LlmModelInfo {
 /** Provider-owned context capacity for one exact provider/model route. */
 interface LlmModelContext {
   /** Maximum combined request and response context in tokens. */
-  contextWindow: number
+  contextWindow: number;
 }
 ```
 
@@ -462,18 +462,18 @@ interface LlmModelContext {
 
 ```ts type-equiv
 /** Adapter-owned identifier for one model's selectable reasoning effort. */
-type ReasoningEffortId = Branded<'ReasoningEffortId'>
+type ReasoningEffortId = Branded<"ReasoningEffortId">;
 ```
 
 ```ts type-equiv
 /** Display metadata for one adapter-owned reasoning effort. */
 interface LlmReasoningEffortInfo {
   /** Opaque stable value accepted by {@link GenerateOptions.reasoningEffort}. */
-  id: ReasoningEffortId
+  id: ReasoningEffortId;
   /** Human-readable effort name for selectors and diagnostics. */
-  name: string
+  name: string;
   /** Optional user-facing distinction from otherwise similar efforts. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -481,12 +481,12 @@ interface LlmReasoningEffortInfo {
 /** Selectable reasoning efforts for one exact provider/model route. */
 interface LlmModelReasoningInfo {
   /** Supported efforts in adapter-preferred display order. */
-  efforts: readonly LlmReasoningEffortInfo[]
+  efforts: readonly LlmReasoningEffortInfo[];
   /**
    * Adapter-configured default materialized into requests when callers omit
    * an effort. Absence preserves the provider's own default.
    */
-  defaultEffort?: ReasoningEffortId
+  defaultEffort?: ReasoningEffortId;
 }
 ```
 
@@ -494,11 +494,11 @@ interface LlmModelReasoningInfo {
 /** Exact-route model metadata resolved by its owning adapter. */
 interface LlmResolvedModelInfo extends LlmModelInfo {
   /** Provider-owned context capacity when known. */
-  context?: LlmModelContext
+  context?: LlmModelContext;
   /** Adapter-configured per-request output cap materialized when callers omit one. */
-  defaultMaxTokens?: number
+  defaultMaxTokens?: number;
   /** Adapter-owned selectable reasoning levels when exposed. */
-  reasoning?: LlmModelReasoningInfo
+  reasoning?: LlmModelReasoningInfo;
 }
 ```
 
@@ -506,40 +506,40 @@ interface LlmResolvedModelInfo extends LlmModelInfo {
 /** A single model request, fully assembled. */
 interface GenerateOptions {
   /** Registered provider route selecting the adapter instance. */
-  provider: string
-  model: string
+  provider: string;
+  model: string;
   /** Adapter-owned reasoning effort selected for this exact model. */
-  reasoningEffort?: ReasoningEffortId
+  reasoningEffort?: ReasoningEffortId;
   /**
    * Ordered conversation messages, exactly as the provider sees them (after
    * the `system` slot). A loop-built request assembles them as
    * the derived history (dsh-agent-loop); a hand-built one-shot passes any list.
    */
-  messages: Message[]
+  messages: Message[];
   /** System prompt text (adapters map to the provider's system slot). */
-  system?: string
+  system?: string;
   /** Tool schemas (adapters map to the provider's `tools` field). */
-  tools?: ToolSchema[]
-  temperature?: number
-  maxTokens?: number
+  tools?: ToolSchema[];
+  temperature?: number;
+  maxTokens?: number;
   /**
    * Stop sequences: generation halts as soon as the model produces any one of
    * these strings (adapters map to the provider's stop field, e.g. OpenAI
    * `stop`). The stop string itself is not included in the output.
    */
-  stop?: string[]
-  signal?: AbortSignal
+  stop?: string[];
+  signal?: AbortSignal;
   /**
    * Session identity stamped by the loop for request routing. Replay uses it
    * to separate cursors; adapters may map it to model-hidden transport metadata.
    */
-  sessionId?: Branded<'SessionId'>
+  sessionId?: Branded<"SessionId">;
   /**
    * Provider-neutral classification for an auxiliary model call. Adapters may
    * map the purpose to model-hidden transport metadata or purpose-specific
    * generation policy. Ordinary conversation requests leave it unset.
    */
-  purpose?: 'compaction' | 'session-title'
+  purpose?: "compaction" | "session-title";
 }
 ```
 
@@ -551,11 +551,11 @@ interface GenerateOptions {
  * Merge-extensible so adapters can surface provider-specific reasons.
  */
 interface FinishReasonMap {
-  'stop': { kind: 'stop' }
-  'tool-calls': { kind: 'tool-calls' }
-  'max-tokens': { kind: 'max-tokens' }
-  'aborted': { kind: 'aborted'; failure: LlmFailure }
-  'error': { kind: 'error'; failure: LlmFailure }
+  stop: { kind: "stop" };
+  "tool-calls": { kind: "tool-calls" };
+  "max-tokens": { kind: "max-tokens" };
+  aborted: { kind: "aborted"; failure: LlmFailure };
+  error: { kind: "error"; failure: LlmFailure };
 }
 ```
 
@@ -572,10 +572,10 @@ interface FinishReasonMap {
  * it from this package.
  */
 interface ToolSchema {
-  name: string
-  description: string
+  name: string;
+  description: string;
   /** JSON Schema object for the arguments. */
-  parameters: Record<string, unknown>
+  parameters: Record<string, unknown>;
 }
 ```
 
@@ -597,18 +597,18 @@ interface LlmModelDiscoveryRequest {
    * asking the endpoint — the adapter's own registry is the better answer, and
    * it costs no network call.
    */
-  provider?: string
+  provider?: string;
   /**
    * Endpoint to interrogate. Optional because a route the adapter already
    * describes needs none; a route it does not must supply one.
    */
-  baseURL?: string
+  baseURL?: string;
   /** Wire protocol the endpoint speaks, when the draft names one. */
-  api?: string
+  api?: string;
   /** Credential for this interrogation alone; the harness never stores it. */
-  apiKey?: string
+  apiKey?: string;
   /** Caller cancellation; implementations must settle promptly after it aborts. */
-  signal?: AbortSignal
+  signal?: AbortSignal;
 }
 ```
 
@@ -620,13 +620,13 @@ interface LlmModelDiscoveryRequest {
  */
 interface LlmDiscoveredModel {
   /** Model id the endpoint accepts. */
-  id: string
+  id: string;
   /** Human-readable name when the endpoint supplies one. */
-  name?: string
+  name?: string;
   /** Maximum combined request and response context, when disclosed. */
-  contextWindow?: number
+  contextWindow?: number;
   /** Maximum output tokens, when disclosed. */
-  maxTokens?: number
+  maxTokens?: number;
 }
 ```
 
@@ -648,12 +648,12 @@ FIXME(call-config-shape)：重新审视其余哪些字段出于缓存目的确�
  * per call.
  */
 interface LlmCallConfig {
-  provider: string
-  model: string
-  reasoningEffort?: ReasoningEffortId
-  temperature?: number
-  maxTokens?: number
-  stop?: string[]
+  provider: string;
+  model: string;
+  reasoningEffort?: ReasoningEffortId;
+  temperature?: number;
+  maxTokens?: number;
+  stop?: string[];
 }
 ```
 
@@ -663,8 +663,8 @@ interface LlmCallConfig {
  * than by the caller's request proposal.
  */
 interface LlmCallConfigAdapterDefaults {
-  reasoningEffort?: true
-  maxTokens?: true
+  reasoningEffort?: true;
+  maxTokens?: true;
 }
 ```
 
@@ -676,15 +676,15 @@ interface LlmCallConfigAdapterDefaults {
 /** One model call whose config and adapter registration were resolved together. */
 interface PreparedLlmCall {
   /** Detached, deep-frozen config with any adapter-owned default materialized. */
-  readonly config: LlmCallConfig
+  readonly config: LlmCallConfig;
   /** Immutable retry policy captured with the adapter registration. */
-  readonly retryPolicy: ResolvedRetryPolicy
+  readonly retryPolicy: ResolvedRetryPolicy;
   /** Detached context metadata resolved with the registration-bound call. */
-  readonly context?: LlmModelContext
+  readonly context?: LlmModelContext;
   /** Exact model modalities captured with the adapter dispatch generation. */
-  readonly inputModalities?: readonly ModelModality[]
+  readonly inputModalities?: readonly ModelModality[];
   /** Config fields materialized by the captured adapter rather than proposed by the caller. */
-  readonly adapterDefaults: LlmCallConfigAdapterDefaults
+  readonly adapterDefaults: LlmCallConfigAdapterDefaults;
   /**
    * Dispatch this call once through the registration captured during
    * preparation. The request's call-config fields must match {@link config};
@@ -692,7 +692,7 @@ interface PreparedLlmCall {
    * @param options - fully assembled request carrying the prepared config.
    * @returns the chunk stream, including the `llm/stream` waterfall.
    */
-  stream(options: GenerateOptions): AsyncIterable<StreamChunk>
+  stream(options: GenerateOptions): AsyncIterable<StreamChunk>;
 }
 ```
 
@@ -733,11 +733,7 @@ declare abstract class LlmAdapter {
    *   implementations must settle promptly after it aborts.
    * @returns provider/model identity plus any context, call-default, and reasoning metadata.
    */
-  resolveModel(
-    provider: string,
-    model: string,
-    _signal?: AbortSignal,
-  ): Promise<LlmResolvedModelInfo>;
+  resolveModel(provider: string, model: string, _signal?: AbortSignal): Promise<LlmResolvedModelInfo>;
   /**
    * Bind exact model metadata and the eventual request dispatch to one adapter generation.
    * Dynamic adapters override this so settings changes between preparation and
@@ -892,6 +888,56 @@ stream(options: GenerateOptions): AsyncIterable<StreamChunk>
 ```
 
 Source: [`packages/llm/llm/src/index.ts`](../../packages/llm/llm/src/index.ts)
+
+<a id="ctxmodels--modelrouter"></a>
+
+### `ctx.models` — `ModelRouter`
+
+Provider/model fallback router (`ctx.models`).
+
+```ts cordis-catalog
+/**
+ * Add or replace one fallback chain.
+ * @param from Source model route.
+ * @param to Ordered fallback routes.
+ */
+setFallbacks(from: ModelRoute, to: readonly ModelRoute[]): void
+
+/**
+ * Return a detached configured chain for diagnostics.
+ * @param from Source model route.
+ * @returns Detached ordered fallback chain.
+ */
+fallbacks(from: ModelRoute): readonly ModelRoute[]
+```
+
+Source: [`packages/llm/model-router/src/index.ts`](../../packages/llm/model-router/src/index.ts)
+
+<a id="ctxrecovery--recoveryservice"></a>
+
+### `ctx.recovery` — `RecoveryService`
+
+Ordered model-request recovery strategy registry (`ctx.recovery`).
+
+```ts cordis-catalog
+/**
+ * Register one recovery strategy.
+ * @param id Stable strategy identifier.
+ * @param run Recovery handler.
+ * @param options Ordering options.
+ * @returns Function that unregisters the strategy.
+ */
+register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void
+
+/**
+ * Resolve a failed request through registered strategies.
+ * @param request Failed request context.
+ * @returns First accepted recovery resolution, if any.
+ */
+async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined>
+```
+
+Source: [`packages/llm/recovery/src/index.ts`](../../packages/llm/recovery/src/index.ts)
 
 <a id="llm-events"></a>
 

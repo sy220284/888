@@ -60,33 +60,33 @@ flowchart LR
   cfg --> plugin_headless_tool_fs
 ```
 
-| Plugin id | Package / module |
-| --- | --- |
-| `settings` | `@deepseek-ai/dsh-settings-file` |
-| `credentials` | `@deepseek-ai/dsh-credentials-local` |
-| `llm-deepseek` | `@deepseek-ai/dsh-llm-deepseek` |
-| `subprocess` | `@deepseek-ai/dsh-subprocess-local` |
-| `bash` | `@deepseek-ai/dsh-bash-local` |
-| `agent-spine` | `@deepseek-ai/dsh-agent-spine-demo` |
-| `persistence` | `@deepseek-ai/dsh-session-persistence-jsonl` |
-| `checkpoint-policy` | `@deepseek-ai/dsh-session-checkpoint-policy` |
-| `token-meter` | `@deepseek-ai/dsh-token-meter` |
-| `compaction-basic` | `@deepseek-ai/dsh-compaction-basic` |
-| `session-projection` | `@deepseek-ai/dsh-session-projection` |
-| `subagent` | `@deepseek-ai/dsh-subagent` |
+| Plugin id                   | Package / module                             |
+| --------------------------- | -------------------------------------------- |
+| `settings`                  | `@deepseek-ai/dsh-settings-file`             |
+| `credentials`               | `@deepseek-ai/dsh-credentials-local`         |
+| `llm-deepseek`              | `@deepseek-ai/dsh-llm-deepseek`              |
+| `subprocess`                | `@deepseek-ai/dsh-subprocess-local`          |
+| `bash`                      | `@deepseek-ai/dsh-bash-local`                |
+| `agent-spine`               | `@deepseek-ai/dsh-agent-spine-demo`          |
+| `persistence`               | `@deepseek-ai/dsh-session-persistence-jsonl` |
+| `checkpoint-policy`         | `@deepseek-ai/dsh-session-checkpoint-policy` |
+| `token-meter`               | `@deepseek-ai/dsh-token-meter`               |
+| `compaction-basic`          | `@deepseek-ai/dsh-compaction-basic`          |
+| `session-projection`        | `@deepseek-ai/dsh-session-projection`        |
+| `subagent`                  | `@deepseek-ai/dsh-subagent`                  |
 | `subagent-spawn-in-process` | `@deepseek-ai/dsh-subagent-spawn-in-process` |
-| `subagent-fork-in-process` | `@deepseek-ai/dsh-subagent-fork-in-process` |
-| `tool-subagent-control` | `@deepseek-ai/dsh-tool-subagent-control` |
-| `tool-subagent-report` | `@deepseek-ai/dsh-tool-subagent-report` |
-| `tool-subagent` | `@deepseek-ai/dsh-tool-subagent` |
-| `tool-subagent-fork` | `@deepseek-ai/dsh-tool-subagent` |
-| `workflow-worker-thread` | `@deepseek-ai/dsh-workflow-worker-thread` |
-| `tool-workflow` | `@deepseek-ai/dsh-tool-workflow` |
-| `tool-ralph` | `@deepseek-ai/dsh-tool-ralph` |
-| `tool-todo` | `@deepseek-ai/dsh-tool-todo` |
-| `fs-local` | `@deepseek-ai/dsh-fs-local` |
-| `fs-observation-policy` | `@deepseek-ai/dsh-fs-observation-policy` |
-| `tool-fs` | `@deepseek-ai/dsh-tool-fs` |
+| `subagent-fork-in-process`  | `@deepseek-ai/dsh-subagent-fork-in-process`  |
+| `tool-subagent-control`     | `@deepseek-ai/dsh-tool-subagent-control`     |
+| `tool-subagent-report`      | `@deepseek-ai/dsh-tool-subagent-report`      |
+| `tool-subagent`             | `@deepseek-ai/dsh-tool-subagent`             |
+| `tool-subagent-fork`        | `@deepseek-ai/dsh-tool-subagent`             |
+| `workflow-worker-thread`    | `@deepseek-ai/dsh-workflow-worker-thread`    |
+| `tool-workflow`             | `@deepseek-ai/dsh-tool-workflow`             |
+| `tool-ralph`                | `@deepseek-ai/dsh-tool-ralph`                |
+| `tool-todo`                 | `@deepseek-ai/dsh-tool-todo`                 |
+| `fs-local`                  | `@deepseek-ai/dsh-fs-local`                  |
+| `fs-observation-policy`     | `@deepseek-ai/dsh-fs-observation-policy`     |
+| `tool-fs`                   | `@deepseek-ai/dsh-tool-fs`                   |
 
 Source config: [`examples/headless-agent/cordis.yml`](cordis.yml).
 

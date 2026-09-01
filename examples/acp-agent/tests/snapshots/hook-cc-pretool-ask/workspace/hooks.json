@@ -4,7 +4,10 @@
       {
         "matcher": "bash",
         "hooks": [
-          { "type": "command", "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"bash requires manual approval in this session\"}}'" }
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"bash requires manual approval in this session\"}}'"
+          }
         ]
       }
     ]

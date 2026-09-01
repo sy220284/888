@@ -36,7 +36,7 @@
       "requiredBy": ["test", "native", "full"]
     },
     "python": {
-      "minimumVersion": "3.10",
+      "minimumVersion": "3.10.0",
       "sourceOfTruth": "python/sdk/pyproject.toml#project.requires-python",
       "requiredBy": ["python", "full"]
     },
@@ -51,10 +51,6 @@
     "powershell": {
       "versionPolicy": "system-or-project-compatible",
       "optional": true,
-      "requiredBy": ["full"]
-    },
-    "psscriptanalyzer": {
-      "version": "1.25.0",
       "requiredBy": ["full"]
     }
   },

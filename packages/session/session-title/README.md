@@ -21,11 +21,11 @@ Forks inherit title events in their seed unchanged. The first-prompt cadence doe
 
 All limits are required; the library supplies no defaults.
 
-| Key | Contract |
-|---|---|
-| `fallbackMaxWords` | Positive maximum whitespace-delimited words in the deterministic fallback. |
+| Key                | Contract                                                                       |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `fallbackMaxWords` | Positive maximum whitespace-delimited words in the deterministic fallback.     |
 | `fallbackMaxBytes` | Positive maximum UTF-8 bytes in the fallback; must not exceed `maxTitleBytes`. |
-| `maxTitleBytes` | Positive maximum UTF-8 bytes accepted from any source. |
+| `maxTitleBytes`    | Positive maximum UTF-8 bytes accepted from any source.                         |
 
 ## Provider contract
 

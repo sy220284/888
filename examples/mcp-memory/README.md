@@ -14,11 +14,11 @@ The stdio bridge deliberately removes ambient variables whose names usually iden
 
 ## Choose one
 
-| System | Tested pin | Transport | Upstream prerequisite |
-|---|---:|---|---|
-| [Memorix](https://github.com/AVIDS2/memorix) | `memorix@1.3.0` (`500792cad3144142293bfbb20acb4841c9f7fcfa`) | stdio | Node 22.18+ and `npm install --global memorix@1.3.0` |
-| [MCP Reference Memory](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) | `@modelcontextprotocol/server-memory@2026.7.4` (`6dd0a683e198783e30feabf7abaf42f925bd18b1`) | stdio | `npm install --global @modelcontextprotocol/server-memory@2026.7.4` |
-| [Engram](https://github.com/Gentleman-Programming/engram) | `v1.20.0` (`ba9e46ced152c37a7cb9e576153c41995873e2fc`) | stdio | Go 1.25.10+ and `go install github.com/Gentleman-Programming/engram/cmd/engram@v1.20.0`, or the matching release binary |
+| System                                                                                       |                                                                                  Tested pin | Transport | Upstream prerequisite                                                                                                   |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------: | --------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [Memorix](https://github.com/AVIDS2/memorix)                                                 |                                `memorix@1.3.0` (`500792cad3144142293bfbb20acb4841c9f7fcfa`) | stdio     | Node 22.18+ and `npm install --global memorix@1.3.0`                                                                    |
+| [MCP Reference Memory](https://github.com/modelcontextprotocol/servers/tree/main/src/memory) | `@modelcontextprotocol/server-memory@2026.7.4` (`6dd0a683e198783e30feabf7abaf42f925bd18b1`) | stdio     | `npm install --global @modelcontextprotocol/server-memory@2026.7.4`                                                     |
+| [Engram](https://github.com/Gentleman-Programming/engram)                                    |                                      `v1.20.0` (`ba9e46ced152c37a7cb9e576153c41995873e2fc`) | stdio     | Go 1.25.10+ and `go install github.com/Gentleman-Programming/engram/cmd/engram@v1.20.0`, or the matching release binary |
 
 ## Enable one
 
@@ -88,7 +88,7 @@ Copy the same entry fields and use a unique `id` and `serverName`:
 ```yaml
 - insert:
     - id: memory-my-server
-      name: '@deepseek-ai/dsh-mcp-client'
+      name: "@deepseek-ai/dsh-mcp-client"
       config:
         serverName: my-memory
         transport: stdio

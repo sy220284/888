@@ -7,15 +7,15 @@
 调用方注册适配器和可选插件，使用待测配置挂载 `AgentLoop`，并 dispose（资源释放）自己的 Context。系统提示词和工具注册表配置可通过 `options` 转发；该辅助函数不提供超出服务自有默认值的测试默认值。插件加载失败会使辅助函数调用被拒绝，而顺序中较早激活的服务仍归调用方的 Context 所有。
 
 ```ts
-import { Context } from '@deepseek-ai/cordis'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from "@deepseek-ai/cordis";
+import AgentLoop from "@deepseek-ai/dsh-agent-loop";
+import { mountAgentLoopTestDependencies } from "@deepseek-ai/dsh-agent-loop-testkit";
 
-const ctx = new Context()
+const ctx = new Context();
 
-await mountAgentLoopTestDependencies(ctx)
+await mountAgentLoopTestDependencies(ctx);
 // Register the test adapter and any optional plugins here.
-await ctx.plugin(AgentLoop, { agents: [] })
+await ctx.plugin(AgentLoop, { agents: [] });
 ```
 
 针对注入失败、部分拓扑、服务加载顺序或服务清理的测试会直接挂载其依赖，而不使用此辅助函数。

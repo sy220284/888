@@ -12,31 +12,31 @@ Requires `ctx.skills` (`inject: ['skills']`).
 
 ### Config
 
-| Field | Default | Meaning |
-|---|---|---|
-| `providerName` | `filesystem` | Unique name used to register this provider on `ctx.skills`. |
-| `includeDefaultRoots` | `true` | Include project and user roots around `customSkillDirs`; set false for an isolated custom-root provider. |
-| `dshHome` | `$DSH_HOME` or `~/.dsh` | DeepSeek Harness config root resolved by [`@deepseek-ai/dsh-home-paths`](../../util/home-paths/README.md); scans `skills` under this directory. |
-| `agentsHome` | `$DSH_AGENTS_HOME` or `~/.agents` | Shared agent config root scanned for compatible skills. |
-| `customSkillDirs` | `[]` | Additional local skill roots scanned after project roots and before user roots. |
-| `watch` | `true` | Watch host-local roots and invalidate the local provider when catalog membership or frontmatter may have changed. |
-| `watchUsePolling` | `false` | Use Chokidar polling instead of native events for existing skill roots. |
-| `watchStabilityThresholdMs` | `200` | Stable-write window for Chokidar `add` and `change` events. |
-| `watchPollIntervalMs` | `100` | Chokidar polling/stability interval and missing-path probe interval. |
-| `watchMaxProjects` | `128` | Maximum distinct project roots retained in the watcher LRU. |
-| `watchFollowSymlinks` | `true` | Follow symbolic links while watching existing roots. |
+| Field                       | Default                           | Meaning                                                                                                                                         |
+| --------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `providerName`              | `filesystem`                      | Unique name used to register this provider on `ctx.skills`.                                                                                     |
+| `includeDefaultRoots`       | `true`                            | Include project and user roots around `customSkillDirs`; set false for an isolated custom-root provider.                                        |
+| `dshHome`                   | `$DSH_HOME` or `~/.dsh`           | DeepSeek Harness config root resolved by [`@deepseek-ai/dsh-home-paths`](../../util/home-paths/README.md); scans `skills` under this directory. |
+| `agentsHome`                | `$DSH_AGENTS_HOME` or `~/.agents` | Shared agent config root scanned for compatible skills.                                                                                         |
+| `customSkillDirs`           | `[]`                              | Additional local skill roots scanned after project roots and before user roots.                                                                 |
+| `watch`                     | `true`                            | Watch host-local roots and invalidate the local provider when catalog membership or frontmatter may have changed.                               |
+| `watchUsePolling`           | `false`                           | Use Chokidar polling instead of native events for existing skill roots.                                                                         |
+| `watchStabilityThresholdMs` | `200`                             | Stable-write window for Chokidar `add` and `change` events.                                                                                     |
+| `watchPollIntervalMs`       | `100`                             | Chokidar polling/stability interval and missing-path probe interval.                                                                            |
+| `watchMaxProjects`          | `128`                             | Maximum distinct project roots retained in the watcher LRU.                                                                                     |
+| `watchFollowSymlinks`       | `true`                            | Follow symbolic links while watching existing roots.                                                                                            |
 
 ## Discovery
 
 Default roots are resolved in this provider's rank order:
 
-| Rank | Source | Path |
-|---|---|---|
-| 100 | `project-dsh` | `<projectRoot>/.dsh/skills` |
-| 200 | `project-agents` | `<projectRoot>/.agents/skills` |
-| 300 | `custom` | `Config.customSkillDirs` |
-| 400 | `user-dsh` | `<dshHome>/skills` |
-| 500 | `user-agents` | `<agentsHome>/skills` |
+| Rank | Source           | Path                           |
+| ---- | ---------------- | ------------------------------ |
+| 100  | `project-dsh`    | `<projectRoot>/.dsh/skills`    |
+| 200  | `project-agents` | `<projectRoot>/.agents/skills` |
+| 300  | `custom`         | `Config.customSkillDirs`       |
+| 400  | `user-dsh`       | `<dshHome>/skills`             |
+| 500  | `user-agents`    | `<agentsHome>/skills`          |
 
 The project root is the nearest ancestor containing `.git`; without one, the current cwd is used. The user DSH root skips its `.system` child so system-owned directories are not treated as normal user skills. `includeDefaultRoots: false` omits the project and user rows and the `$DSH_BUNDLED_SKILL_DIR` environment default while retaining explicitly configured custom and bundled roots, allowing several uniquely named isolated providers to see only their own roots. This provider supplies project and user skills; another provider may supply built-in system skills.
 

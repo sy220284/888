@@ -10,17 +10,17 @@ Source: [`packages/host/webserver/src/index.ts`](../../packages/host/webserver/s
 
 ```ts type-equiv
 /** Route match kind: 'exact' matches the pathname verbatim; 'prefix' p matches p and p/<anything>. */
-type WebRouteKind = 'exact' | 'prefix'
+type WebRouteKind = "exact" | "prefix";
 ```
 
 ```ts type-equiv
 /** One named route registration. */
 interface WebRoute {
-  kind: WebRouteKind
+  kind: WebRouteKind;
   /** Absolute pathname, no trailing slash. */
-  path: string
+  path: string;
   /** Owns the full response lifecycle (may hold the response open, e.g. SSE). */
-  handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
+  handler: (req: IncomingMessage, res: ServerResponse) => void | Promise<void>;
 }
 ```
 
@@ -32,9 +32,9 @@ Match order is fixed: exact table first, then longest matching prefix, then the 
 /** Gateway config: the listen address. */
 interface Config {
   /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
+  host: "127.0.0.1" | "0.0.0.0";
   /** Listen port; zero requests an OS-assigned port. */
-  port: number
+  port: number;
 }
 ```
 

@@ -11,33 +11,37 @@ The two halves live in one package — the Host half under `src/`, the browser h
 The namespace is the join key, so pick it once and spell it in both halves. A consumer that already has a `cordis.yml` entry should register through `installSettingsSection`, which layers the entry under the user document and keeps working when no settings provider is mounted:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from "@deepseek-ai/cordis";
+import { installSettingsSection, settingsNamespace } from "@deepseek-ai/dsh-settings";
+import z from "@deepseek-ai/schemastery";
 
-declare function assertReachable(endpoint: string | undefined): void
-declare function rebuildFromSettings(config: Config): void
+declare function assertReachable(endpoint: string | undefined): void;
+declare function rebuildFromSettings(config: Config): void;
 
-export const MY_PLUGIN_NS = settingsNamespace('my-plugin')
+export const MY_PLUGIN_NS = settingsNamespace("my-plugin");
 
 export interface Config {
-  endpoint?: string
-  retries?: number
+  endpoint?: string;
+  retries?: number;
 }
 
 export const Config: z<Config> = z.object({
   endpoint: z.string(),
   retries: z.number().step(1).min(0).default(3),
-})
+});
 
 export function apply(ctx: Context, config: Config) {
-  let source = () => config
+  let source = () => config;
   installSettingsSection(ctx, MY_PLUGIN_NS, Config, config, {
     // Constraints the schema cannot express refuse the write, not the next use.
-    validate: value => void assertReachable(value.endpoint),
-    setSource: (current) => { source = current },
-    onChange: () => { rebuildFromSettings(source()) },
-  })
+    validate: (value) => void assertReachable(value.endpoint),
+    setSource: (current) => {
+      source = current;
+    },
+    onChange: () => {
+      rebuildFromSettings(source());
+    },
+  });
 }
 ```
 
@@ -48,22 +52,26 @@ export function apply(ctx: Context, config: Config) {
 The card registers into `settings.plugin.item` under its namespace and owns everything inside it — chrome, controls, and copy. It reads and writes through `ctx.settingsScope`, which fences each write with the revision it read:
 
 ```ts ignore-check
-import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ClientContext } from "@deepseek-ai/dsh-client-runtime/client";
 // Type-only: the keyed slot's declaration. Cross-plugin collaboration goes
 // through cordis services; a value import fails the client bundle-purity gate.
-import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+import type {} from "@deepseek-ai/dsh-client-ui-settings-plugins/client";
 
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
+export const inject = ["slots", "locale", "connection", "remote", "settingsScope"];
 
 export function apply(ctx: ClientContext): void {
-  const card = new MyPluginCardController(ctx.settingsScope.bind({ namespace: 'my-plugin' }))
-  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
-    name: 'settings.plugin.item',
-    key: 'my-plugin',
-    locale: 'settings.myPlugin',
-    inject: () => card.inject(),
-  }, MyPluginCard),
-  )
+  const card = new MyPluginCardController(ctx.settingsScope.bind({ namespace: "my-plugin" }));
+  ctx.slots.inject("settings.plugin.item", () =>
+    ctx.slots.register(
+      {
+        name: "settings.plugin.item",
+        key: "my-plugin",
+        locale: "settings.myPlugin",
+        inject: () => card.inject(),
+      },
+      MyPluginCard,
+    ),
+  );
 }
 ```
 
@@ -83,18 +91,18 @@ The browser half is served to the page by the [client module system](../../packa
 {
   "exports": {
     ".": { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" }
+    "./client": { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
   },
-  "dsh": { "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-settings-plugins"] } }
+  "dsh": { "client": { "platform": "web", "inject": ["@deepseek-ai/dsh-client-ui-settings-plugins"] } },
 }
 ```
 
 The bundle must be the loader's lazy-CJS factory artifact. Inside this repository `tsdown.config.ts` is three lines over the shared preset:
 
 ```ts ignore-check
-import { clientBundle } from '../tsdown.client.ts'
+import { clientBundle } from "../tsdown.client.ts";
 
-export default clientBundle('@deepseek-ai/dsh-client-my-plugin', ['lib/types/index.js', 'lib/types/invariant.js'])
+export default clientBundle("@deepseek-ai/dsh-client-my-plugin", ["lib/types/index.js", "lib/types/invariant.js"]);
 ```
 
 That preset is not published today, so a package outside this repository has to reproduce the same output format itself. The bundle-purity gate also rejects value imports across plugins, so a card cannot import this section's card chrome or its staged-form model — it renders its own, and owns its own staging and revision fencing. Both limits are recorded under [the section's known limitations](../../packages/client/ui-settings-plugins/README.md#known-limitations-and-deferred-work).

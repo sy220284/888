@@ -1,19 +1,25 @@
 import type { BudgetDimension, BudgetVector, GlobalBudgetSnapshot } from './types.ts'
 
+/** Ordered set of dimensions accepted in budget vectors. */
 export const BUDGET_DIMENSIONS: readonly BudgetDimension[] = [
   'tokens', 'costMicros', 'wallTimeMs', 'toolCalls', 'agentStarts', 'riskPoints',
 ]
 
 function assertVector(vector: BudgetVector, label: string): void {
-  for (const [key, value] of Object.entries(vector)) {
+  for (const [key, value] of Object.entries(vector) as Array<[string, unknown]>) {
     if (!BUDGET_DIMENSIONS.includes(key as BudgetDimension)) throw new TypeError(`${label}: unknown dimension ${key}`)
-    if (value === undefined || !Number.isSafeInteger(value) || value < 0) {
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
       throw new TypeError(`${label}.${key} must be a non-negative safe integer`)
     }
   }
 }
 
-/** Add two sparse budget vectors without mutating either. */
+/**
+ * Add two sparse budget vectors without mutating either.
+ * @param left - current budget values.
+ * @param right - values to add.
+ * @returns the summed sparse vector.
+ */
 export function addBudget(left: BudgetVector, right: BudgetVector): BudgetVector {
   assertVector(left, 'budget')
   assertVector(right, 'charge')
@@ -30,6 +36,9 @@ export function addBudget(left: BudgetVector, right: BudgetVector): BudgetVector
  * Monotonically narrow deployment limits with a delegated ceiling. An
  * unbounded side adopts the bounded side; when both are bounded the smaller
  * value wins. The result can never widen either input.
+ * @param base - locally configured limits.
+ * @param ceiling - optional delegated upper bounds.
+ * @returns the intersection of both limit vectors.
  */
 export function narrowBudgetLimits(base: BudgetVector, ceiling?: BudgetVector): BudgetVector {
   assertVector(base, 'runtime budget limits')
@@ -49,7 +58,12 @@ export function narrowBudgetLimits(base: BudgetVector, ceiling?: BudgetVector): 
   return limits
 }
 
-/** Build remaining values only for dimensions that have configured limits. */
+/**
+ * Build remaining values only for dimensions that have configured limits.
+ * @param limits - configured upper bounds.
+ * @param consumed - debits already charged.
+ * @returns remaining values for bounded dimensions.
+ */
 export function remainingBudget(limits: BudgetVector, consumed: BudgetVector): BudgetVector {
   assertVector(limits, 'limits')
   assertVector(consumed, 'consumed')
@@ -61,7 +75,13 @@ export function remainingBudget(limits: BudgetVector, consumed: BudgetVector): B
   return remaining
 }
 
-/** Return the first dimension a proposed charge would exceed, or undefined when it fits. */
+/**
+ * Return the first dimension a proposed charge would exceed.
+ * @param limits - configured upper bounds.
+ * @param consumed - debits already charged.
+ * @param charge - proposed additional debit.
+ * @returns the first exceeded dimension, or undefined when the charge fits.
+ */
 export function budgetExceeded(limits: BudgetVector, consumed: BudgetVector, charge: BudgetVector): BudgetDimension | undefined {
   assertVector(limits, 'limits')
   assertVector(consumed, 'consumed')
@@ -74,12 +94,23 @@ export function budgetExceeded(limits: BudgetVector, consumed: BudgetVector, cha
   return undefined
 }
 
+/**
+ * Build an immutable-style snapshot of one global budget ledger.
+ * @param limits - configured upper bounds.
+ * @param consumed - debits already charged.
+ * @returns copied limits, consumption, and derived remaining values.
+ */
 export function budgetSnapshot(limits: BudgetVector, consumed: BudgetVector): GlobalBudgetSnapshot {
   assertVector(limits, 'limits')
   assertVector(consumed, 'consumed')
   return { limits: { ...limits }, consumed: { ...consumed }, remaining: remainingBudget(limits, consumed) }
 }
 
+/**
+ * Assert that a sparse budget vector contains only valid dimensions and values.
+ * @param vector - vector to validate.
+ * @param label - diagnostic name for validation errors.
+ */
 export function assertBudgetVector(vector: BudgetVector, label = 'budget'): void {
   assertVector(vector, label)
 }

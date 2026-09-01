@@ -6,8 +6,8 @@ How to translate between the two sides of a documentation pair in this repo. Bot
 
 ## Faithfulness
 
-- The counterpart *MUST* say what the authored side says — no added behavior, prerequisites, warnings, version claims, or examples, and no dropped ones. If the pair disagrees on substance, neither language wins by default: fix the side that is wrong, then bring the other along in the same change.
-- The counterpart *SHOULD* read as natural technical writing in its own language, not word-by-word gloss. Translate meaning, restructure sentences where the target grammar wants it, and keep the author's register — terse stays terse.
+- The counterpart _MUST_ say what the authored side says — no added behavior, prerequisites, warnings, version claims, or examples, and no dropped ones. If the pair disagrees on substance, neither language wins by default: fix the side that is wrong, then bring the other along in the same change.
+- The counterpart _SHOULD_ read as natural technical writing in its own language, not word-by-word gloss. Translate meaning, restructure sentences where the target grammar wants it, and keep the author's register — terse stays terse.
 - Do not translate the untranslatable: if a sentence resists natural rendering because it leans on an idiom of the source language, translate the idea, not the idiom.
 
 ## Voice
@@ -44,7 +44,7 @@ These rules govern the Chinese side; the English side follows the repo's normal 
 
 - MUST put one half-width space between Chinese text and Latin words, and between Chinese text and numerals: `每个 plugin 注册 3 个 tool`。No space between a full-width punctuation mark and anything.
 - MUST use full-width (Chinese) punctuation in Chinese prose: `，。：；？！（）「」`. Half-width punctuation stays inside code spans, inside complete English sentences quoted as-is, and in numbers (`3.5`, `1,024`).
-- Chinese prose *SHOULD* prefer colons, periods, commas, or parentheses over em dashes. Keep an em dash only when no other punctuation preserves the sentence naturally.
+- Chinese prose _SHOULD_ prefer colons, periods, commas, or parentheses over em dashes. Keep an em dash only when no other punctuation preserves the sentence naturally.
 - Enumeration commas: a Chinese list of parallel items uses 顿号（、）, not commas.
 - MUST NOT use full-width digits or full-width Latin letters — `１２３` never, `123` always.
 - Proper nouns keep their canonical casing: GitHub, TypeScript, DeepSeek — never `github`/`Github` unless quoting code.

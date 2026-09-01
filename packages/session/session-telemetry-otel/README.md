@@ -19,11 +19,11 @@ The OpenTelemetry backend for [the telemetry seam](../session-telemetry/) — th
     processor: {}            # optional; passed verbatim to BatchLogRecordProcessor
 ```
 
-| `mode` | Behavior |
-|---|---|
-| `FULL` | Each projected record, including lifecycle ops records, is handed to the OTel SDK immediately. |
-| `FEEDBACK_ONLY` | Each `feedback/record` replays, projects, and redacts the canonical session-log suffix through that event. Later records wait for another feedback event and remain local if none arrives. |
-| `DISABLED` | Default. No coordinator, provider, processor, or exporter is constructed. No telemetry record leaves the process. A `feedback/record` logs `session sessionTelemetry is DISABLED; nothing will be shared and this feedback remains local`; the event remains in the local session log. |
+| `mode`          | Behavior                                                                                                                                                                                                                                                                               |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FULL`          | Each projected record, including lifecycle ops records, is handed to the OTel SDK immediately.                                                                                                                                                                                         |
+| `FEEDBACK_ONLY` | Each `feedback/record` replays, projects, and redacts the canonical session-log suffix through that event. Later records wait for another feedback event and remain local if none arrives.                                                                                             |
+| `DISABLED`      | Default. No coordinator, provider, processor, or exporter is constructed. No telemetry record leaves the process. A `feedback/record` logs `session sessionTelemetry is DISABLED; nothing will be shared and this feedback remains local`; the event remains in the local session log. |
 
 Programmatic TypeScript configuration uses the exported `SessionTelemetryMode` enum (`SessionTelemetryMode.FULL`, `SessionTelemetryMode.FEEDBACK_ONLY`, or `SessionTelemetryMode.DISABLED`); raw string literals are not assignable. Serialized Cordis configuration continues to use the string values shown above.
 

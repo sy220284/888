@@ -8,11 +8,11 @@ The package root exports the default and named `SandboxBashExecutor` plugin plus
 
 Every command is confined by handing the provider the exact `['bash', '-c', command]` argv this executor is about to spawn and spawning the returned argv directly. With the shipped native runners, the inner Bash retains shell semantics and evaluates `BASH_ENV` only after the runner establishes confinement. WHICH platform runner confines it — and whether one is usable at all (fail closed with a structured `SANDBOX_UNAVAILABLE` error, never a silent unconfined run) — is the provider's concern; this package owns the bash side only.
 
-| Mode | File effects |
-|---|---|
-| `read-only` (default) | No writes anywhere (of `/dev`, only the `/dev/null` node is writable, so `>/dev/null` keeps working) |
-| `workspace-write` | Writes only under `workspaceRoot` + `/tmp` (ephemeral under bwrap, the host `/tmp` under Landlock, `/private/tmp` plus the per-user temp dir under Seatbelt) |
-| `danger-full-access` | No confinement; the provider is never consulted. Foreground results carry `sandbox: { mode, denied: false }`; background process handles carry no sandbox facts. |
+| Mode                  | File effects                                                                                                                                                     |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `read-only` (default) | No writes anywhere (of `/dev`, only the `/dev/null` node is writable, so `>/dev/null` keeps working)                                                             |
+| `workspace-write`     | Writes only under `workspaceRoot` + `/tmp` (ephemeral under bwrap, the host `/tmp` under Landlock, `/private/tmp` plus the per-user temp dir under Seatbelt)     |
+| `danger-full-access`  | No confinement; the provider is never consulted. Foreground results carry `sandbox: { mode, denied: false }`; background process handles carry no sandbox facts. |
 
 Semantics:
 
@@ -26,14 +26,14 @@ Deny-only at the seam: a denial is a reported fact, and this executor never nego
 
 ```yaml
 - id: sandbox
-  name: '@deepseek-ai/dsh-sandbox-local'
+  name: "@deepseek-ai/dsh-sandbox-local"
 - id: sandbox-policy
-  name: '@deepseek-ai/dsh-sandbox-policy'
+  name: "@deepseek-ai/dsh-sandbox-policy"
   config:
     mode: read-only
     workspaceRoot: !!js process.cwd() # fallback for calls without a session cwd
 - id: bash
-  name: '@deepseek-ai/dsh-bash-sandbox'
+  name: "@deepseek-ai/dsh-bash-sandbox"
 ```
 
 ## Model Experience

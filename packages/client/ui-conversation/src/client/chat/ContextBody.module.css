@@ -71,7 +71,6 @@
   color: var(--dsw-alias-label-caption);
 }
 
-
 .entries {
   display: flex;
   flex-direction: column;

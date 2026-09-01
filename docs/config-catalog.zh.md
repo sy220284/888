@@ -21,11 +21,11 @@
 /** Plugin config: the provider/model selection used for each ACP-created agent. */
 export interface AcpConfig {
   /** Provider route for created agents. */
-  provider?: string
+  provider?: string;
   /** Model name for created agents. */
-  model?: string
+  model?: string;
   /** Runtime-only transport override; production uses stdio. */
-  stream?: Stream
+  stream?: Stream;
 }
 ```
 
@@ -48,39 +48,39 @@ export interface AcpConfig {
  */
 export interface Config {
   /** Provider route for ACP-created agents. */
-  provider: string
+  provider: string;
   /** Model name for ACP-created agents (must have a registered adapter). */
-  model: string
+  model: string;
   /** Bundled agent-loop concurrency cap; `1` is serial and omission uses its default. */
-  maxParallelToolCalls?: number
+  maxParallelToolCalls?: number;
   /** Deployment persona (the system-prompt plugin's `persona` config). */
-  persona?: string
+  persona?: string;
   /** Explicit model-facing tool order (the system-prompt plugin's `toolOrder` config; see dsh-system-prompt). */
-  toolOrder?: string[]
+  toolOrder?: string[];
   /** Tool-registry config — its presentation `mode` (forwarded through agent-spine-demo; see dsh-tools). */
-  tools?: ToolsConfig
+  tools?: ToolsConfig;
   /** DeepSeek Harness home directory exposed to bash and used for local skill discovery. */
-  dshHome?: string
+  dshHome?: string;
   /** Fallback session-title limits forwarded through agent-spine-demo. */
-  sessionTitle?: NonNullable<agentCore.Config['sessionTitle']>
+  sessionTitle?: NonNullable<agentCore.Config["sessionTitle"]>;
   /** Directory for JSONL sessions and the derived query index. Defaults to `./.sessions`. */
-  persistenceRoot?: string
+  persistenceRoot?: string;
   /** Write delta-chunk runs as packed storage rows (the JSONL backend's `packChunks`). Defaults to `true`. */
-  packChunks?: boolean
+  packChunks?: boolean;
   /** JSONL artifact encoding; defaults to checksummed Zstandard frames. */
-  persistenceCompression?: JsonlCompression
+  persistenceCompression?: JsonlCompression;
   /** Controls automatic AGENTS.md/CLAUDE.md loading; configure a byte budget or set `false`. */
-  workspaceContext: agentCore.Config['workspaceContext']
+  workspaceContext: agentCore.Config["workspaceContext"];
   /** Skill registry, local-provider, and model-facing consumer config forwarded to agent-spine-demo. */
-  skills?: agentCore.SkillConfig
+  skills?: agentCore.SkillConfig;
   /** Model-facing bash tool config forwarded through agent-core. */
-  toolBash?: NonNullable<agentCore.Config['toolBash']>
+  toolBash?: NonNullable<agentCore.Config["toolBash"]>;
   /** Process-local background-job admission config forwarded through agent-core. */
-  jobs?: NonNullable<agentCore.Config['jobs']>
+  jobs?: NonNullable<agentCore.Config["jobs"]>;
   /** Generic background-job controls forwarded through agent-core; set false to omit their tools. */
-  toolJobs?: NonNullable<agentCore.Config['toolJobs']>
+  toolJobs?: NonNullable<agentCore.Config["toolJobs"]>;
   /** Persisted same-session goals; owner defaults enable them, or false disables the stack and tools. */
-  goals?: agentCore.GoalConfig | false
+  goals?: agentCore.GoalConfig | false;
 }
 ```
 
@@ -96,9 +96,9 @@ export interface Config {
 /** Composition entry for the default model selection. */
 export interface Config {
   /** Registered provider route. */
-  provider: string
+  provider: string;
   /** Provider-owned model id. */
-  model: string
+  model: string;
 }
 ```
 
@@ -112,23 +112,23 @@ export interface Config {
 /** User-facing workspace instruction loader configuration. */
 export interface Config {
   /** Harness home containing the fixed user-global `AGENTS.md`; defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  dshHome?: string;
   /** Directory entries that identify the project root while walking upward from the session cwd. */
-  projectRootMarkers?: string[]
+  projectRootMarkers?: string[];
   /** UTF-8 byte cap for one rendered baseline or dynamic batch; non-positive or non-finite disables loading. */
-  maxBytes: number
+  maxBytes: number;
   /** Maximum UTF-8 bytes read from one instruction file; larger files are ignored. */
-  maxSourceBytes?: number
+  maxSourceBytes?: number;
   /**
    * Ordered same-directory project candidates; every existing file loads, with
    * per-directory trimmed-content duplicates collapsed to the earliest candidate.
    */
-  instructionFileCandidates?: string[]
+  instructionFileCandidates?: string[];
   /**
    * Ordered same-directory local-overlay candidates loaded after the base files
    * under the same per-directory trimmed-content dedup; empty disables the overlay.
    */
-  localInstructionFileCandidates?: string[]
+  localInstructionFileCandidates?: string[];
 }
 ```
 
@@ -147,18 +147,18 @@ export interface Config {
    * Maximum parallel-safe calls in flight per agent step. `1` is serial;
    * omission defaults to {@link DEFAULT_MAX_PARALLEL_TOOL_CALLS}.
    */
-  maxParallelToolCalls?: number
+  maxParallelToolCalls?: number;
   /** Agents created or resumed at plugin startup. */
   agents: (AgentOptions & {
     /** Stable config label used in logs and as the fresh combined-id prefix. */
-    id: string
+    id: string;
     /** Optional stable identity; remounts resume its materialized history, while first use creates it fresh. */
-    sessionId?: SessionId
+    sessionId?: SessionId;
     /** Optional workspace for a fresh session. */
-    cwd?: string
+    cwd?: string;
     /** Persisted session to resume instead of creating a fresh session. */
-    resumeSessionId?: SessionId
-  })[]
+    resumeSessionId?: SessionId;
+  })[];
 }
 ```
 
@@ -176,22 +176,22 @@ export interface Config {
 /** Plugin config: which preset is the default, and where presets live. */
 export interface Config {
   /** Preset id mounted when a caller names none. Missing at mount time fails loud. */
-  default: string
+  default: string;
   /** Scanned roots in precedence order; an earlier root wins a duplicate id. */
-  roots: PresetRoot[]
+  roots: PresetRoot[];
   /**
    * Append the harness home's `USER_PRESET_DIR` as a `user` root, after every
    * configured root. False mounts a roster over `roots` alone.
    */
-  includeUserRoot: boolean
+  includeUserRoot: boolean;
 }
 
 /** One directory scanned for preset subdirectories. */
 export interface PresetRoot {
   /** Directory holding one subdirectory per preset; a leading `~` expands. */
-  path: string
+  path: string;
   /** Trust recorded on every preset discovered under this root. */
-  trust: PresetTrust
+  trust: PresetTrust;
 }
 
 /**
@@ -199,7 +199,7 @@ export interface PresetRoot {
  * deployment; a `user` preset was authored locally, by a person or by an
  * agent, and therefore carries the same trust as shell access.
  */
-export type PresetTrust = 'system' | 'user'
+export type PresetTrust = "system" | "user";
 ```
 
 来源：[`packages/preset/agent-presets/src/preset.ts:52`](../packages/preset/agent-presets/src/preset.ts)
@@ -234,61 +234,61 @@ export type PresetTrust = 'system' | 'user'
  */
 export interface Config {
   /** The agent-loop `agents` list (see dsh-agent-loop's `Config`). */
-  agents?: AgentLoopConfig['agents']
+  agents?: AgentLoopConfig["agents"];
   /** Agent-loop concurrency cap; `1` is serial. */
-  maxParallelToolCalls?: AgentLoopConfig['maxParallelToolCalls']
+  maxParallelToolCalls?: AgentLoopConfig["maxParallelToolCalls"];
   /** Whether the system prompt includes the fixed Harness identity (default true). */
-  includeHarnessIdentity?: SystemPromptConfig['includeHarnessIdentity']
+  includeHarnessIdentity?: SystemPromptConfig["includeHarnessIdentity"];
   /** Whether model history includes dynamic runtime-context snapshots (default true). */
-  includeRuntimeContext?: SystemPromptConfig['includeRuntimeContext']
+  includeRuntimeContext?: SystemPromptConfig["includeRuntimeContext"];
   /** The deployment persona (see dsh-system-prompt's `Config`). */
-  persona?: SystemPromptConfig['persona']
+  persona?: SystemPromptConfig["persona"];
   /** The explicit model-facing tool order (see dsh-system-prompt's `Config`). */
-  toolOrder?: SystemPromptConfig['toolOrder']
+  toolOrder?: SystemPromptConfig["toolOrder"];
   /** The tool registry's config — its presentation `mode` (see dsh-tools' `Config`). */
-  tools?: ToolsConfig
+  tools?: ToolsConfig;
   /** DeepSeek Harness home directory shared by shell context and local skill discovery. */
-  dshHome?: string
+  dshHome?: string;
   /** Deterministic fallback and accepted-title limits; omission uses the bundle's example policy. */
-  sessionTitle?: SessionTitleConfig
+  sessionTitle?: SessionTitleConfig;
   /** Workspace-context loader controls with an explicit byte budget; set `false` for hermetic prompts. */
-  workspaceContext: workspaceContext.Config | false
+  workspaceContext: workspaceContext.Config | false;
   /**
    * Skill registry, local provider, and model-facing consumer config.
    * Skills use `enabled` because one nested config controls a provider stack;
    * single model-tool plugins use `Config | false` to disable that one consumer.
    */
-  skills?: SkillConfig
+  skills?: SkillConfig;
   /** Model-facing bash tool config, or false when another plugin owns `bash`. */
-  toolBash?: toolBash.Config | false
+  toolBash?: toolBash.Config | false;
   /** Process-local background-job admission config. */
-  jobs?: JobsConfig
+  jobs?: JobsConfig;
   /** Generic background-job controls; set false to keep the job service without model-facing job tools. */
-  toolJobs?: toolJobs.Config | false
+  toolJobs?: toolJobs.Config | false;
   /** Global enablement and package-name filters for invariant companions. */
-  invariants?: InvariantConfig
+  invariants?: InvariantConfig;
   /** Opt-in persisted same-session goal stack; set false or omit to leave it unmounted. */
-  goals?: GoalConfig | false
+  goals?: GoalConfig | false;
 }
 
 /** Skill bundle config forwarded to the registry, local provider, and model-facing consumer. */
 export interface SkillConfig {
   /** Mount the bundled local skill provider and model-facing skill tool (default true). */
-  enabled?: boolean
+  enabled?: boolean;
   /** Registry-level discovery cache settings. */
-  registry?: SkillRegistryConfig
+  registry?: SkillRegistryConfig;
   /** Local filesystem skill provider settings. */
-  filesystem?: SkillFileSystem.Config
+  filesystem?: SkillFileSystem.Config;
   /** Model-facing skill catalog and tool settings. */
-  tool?: toolSkill.Config
+  tool?: toolSkill.Config;
 }
 
 /** Persisted goal domain, model-tool policy, and same-session driver config. */
 export interface GoalConfig {
   /** Goal-domain creation defaults. */
-  domain?: GoalDomainConfig
+  domain?: GoalDomainConfig;
   /** Model-facing goal-tool authority policy. */
-  tool?: toolGoal.Config
+  tool?: toolGoal.Config;
 }
 ```
 
@@ -312,7 +312,7 @@ export interface Config {
    * without this row already gets, so an omitted value would mean the row was
    * composed for nothing.
    */
-  mode: ToolPresentationMode
+  mode: ToolPresentationMode;
 }
 ```
 
@@ -328,23 +328,23 @@ export interface Config {
 /** Local attachment backend configuration. */
 export interface Config {
   /** Explicit harness home; omitted follows `DSH_HOME`, then `~/.dsh`. */
-  dshHome?: string
+  dshHome?: string;
   /** Maximum encoded bytes accepted for one submitted image. Default: 20 MiB. */
-  maxImageBytes?: number
+  maxImageBytes?: number;
   /** Maximum image count accepted in one submitted message. Default: 20. */
-  maxImagesPerMessage?: number
+  maxImagesPerMessage?: number;
   /** Maximum aggregate encoded image bytes accepted in one submitted message. Default: 200 MiB. */
-  maxMessageImageBytes?: number
+  maxMessageImageBytes?: number;
   /** Maximum intrinsic width multiplied by height accepted for one submitted image. Default: 64,000,000. */
-  maxImagePixels?: number
+  maxImagePixels?: number;
   /** Maximum intrinsic width and maximum intrinsic height accepted for one submitted image. Default: 8192px. */
-  maxImageDimension?: number
+  maxImageDimension?: number;
   /** Long-edge pixel cap of the stored provider-independent normalized image. */
-  normalizedImageMaxDimension?: number
+  normalizedImageMaxDimension?: number;
   /** Encoded-byte safety cap of the stored provider-independent normalized image. */
-  normalizedImageMaxBytes?: number
+  normalizedImageMaxBytes?: number;
   /** Maximum simultaneous normalization or request-image transformations in this service instance. */
-  imageCompressionConcurrency?: number
+  imageCompressionConcurrency?: number;
 }
 ```
 
@@ -360,17 +360,17 @@ export interface Config {
 /** Plugin config (all optional — `static Config` supplies the defaults). */
 export interface Config {
   /** Default working directory for commands (default: process.cwd()). */
-  cwd?: string
+  cwd?: string;
   /** Default foreground timeout in milliseconds. */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** Upper bound for per-call timeout overrides. */
-  maxTimeoutMs?: number
+  maxTimeoutMs?: number;
   /** Per-stream in-memory output cap; overflow spills to a temp file. */
-  maxOutputBytes?: number
+  maxOutputBytes?: number;
   /** Per-stream spill-file cap; larger streams retain only their in-memory tail. */
-  maxSpillBytes?: number
+  maxSpillBytes?: number;
   /** Grace period for kill escalation and inherited pipes; at most `MAX_TIMER_DELAY_MS`. */
-  graceMs?: number
+  graceMs?: number;
 }
 ```
 
@@ -390,7 +390,7 @@ export interface Config {
  * each calling session's mode and cwd for every enforcing capability. The runner
  * choice is likewise the `ctx.sandbox` provider's config, not this executor's.
  */
-export type Config = LocalConfig
+export type Config = LocalConfig;
 ```
 
 依赖：[`LocalConfig`](#deepseek-aidsh-bash-local)
@@ -414,9 +414,9 @@ export interface ConnectionConfig {
    * by (the dsh CLI derives the machine's LAN IP literals itself). An entry
    * that is not a bare, canonical authority fails the plugin load.
    */
-  trustedHosts?: string[]
+  trustedHosts?: string[];
   /** Maximum buffered JSON body for every `/api` request. Default: 300 MiB. */
-  maxRequestBodyBytes?: number
+  maxRequestBodyBytes?: number;
 }
 ```
 
@@ -432,7 +432,7 @@ export interface ConnectionConfig {
 /** Plugin config, validated by the same-named schemastery schema. */
 export interface Config {
   /** Bundle stat-poll interval in milliseconds (default 500, the build-side watcher's polling default). */
-  pollIntervalMs?: number
+  pollIntervalMs?: number;
 }
 ```
 
@@ -454,7 +454,7 @@ export interface Config {
    * slow tool accrues nothing) and ungameable (a hot loop accrues whether
    * or not a decoy dispatch is in flight).
    */
-  computeMs?: number
+  computeMs?: number;
   /**
    * Wall-clock ceiling in milliseconds; never pauses for anything. The
    * backstop for what busy-time cannot see (a program awaiting a promise
@@ -462,14 +462,14 @@ export interface Config {
    * `setTimeout` delay, about 24.9 days): a longer value is rejected at load
    * because `setTimeout` would clamp it to 1 ms.
    */
-  maxWallMs?: number
+  maxWallMs?: number;
   /**
    * Hard cap for serialized log-array, completion-value, and failure-message payloads;
    * fixed result-envelope syntax is excluded.
    */
-  maxOutputBytes?: number
+  maxOutputBytes?: number;
   /** The worker's max old-generation heap in MiB (`resourceLimits`); overflow kills the worker, surfacing as kind `'worker-exit'`. */
-  maxOldGenerationSizeMb?: number
+  maxOldGenerationSizeMb?: number;
 }
 ```
 
@@ -485,37 +485,37 @@ export interface Config {
 /** Basic compaction configuration with an optional exact-target policy table. */
 export interface BasicCompactionConfig extends CompactionPolicyConfig {
   /** Exact provider/model overrides; duplicate targets fail plugin load. */
-  modelPolicies?: ModelCompactPolicyConfig[]
+  modelPolicies?: ModelCompactPolicyConfig[];
   /** Enable automatic step-boundary pressure and overflow-recovery listeners. Defaults to `true`. */
-  auto?: boolean
+  auto?: boolean;
 }
 
 /** Policy fields shared by the default policy and exact model overrides. */
 export interface CompactionPolicyConfig {
   /** Compact at this fraction of the model's context window. Defaults to `0.8`. */
-  thresholdRatio?: number
+  thresholdRatio?: number;
   /** Recent context retained as a fraction of the model's window. Defaults to `0.16`. */
-  retainRatio?: number
+  retainRatio?: number;
   /** Absolute recent-context budget; mutually exclusive with `retainRatio`. */
-  retainTokens?: number
+  retainTokens?: number;
   /** Summary provider; set together with `summarizationModel`, or inherit the conversation target. */
-  summarizationProvider?: string
+  summarizationProvider?: string;
   /** Summary model; set together with `summarizationProvider`, or inherit the conversation target. */
-  summarizationModel?: string
+  summarizationModel?: string;
   /** Provider generation cap for summarization. Defaults to `8192`. */
-  maxTokens?: number
+  maxTokens?: number;
   /** Extra attempts after the first compaction when pressure remains above threshold. Defaults to `1`. */
-  compactionRetries?: number
+  compactionRetries?: number;
   /** Maximum retries after canonical context overflow; `0` disables recovery. Defaults to `1`. */
-  maxOverflowRetries?: number
+  maxOverflowRetries?: number;
 }
 
 /** Exact provider/model override merged over the default compaction policy. */
 export interface ModelCompactPolicyConfig extends CompactionPolicyConfig {
   /** Registered provider route to match. */
-  provider: string
+  provider: string;
   /** Exact routed model id to match within `provider`. */
-  model: string
+  model: string;
 }
 ```
 
@@ -531,11 +531,11 @@ export interface ModelCompactPolicyConfig extends CompactionPolicyConfig {
 /** Character-budget policy for deterministic tool-result pruning. */
 export interface ToolResultPruneConfig {
   /** Prune when total text exceeds this many Unicode code points. Defaults to `8192`. */
-  thresholdChars?: number
+  thresholdChars?: number;
   /** Maximum leading Unicode code points retained. Defaults to `4096`. */
-  headChars?: number
+  headChars?: number;
   /** Maximum trailing Unicode code points retained. Defaults to `1024`. */
-  tailChars?: number
+  tailChars?: number;
 }
 ```
 
@@ -551,7 +551,7 @@ export interface ToolResultPruneConfig {
 /** Runner configuration. */
 export interface Config {
   /** Maximum synchronous VM evaluation time in milliseconds. */
-  vmTimeoutMs?: number
+  vmTimeoutMs?: number;
 }
 ```
 
@@ -565,13 +565,13 @@ export interface Config {
 /** Plugin config: file location and hot-reload behavior. */
 export interface Config {
   /** Credentials document path; defaults to `.credentials.yaml` under the harness home. */
-  path?: string
+  path?: string;
   /** Harness home used when `path` is omitted; defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  dshHome?: string;
   /** Watch the document and hot-publish external edits; defaults to true. */
-  watch?: boolean
+  watch?: boolean;
   /** Watcher write-settle window in milliseconds; defaults to 100. */
-  debounceMs?: number
+  debounceMs?: number;
 }
 ```
 
@@ -585,11 +585,11 @@ export interface Config {
 /** Configuration for the shared E2B sandbox owner. */
 export interface Config {
   /** API key; omission reads `E2B_API_KEY`. It is never forwarded into the sandbox. */
-  apiKey?: string
+  apiKey?: string;
   /** Shared remote working directory, created before adapters receive the sandbox. */
-  cwd?: string
+  cwd?: string;
   /** E2B sandbox lifetime in milliseconds; expiry always deletes the sandbox. */
-  timeoutMs?: number
+  timeoutMs?: number;
 }
 ```
 
@@ -605,15 +605,15 @@ export interface Config {
 /** Team-service deployment limits. */
 export interface Config {
   /** Maximum immutable teammate names retained by one Team. */
-  readonly maxMembers?: number
+  readonly maxMembers?: number;
   /** Maximum non-deleted tasks retained by one Team. */
-  readonly maxTasks?: number
+  readonly maxTasks?: number;
   /** Maximum queued-minus-delivered messages for one target member. */
-  readonly maxPendingMessagesPerMember?: number
+  readonly maxPendingMessagesPerMember?: number;
   /** Maximum UTF-8 bytes in one complete sender-framed delivery. */
-  readonly maxMessageBytes?: number
+  readonly maxMessageBytes?: number;
   /** Maximum milliseconds allowed for Team-owned runtime disposal. */
-  readonly disposalTimeoutMs?: number
+  readonly disposalTimeoutMs?: number;
 }
 ```
 
@@ -629,9 +629,9 @@ export interface Config {
 /** Tool routing configuration. */
 export interface Config {
   /** Continuable-subagent provider used for fresh teammates. */
-  readonly freshProvider?: string
+  readonly freshProvider?: string;
   /** Continuable-subagent provider used for completed-prefix fork teammates. */
-  readonly forkProvider?: string
+  readonly forkProvider?: string;
 }
 ```
 
@@ -647,11 +647,11 @@ export interface Config {
 /** Local file-reference discovery configuration. */
 export interface Config {
   /** Maximum ranked candidates returned for one query. */
-  maxResults?: number
+  maxResults?: number;
   /** Maximum indexed files and directories per agent workspace. */
-  maxEntries?: number
+  maxEntries?: number;
   /** Directory basenames never traversed or offered. */
-  excludedDirectories?: string[]
+  excludedDirectories?: string[];
 }
 ```
 
@@ -665,12 +665,12 @@ export interface Config {
 /** Configuration for the local filesystem backend. */
 export interface Config {
   /** Base directory for relative paths. Defaults to `process.cwd()`. */
-  cwd?: string
+  cwd?: string;
   /**
    * Exclusive UTF-8 byte limit on each overwrite-diff side, capped by the
    * runtime's safe allocation/decode maximum. Defaults to 10 MiB.
    */
-  diffBasisMaxBytes?: number
+  diffBasisMaxBytes?: number;
 }
 ```
 
@@ -689,7 +689,7 @@ export interface Config {
  * (mode + `workspace-write` fallback root) is NOT here — `ctx.sandboxPolicy`
  * resolves each calling session for every enforcing capability.
  */
-export type Config = LocalConfig
+export type Config = LocalConfig;
 ```
 
 依赖：[`LocalConfig`](#deepseek-aidsh-fs-local)
@@ -706,7 +706,7 @@ export type Config = LocalConfig
 /** Deployment defaults for goal creation. */
 export interface Config {
   /** Total rounds used when a create request omits its own cap. */
-  defaultMaxGoalRounds?: number
+  defaultMaxGoalRounds?: number;
 }
 ```
 
@@ -722,7 +722,7 @@ export interface Config {
 /** Plugin config: the task resolved from this app's injected provider service. */
 export interface Config {
   /** The prompt text for the single run. */
-  task: string
+  task: string;
 }
 ```
 
@@ -744,11 +744,11 @@ export interface Config {
    * TODO(per-session-hook-config): per-session discovery of a project-local
    * `hooks.json` from each `session/new.cwd`.
    */
-  configPath: string
+  configPath: string;
   /**
    * Replaces `${CLAUDE_PLUGIN_ROOT}` in command strings (the plugin's root dir).
    */
-  pluginRoot?: string
+  pluginRoot?: string;
   /**
    * Replaces `${CLAUDE_PROJECT_DIR}` in command strings AND is exported as the
    * `CLAUDE_PROJECT_DIR` env var for hook processes. When omitted, the env var
@@ -756,11 +756,11 @@ export interface Config {
    * same dir the hook runs in) — Claude Code always exports this var, and common
    * unmodified hooks reference `$CLAUDE_PROJECT_DIR` for project-relative paths.
    */
-  projectDir?: string
+  projectDir?: string;
   /** Default per-hook timeout in ms when a hook sets none (CC default: 600000). */
-  defaultTimeoutMs?: number
+  defaultTimeoutMs?: number;
   /** Character cap for the `hook/result` event's persisted stderr summary. */
-  stderrSummaryMaxChars?: number
+  stderrSummaryMaxChars?: number;
 }
 ```
 
@@ -781,13 +781,13 @@ export interface Config {
    * TODO(per-session-hook-config): per-session project-local discovery from each
    * `session/new.cwd`.
    */
-  configPath: string
+  configPath: string;
   /** The model name stamped on every payload (Codex includes `model` on each event). */
-  model?: string
+  model?: string;
   /** Default per-hook timeout in ms when a hook sets none (Codex default: 600000). */
-  defaultTimeoutMs?: number
+  defaultTimeoutMs?: number;
   /** Character cap for the `hook/result` event's persisted stderr summary. */
-  stderrSummaryMaxChars?: number
+  stderrSummaryMaxChars?: number;
 }
 ```
 
@@ -809,19 +809,19 @@ export interface Config {
    * server); set it explicitly where detection misleads, e.g. `false` in a
    * container whose DISPLAY points nowhere a user can see.
    */
-  nativeOpen?: boolean
+  nativeOpen?: boolean;
   /**
    * DEFLATE level for every session-log ZIP entry: `0` stores without
    * compression, `1` favors CPU/latency, and `9` favors archive size.
    * @default 6
    */
-  sessionExportCompressionLevel?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
+  sessionExportCompressionLevel?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
   /**
    * Maximum physical size of a cold Session artifact eligible for blankness
    * verification. Zero disables probes.
    * @default 1024
    */
-  coldBlankProbeMaxBytes?: number
+  coldBlankProbeMaxBytes?: number;
 }
 ```
 
@@ -835,7 +835,7 @@ export interface Config {
 /** Validated plugin configuration. */
 export interface Config {
   /** Complete-result bound of one listing level; see {@link BrowseDirectoryPicker.Config}. */
-  maxEntries: number
+  maxEntries: number;
 }
 ```
 
@@ -851,7 +851,7 @@ export interface Config {
 /** Plugin config: the dist anchor. */
 export interface Config {
   /** Absolute path of index.html inside the dist root. */
-  distIndex: string
+  distIndex: string;
 }
 ```
 
@@ -865,9 +865,9 @@ export interface Config {
 /** Gateway config: the listen address. */
 export interface Config {
   /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
+  host: "127.0.0.1" | "0.0.0.0";
   /** Listen port; zero requests an OS-assigned port. */
-  port: number
+  port: number;
 }
 ```
 
@@ -881,11 +881,11 @@ export interface Config {
 /** Runtime invariant selection configured on the service plugin. */
 export interface Config {
   /** Global switch; defaults to `true`. */
-  readonly enabled?: boolean
+  readonly enabled?: boolean;
   /** Case-sensitive JavaScript regex sources that admit package names; empty admits all. */
-  readonly package_allowlist?: string[]
+  readonly package_allowlist?: string[];
   /** Case-sensitive JavaScript regex sources that exclude package names after allowlist matching. */
-  readonly package_blocklist?: string[]
+  readonly package_blocklist?: string[];
 }
 ```
 
@@ -902,7 +902,7 @@ export interface Config {
    * Maximum `running` plus `stopping` jobs per exact owner or in the shared unowned bucket;
    * omission defaults to 10.
    */
-  maxConcurrentJobsPerOwner?: number
+  maxConcurrentJobsPerOwner?: number;
 }
 ```
 
@@ -925,65 +925,65 @@ export interface Config {
  */
 export interface Config {
   /** Credential reference (environment-variable name) resolved per request; defaults to `DEEPSEEK_API_KEY`. */
-  apiKeyEnv?: string
+  apiKeyEnv?: string;
   /** Endpoint base; falls back to $DEEPSEEK_BASE_URL from a trusted environment layer, then the public API. */
-  baseURL?: string
+  baseURL?: string;
   /** Deployment thinking policy; `disabled` limits every conversation request to `off`. */
-  thinking?: 'enabled' | 'disabled'
+  thinking?: "enabled" | "disabled";
   /** Default thinking effort (default `high`); `off` disables thinking per request. */
-  reasoningEffort?: 'off' | 'low' | 'high' | 'max'
+  reasoningEffort?: "off" | "low" | "high" | "max";
   /** Default per-request output cap (default 256,000); a model's own cap and explicit request values win. */
-  maxTokens?: number
+  maxTokens?: number;
   /** Positive context capacity used when the selected model has no exact value (default 1,000,000). */
-  defaultContextWindow?: number
+  defaultContextWindow?: number;
   /** Advisory models shown by discovery consumers; defaults to V4 Flash, V4 Pro, and V4 Flash Vision Exp. */
-  models?: DeepSeekCatalogModel[]
+  models?: DeepSeekCatalogModel[];
   /** Maximum provider idle time while one stream read is outstanding (default five minutes). */
-  streamIdleTimeoutMs?: number
+  streamIdleTimeoutMs?: number;
   /** Maximum accumulated file-referenced image bytes per chat request (default 128 MiB). */
-  maxRequestFilesBytes?: number
+  maxRequestFilesBytes?: number;
   /** Maximum accumulated base64 image payload after Files API fallback (default 20 MiB). */
-  maxInlineRequestImageBytes?: number
+  maxInlineRequestImageBytes?: number;
   /** Maximum number of represented images per chat request (default 600). */
-  maxImagesPerRequest?: number
+  maxImagesPerRequest?: number;
   /** Raw-byte removal step after the request exceeds its file bound (default 64 MiB). */
-  imageOffloadByteQuantum?: number
+  imageOffloadByteQuantum?: number;
   /** Base64-byte removal step after inline fallback exceeds its bound (default 10 MiB). */
-  inlineImageOffloadByteQuantum?: number
+  inlineImageOffloadByteQuantum?: number;
   /** Image-count removal step after the request exceeds its count bound (default 20). */
-  imageOffloadCountQuantum?: number
+  imageOffloadCountQuantum?: number;
   /** Maximum duration of one request-image Files API resolution (default one minute). */
-  filesApiTimeoutMs?: number
+  filesApiTimeoutMs?: number;
   /** Explicit lifetime assigned to each uploaded image (default seven days). */
-  fileExpiresAfterSeconds?: number
+  fileExpiresAfterSeconds?: number;
   /** Remaining lifetime below which an indexed file is replaced (default one hour). */
-  fileRefreshMarginSeconds?: number
+  fileRefreshMarginSeconds?: number;
   /** Oldest harness-owned files deleted before one quota-recovery upload retry (default 100). */
-  fileQuotaCleanupBatch?: number
+  fileQuotaCleanupBatch?: number;
   /** Provider-owned model-request retry policy; omission uses normal mode with five retries. */
-  retryPolicy?: RetryPolicyConfig
+  retryPolicy?: RetryPolicyConfig;
 }
 
 /** One optional model entry advertised by the direct-fetch adapter. */
 export interface DeepSeekCatalogModel {
   /** Wire model id accepted by the configured endpoint. */
-  id: string
+  id: string;
   /** Selector label; defaults to {@link id}. */
-  name?: string
+  name?: string;
   /** Optional selector detail for deployments with similar model variants. */
-  description?: string
+  description?: string;
   /** Known combined request/response context capacity; omitted when deployment metadata is unavailable. */
-  contextWindow?: number
+  contextWindow?: number;
   /** Per-request output cap for this model; omission falls back to the profile's {@link DeepSeekConnectionOptions.maxTokens}. */
-  maxTokens?: number
+  maxTokens?: number;
   /** Accepted request modalities; omission is text-only. */
-  inputModalities?: ModelModality[]
+  inputModalities?: ModelModality[];
   /** Total-pixel budget for one deterministic request preview. */
-  imagePixelBudget?: number
+  imagePixelBudget?: number;
   /** Encoded-byte cap for one deterministic request preview. */
-  imageMaxBytes?: number
+  imageMaxBytes?: number;
   /** Provider detail tier; `low` uses the 512-by-512 total-pixel default. */
-  imageDetail?: 'auto' | 'low'
+  imageDetail?: "auto" | "low";
 }
 ```
 
@@ -1005,29 +1005,29 @@ export interface Config {
    * the dormant settings-driven posture: the adapter mounts with no routes
    * and registers them the moment a settings section supplies profiles.
    */
-  providers?: Record<string, PiAiProviderProfile>
+  providers?: Record<string, PiAiProviderProfile>;
 }
 
 /** Configuration for one pi-ai provider route; the `providers` dict key IS the route. */
 export interface PiAiProviderProfile {
   /** Credential reference (environment-variable name) resolved per request through `ctx.credentials`. */
-  apiKeyEnv?: string
+  apiKeyEnv?: string;
   /** Name shown by configuration surfaces; defaults to the route key. */
-  displayName?: string
+  displayName?: string;
   /**
    * Wire protocol every model on this route speaks. Omission keeps each
    * installed catalog model's own protocol, which is why a catalog route needs
    * no protocol at all; a route the catalog does not ship must name one.
    */
-  api?: string
+  api?: string;
   /** Endpoint for this route's models; defaults to the installed catalog's endpoint. */
-  baseURL?: string
+  baseURL?: string;
   /**
    * This route's model catalog. Omission serves the installed catalog for the
    * route unchanged; an explicit list replaces it, each entry defaulting its
    * unset fields from the installed model of the same id.
    */
-  models?: PiAiModelProfile[]
+  models?: PiAiModelProfile[];
   /**
    * Installed-catalog customizations by model id: each entry reshapes that
    * one model with the same fields a {@link models} entry takes, while the
@@ -1036,7 +1036,7 @@ export interface PiAiProviderProfile {
    * an override beside it, on a route the catalog does not ship, or naming a
    * model the catalog does not describe is refused rather than skipped.
    */
-  modelOverrides?: Record<string, PiAiModelOverride>
+  modelOverrides?: Record<string, PiAiModelOverride>;
   /**
    * pi-ai wire-compatibility switches defaulting every model on this route
    * whose protocol declares them; each model's own `compat` overrides per
@@ -1044,19 +1044,19 @@ export interface PiAiProviderProfile {
    * pi-ai's own detection. A switch no model on the route could read is
    * refused rather than left looking applied.
    */
-  compat?: PiAiCompatProfile
+  compat?: PiAiCompatProfile;
   /**
    * Context capacity for a model this route lists that neither the entry nor
    * the installed catalog sizes (default 262,144). A guess by construction, so
    * a deployment whose gateway serves smaller models corrects it here.
    */
-  defaultContextWindow?: number
+  defaultContextWindow?: number;
   /**
    * Output capability for a model this route lists that neither the entry nor
    * the installed catalog sizes (default 32,768). This sizes the model; it
    * never becomes a per-request cap on its own.
    */
-  defaultMaxTokens?: number
+  defaultMaxTokens?: number;
   /**
    * Request modalities for a model this route lists that neither its entry's
    * {@link PiAiModelProfile.input} nor the installed catalog declares (default
@@ -1067,53 +1067,53 @@ export interface PiAiProviderProfile {
    * Unlike an entry's list, this one may not be empty — nothing sits below it
    * to answer instead.
    */
-  defaultInput?: PiAiModality[]
+  defaultInput?: PiAiModality[];
   /** Provider request headers; Harness attribution wins reserved names. */
-  headers?: Record<string, string>
+  headers?: Record<string, string>;
   /** Provider-neutral pi-ai reasoning level. */
-  reasoning?: ModelThinkingLevel
+  reasoning?: ModelThinkingLevel;
   /** Token budgets used by reasoning providers that support them. */
-  thinkingBudgets?: ThinkingBudgets
+  thinkingBudgets?: ThinkingBudgets;
   /** Prompt-cache retention preference. */
-  cacheRetention?: CacheRetention
+  cacheRetention?: CacheRetention;
   /** Streaming transport preference. */
-  transport?: Transport
+  transport?: Transport;
   /** HTTP/provider SDK timeout in milliseconds. */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** WebSocket connection timeout in milliseconds. */
-  websocketConnectTimeoutMs?: number
+  websocketConnectTimeoutMs?: number;
   /** Maximum provider idle time while one stream read is outstanding. */
-  streamIdleTimeoutMs?: number
+  streamIdleTimeoutMs?: number;
   /**
    * Maximum base64-encoded image payload per request. When a request's
    * accumulated images exceed it, the oldest images are replaced by text
    * placeholders until the request fits, so a long session keeps completing
    * requests instead of being rejected by a request-size cap.
    */
-  maxRequestImageBytes?: number
+  maxRequestImageBytes?: number;
   /** Total-pixel budget for each deterministic inline request version. */
-  requestImagePixelBudget?: number
+  requestImagePixelBudget?: number;
   /** Raw encoded-byte cap for each deterministic inline request version. */
-  requestImageMaxBytes?: number
+  requestImageMaxBytes?: number;
   /** Provider-owned model-request retry policy; omission uses normal mode with five retries. */
-  retryPolicy?: RetryPolicyConfig
+  retryPolicy?: RetryPolicyConfig;
 }
 
 /** One configured model entry: an id plus the catalog fields it overrides. */
 export interface PiAiModelProfile {
   /** Model id sent to the provider and accepted by {@link GenerateOptions.model}. */
-  id: string
+  id: string;
   /** Display name for selectors; defaults to the catalog name, then the id. */
-  name?: string
+  name?: string;
   /** Maximum combined request and response context in tokens. */
-  contextWindow?: number
+  contextWindow?: number;
   /**
    * Maximum output tokens. Configuring one also makes it this model's
    * per-request default; a value inherited from the installed catalog, or the
    * route's fallback, is the model's capability and never becomes a request
    * default on its own.
    */
-  maxTokens?: number
+  maxTokens?: number;
   /**
    * Request modalities this model accepts. Absent — or empty, which describes
    * a model that accepts nothing and so states no answer either — keeps the
@@ -1125,7 +1125,7 @@ export interface PiAiModelProfile {
    * claiming images its endpoint refuses is refused by the provider instead,
    * mid-turn.
    */
-  input?: PiAiModality[]
+  input?: PiAiModality[];
   /**
    * Selectable reasoning efforts. Absent inherits the installed catalog
    * entry's capability (a hand-declared model has none and does not reason);
@@ -1133,9 +1133,9 @@ export interface PiAiModelProfile {
    * reasoning from a catalog model its gateway cannot serve; a non-empty dict
    * declares the offered levels and their wire spellings.
    */
-  reasoningEfforts?: false | PiAiReasoningEfforts
+  reasoningEfforts?: false | PiAiReasoningEfforts;
   /** pi-ai wire-compatibility switches for this model, winning over the route's per field; one its protocol does not declare is refused. */
-  compat?: PiAiCompatProfile
+  compat?: PiAiCompatProfile;
 }
 
 /**
@@ -1145,7 +1145,7 @@ export interface PiAiModelProfile {
  * rest of the catalog serving untouched, which is what makes "correct one
  * model, keep the other thirty-seven" a three-line edit.
  */
-export type PiAiModelOverride = Omit<PiAiModelProfile, 'id'>
+export type PiAiModelOverride = Omit<PiAiModelProfile, "id">;
 
 /**
  * pi-ai wire-compatibility switches, set on the route (its models' default) or
@@ -1167,29 +1167,29 @@ export type PiAiModelOverride = Omit<PiAiModelProfile, 'id'>
  */
 export interface PiAiCompatProfile {
   /** Whether the endpoint accepts `store`; `openai-completions`. */
-  supportsStore?: boolean
+  supportsStore?: boolean;
   /**
    * Whether the endpoint accepts the `developer` role for the system prompt,
    * which pi-ai sends only to a reasoning model; `false` keeps `system`.
    * `openai-completions` and the three Responses protocols.
    */
-  supportsDeveloperRole?: boolean
+  supportsDeveloperRole?: boolean;
   /** Whether the endpoint accepts `reasoning_effort`; `openai-completions`. */
-  supportsReasoningEffort?: boolean
+  supportsReasoningEffort?: boolean;
   /** Whether the endpoint accepts `stream_options: {include_usage: true}`; `openai-completions`. */
-  supportsUsageInStreaming?: boolean
+  supportsUsageInStreaming?: boolean;
   /** Which output-cap field the endpoint reads; `openai-completions`. */
-  maxTokensField?: NonNullable<OpenAICompletionsCompat['maxTokensField']>
+  maxTokensField?: NonNullable<OpenAICompletionsCompat["maxTokensField"]>;
   /** Whether tool results must carry `name`; `openai-completions`. */
-  requiresToolResultName?: boolean
+  requiresToolResultName?: boolean;
   /** Whether a user message after tool results needs an assistant message between; `openai-completions`. */
-  requiresAssistantAfterToolResult?: boolean
+  requiresAssistantAfterToolResult?: boolean;
   /** Whether thinking blocks must travel as text in `<thinking>` delimiters; `openai-completions`. */
-  requiresThinkingAsText?: boolean
+  requiresThinkingAsText?: boolean;
   /** Whether replayed assistant messages need an empty `reasoning_content` while reasoning is on; `openai-completions`. */
-  requiresReasoningContentOnAssistantMessages?: boolean
+  requiresReasoningContentOnAssistantMessages?: boolean;
   /** Reasoning parameter format the endpoint expects; `openai-completions`. */
-  thinkingFormat?: PiAiThinkingFormat
+  thinkingFormat?: PiAiThinkingFormat;
   /**
    * Kwargs sent as `chat_template_kwargs`, which pi-ai reads only under the
    * two `chat-template` thinking formats; `openai-completions`. Nothing checks
@@ -1197,35 +1197,35 @@ export interface PiAiCompatProfile {
    * entry or from pi-ai's own baseURL detection, neither of which resolution
    * can read, so kwargs set beside another format are sent nowhere.
    */
-  chatTemplateKwargs?: NonNullable<OpenAICompletionsCompat['chatTemplateKwargs']>
+  chatTemplateKwargs?: NonNullable<OpenAICompletionsCompat["chatTemplateKwargs"]>;
   /**
    * Whether the endpoint accepts `strict` in tool definitions;
    * `openai-completions`, the three Responses protocols, `bedrock-converse-stream`.
    */
-  supportsStrictMode?: boolean
+  supportsStrictMode?: boolean;
   /** Prompt-cache marker convention; `openai-completions`. */
-  cacheControlFormat?: NonNullable<OpenAICompletionsCompat['cacheControlFormat']>
+  cacheControlFormat?: NonNullable<OpenAICompletionsCompat["cacheControlFormat"]>;
   /**
    * Whether the endpoint accepts long prompt-cache retention;
    * `openai-completions`, the three Responses protocols, `anthropic-messages`.
    */
-  supportsLongCacheRetention?: boolean
+  supportsLongCacheRetention?: boolean;
   /** Whether the endpoint accepts per-tool `eager_input_streaming`; `anthropic-messages`. */
-  supportsEagerToolInputStreaming?: boolean
+  supportsEagerToolInputStreaming?: boolean;
   /** Whether the endpoint accepts `cache_control` on tool definitions; `anthropic-messages`. */
-  supportsCacheControlOnTools?: boolean
+  supportsCacheControlOnTools?: boolean;
   /** Whether the endpoint accepts the `temperature` request field; `anthropic-messages`. */
-  supportsTemperature?: boolean
+  supportsTemperature?: boolean;
   /** Whether to force adaptive thinking regardless of model id; `anthropic-messages`. */
-  forceAdaptiveThinking?: boolean
+  forceAdaptiveThinking?: boolean;
   /** Whether to replay an empty thinking signature instead of converting thinking to text; `anthropic-messages`. */
-  allowEmptySignature?: boolean
+  allowEmptySignature?: boolean;
   /** Whether the endpoint accepts Anthropic strict tool schemas; `anthropic-messages`. */
-  supportsStrictTools?: boolean
+  supportsStrictTools?: boolean;
 }
 
 /** One request modality a pi-ai model may accept. */
-export type PiAiModality = Model<Api>['input'][number]
+export type PiAiModality = Model<Api>["input"][number];
 
 /**
  * Selectable reasoning efforts for one model: each key is a level the model
@@ -1235,10 +1235,10 @@ export type PiAiModality = Model<Api>['input'][number]
  * absence; every other declared level must name a wire value. A level absent
  * from the dict is not offered.
  */
-export type PiAiReasoningEfforts = Partial<Record<ModelThinkingLevel, string | null>>
+export type PiAiReasoningEfforts = Partial<Record<ModelThinkingLevel, string | null>>;
 
 /** One reasoning-dispatch wire format a profile may name. */
-export type PiAiThinkingFormat = NonNullable<OpenAICompletionsCompat['thinkingFormat']>
+export type PiAiThinkingFormat = NonNullable<OpenAICompletionsCompat["thinkingFormat"]>;
 ```
 
 依赖：`Api`（`@earendil-works/pi-ai`）· `CacheRetention`（`@earendil-works/pi-ai`）· `Model`（`@earendil-works/pi-ai`）· `ModelThinkingLevel`（`@earendil-works/pi-ai`）· `OpenAICompletionsCompat`（`@earendil-works/pi-ai`）· [`RetryPolicyConfig`](../packages/llm/llm/src/index.ts) · `ThinkingBudgets`（`@earendil-works/pi-ai`）· `Transport`（`@earendil-works/pi-ai`)
@@ -1255,57 +1255,57 @@ export type PiAiThinkingFormat = NonNullable<OpenAICompletionsCompat['thinkingFo
 /** Plugin config: the {@link ReplayConfig} inputs, each defaulting to its `DSH_SNAPSHOT_*` env var in `apply`. */
 export interface Config {
   /** Override the fixture path; defaults to `$DSH_SNAPSHOT_FILE`. */
-  file?: string
+  file?: string;
   /** Override the sidecar path; defaults to `$DSH_SNAPSHOT_OVERRIDE`. */
-  overrideFile?: string
+  overrideFile?: string;
   /**
    * Override the child-log paths; defaults to `$DSH_SNAPSHOT_CHILD_FILES` (a
    * path-separator-delimited list). Each is a recorded subagent session log for
    * a nested-agent scenario; absent/empty for a single-session scenario.
    */
-  childFiles?: string[]
+  childFiles?: string[];
   /** Optional replay-only provider catalog; absent or empty selects catch-all waterfall replay. */
-  providers?: ReplayProviderConfig[]
+  providers?: ReplayProviderConfig[];
   /** Optional per-chunk pacing delay in ms (see {@link ReplayConfig.paceMs}); absent keeps burst yield. */
-  paceMs?: number
+  paceMs?: number;
 }
 
 /** One provider route exposed by the replay adapter. */
 export interface ReplayProviderConfig {
   /** Provider route used for replay requests. */
-  id: string
+  id: string;
   /** Selector label; defaults to {@link id}. */
-  name?: string
+  name?: string;
   /** Advisory models exposed to replay scenarios that exercise discovery. */
-  models?: ReplayModelConfig[]
+  models?: ReplayModelConfig[];
   /** Optional provider-owned retry policy used by assembled recovery snapshots. */
-  retryPolicy?: RetryPolicyConfig
+  retryPolicy?: RetryPolicyConfig;
 }
 
 /** One model exposed by a replay-only provider catalog. */
 export interface ReplayModelConfig {
   /** Model id used for replay requests. */
-  id: string
+  id: string;
   /** Selector label; defaults to {@link id}. */
-  name?: string
+  name?: string;
   /** Optional selector description. */
-  description?: string
+  description?: string;
   /** Optional positive integer context capacity published by the replay adapter. */
-  contextWindow?: number
+  contextWindow?: number;
   /** Optional declared input modalities, so a scenario can exercise capability gates (e.g. image-capable `read_image`). */
-  inputModalities?: readonly ModelModality[]
+  inputModalities?: readonly ModelModality[];
   /**
    * Optional per-request output cap the replay route materializes when callers
    * omit one, so replay reconstructs the request header a live catalog produced.
    */
-  defaultMaxTokens?: number
+  defaultMaxTokens?: number;
   /** Optional reasoning-effort ids the replay route accepts, in display order. */
-  reasoningEfforts?: string[]
+  reasoningEfforts?: string[];
   /**
    * Optional effort materialized when callers omit one; must appear in
    * {@link reasoningEfforts} or call resolution rejects the route.
    */
-  defaultReasoningEffort?: string
+  defaultReasoningEffort?: string;
 }
 ```
 
@@ -1321,7 +1321,7 @@ export interface ReplayModelConfig {
 
 ```ts config-catalog
 /** This policy executor has no config; providers own `retryPolicy`. */
-export type Config = Readonly<Record<string, never>>
+export type Config = Readonly<Record<string, never>>;
 ```
 
 来源：[`packages/llm/llm-retry/src/index.ts:24`](../packages/llm/llm-retry/src/index.ts)
@@ -1336,33 +1336,33 @@ export type Config = Readonly<Record<string, never>>
 /** Plugin configuration: provider id → local language-server configuration. */
 export interface Config {
   /** Non-empty table of stable provider ids to independent local server configurations. */
-  servers: Record<string, LspLocalServerConfig>
+  servers: Record<string, LspLocalServerConfig>;
 }
 
 /** One configured local language server and its host bounds. */
 export interface LspLocalServerConfig {
   /** Executable to spawn (absolute, or resolved on PATH at load). */
-  command: string
+  command: string;
   /** Lowercase leading-dot extension → LSP language id (e.g. `{ '.ts': 'typescript' }`). */
-  extensionToLanguage: Record<string, string>
+  extensionToLanguage: Record<string, string>;
   /** Arguments passed to the executable (no shell). Default `[]`. */
-  args?: string[]
+  args?: string[];
   /** Extra env vars merged on top of the scrubbed ambient env. Default `{}`. */
-  env?: Record<string, string>
+  env?: Record<string, string>;
   /** Static `initialize` options forwarded to the server. Default `null`. */
-  initializationOptions?: unknown
+  initializationOptions?: unknown;
   /** Static answer to every `workspace/configuration` item. Default `null`. */
-  configuration?: unknown
+  configuration?: unknown;
   /** Largest single framed message accepted from the server (bytes). Default 16000000. */
-  maxMessageBytes?: number
+  maxMessageBytes?: number;
   /** Largest stderr tail retained for diagnostics (bytes). Default 1000000. */
-  maxStderrBytes?: number
+  maxStderrBytes?: number;
   /** Largest source file this host will open (bytes). Default 4000000. */
-  maxDocumentBytes?: number
+  maxDocumentBytes?: number;
   /** Graceful `shutdown`/`exit` budget before escalation (ms). Default 5000. */
-  shutdownTimeoutMs?: number
+  shutdownTimeoutMs?: number;
   /** Request-cancel and SIGTERM→SIGKILL grace (ms). Default 2000. */
-  killGraceMs?: number
+  killGraceMs?: number;
 }
 ```
 
@@ -1376,66 +1376,66 @@ export interface LspLocalServerConfig {
 
 ```ts config-catalog
 /** Configuration for one stdio or Streamable HTTP MCP server. */
-export type Config = StdioConfig | StreamableHttpConfig
+export type Config = StdioConfig | StreamableHttpConfig;
 
 /** Config for connecting to an MCP server via a spawned child process over stdio. */
 export interface StdioConfig {
   /** Selects child-process stdio transport. */
-  transport: 'stdio'
+  transport: "stdio";
   /**
    * Stable local namespace for this server's model-facing tool names
    * (`mcp__<serverName>__<rawName>`). Must match `[A-Za-z0-9_-]{1,32}` and be
    * unique across live mcp-client instances.
    */
-  serverName: string
+  serverName: string;
   /** Executable used to start the server. */
-  command: string
+  command: string;
   /** Arguments passed directly, without shell interpolation. */
-  args: string[]
+  args: string[];
   /** Extra env vars merged on top of scrubbed ambient env. */
-  env: Record<string, string>
+  env: Record<string, string>;
   /** Working directory for the child process. */
-  cwd: string
+  cwd: string;
   /** Per-tool-call timeout in milliseconds. */
-  toolCallTimeoutMs: number
+  toolCallTimeoutMs: number;
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
-  failOnStartupError: boolean
+  failOnStartupError: boolean;
   /** Automatic reconnect policy after a lost connection; omission uses the defaults. */
-  reconnect?: ReconnectConfig
+  reconnect?: ReconnectConfig;
 }
 
 /** Config for connecting to an MCP server over Streamable HTTP (SSE). */
 export interface StreamableHttpConfig {
   /** Selects Streamable HTTP transport. */
-  transport: 'streamable-http'
+  transport: "streamable-http";
   /**
    * Stable local namespace for this server's model-facing tool names
    * (`mcp__<serverName>__<rawName>`). Must match `[A-Za-z0-9_-]{1,32}` and be
    * unique across live mcp-client instances.
    */
-  serverName: string
+  serverName: string;
   /** MCP endpoint URL. */
-  url: string
+  url: string;
   /** Additional headers attached to MCP requests. */
-  headers: Record<string, string>
+  headers: Record<string, string>;
   /** Per-tool-call timeout in milliseconds. */
-  toolCallTimeoutMs: number
+  toolCallTimeoutMs: number;
   /** Fail plugin activation when the initial connection or tool synchronization fails. */
-  failOnStartupError: boolean
+  failOnStartupError: boolean;
   /** Automatic reconnect policy after a lost connection; omission uses the defaults. */
-  reconnect?: ReconnectConfig
+  reconnect?: ReconnectConfig;
 }
 
 /** Automatic reconnect policy for one MCP server connection. */
 export interface ReconnectConfig {
   /** Reconnect automatically after a lost connection (default true). */
-  enabled?: boolean
+  enabled?: boolean;
   /** First reconnect delay in milliseconds; doubles per consecutive failed attempt (default 500). */
-  initialDelayMs?: number
+  initialDelayMs?: number;
   /** Backoff ceiling in milliseconds; also the uptime after which the attempt budget resets (default 30000). */
-  maxDelayMs?: number
+  maxDelayMs?: number;
   /** Consecutive failed attempts per outage before giving up for good (default 10). */
-  maxAttempts?: number
+  maxAttempts?: number;
 }
 ```
 
@@ -1451,7 +1451,7 @@ export interface ReconnectConfig {
 /** Required deployment policy for optional notes. */
 export interface Config {
   /** Maximum UTF-8 byte length accepted for one note. */
-  readonly maxNoteBytes: number
+  readonly maxNoteBytes: number;
 }
 ```
 
@@ -1471,24 +1471,24 @@ export interface Config {
    * (workspace-write + ask) and `danger-full-access` (danger-full-access +
    * never). The name `custom` is reserved for the derived not-a-preset state.
    */
-  presets?: Record<string, PresetSpec>
+  presets?: Record<string, PresetSpec>;
   /**
    * Default for new sessions. When omitted, the preset matching the composed
    * sandbox and approval defaults is used.
    */
-  defaultPreset?: string
+  defaultPreset?: string;
 }
 
 /** One preset's sandbox/approval bundle and optional client presentation. */
 export interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
-  sandbox: SandboxMode
+  sandbox: SandboxMode;
   /** The `approval/policy` value the preset writes through. */
-  approval: ApprovalPolicy
+  approval: ApprovalPolicy;
   /** The display label a client shows for this preset; the raw table key when omitted. */
-  name?: string
+  name?: string;
   /** One user-facing sentence on what the preset means; omitted when not configured. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -1510,11 +1510,11 @@ export interface Config {
    * complete `{{…}}` groups interpolate strictly against registered prompt
    * variables. Empty text drops the section at render, matching the registry.
    */
-  text: string
+  text: string;
   /** Make this persona the complete system prompt, suppressing every other section. */
-  complete?: boolean
+  complete?: boolean;
   /** Suppress dynamic runtime-context snapshots for this persona's agent scope. */
-  includeRuntimeContext?: boolean
+  includeRuntimeContext?: boolean;
 }
 ```
 
@@ -1530,7 +1530,7 @@ export interface Config {
 /** Deployment-owned plan guidance. */
 export interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
-  section: string
+  section: string;
 }
 ```
 
@@ -1546,24 +1546,24 @@ export interface PlanModeConfig {
 /** Plugin config (all optional — `static Config` supplies the defaults). */
 export interface Config {
   /** Default working directory for commands (default: process.cwd()). */
-  cwd?: string
+  cwd?: string;
   /** Default foreground timeout in milliseconds. */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** Upper bound for per-call timeout overrides. */
-  maxTimeoutMs?: number
+  maxTimeoutMs?: number;
   /** Per-stream in-memory output cap; overflow spills to a temp file. */
-  maxOutputBytes?: number
+  maxOutputBytes?: number;
   /** Per-stream spill-file cap; larger streams retain only their in-memory tail. */
-  maxSpillBytes?: number
+  maxSpillBytes?: number;
   /** Grace period for kill escalation and inherited pipes; at most `MAX_TIMER_DELAY_MS`. */
-  graceMs?: number
+  graceMs?: number;
   /**
    * Explicit pwsh executable. When omitted, well-known Windows install
    * locations and PATH entries are probed in order (PowerShell 7 install,
    * PATH entries such as the Microsoft Store install, then Windows
    * PowerShell 5.1), falling back to a bare `pwsh` resolved through PATH.
    */
-  pwshPath?: string
+  pwshPath?: string;
 }
 ```
 
@@ -1584,7 +1584,7 @@ export interface Config {
  * runner choice is likewise the `ctx.sandbox` provider's config, not this
  * executor's.
  */
-export type Config = LocalConfig
+export type Config = LocalConfig;
 ```
 
 依赖：[`LocalConfig`](#deepseek-aidsh-pwsh-local)
@@ -1607,11 +1607,11 @@ export type Config = LocalConfig
  */
 export interface Config {
   /** Consecutive-repeat counts that trigger a reminder (default `[3, 5, 8]`). */
-  thresholds?: number[]
+  thresholds?: number[];
   /** Tool-name patterns to track; empty means every tool is tracked. */
-  include?: string[]
+  include?: string[];
   /** Tool-name patterns transparent to the chain (neither count nor reset). */
-  exclude?: string[]
+  exclude?: string[];
   /**
    * Maximum characters of canonical arguments quoted in the DETAILED reminder
    * (default 500). Large payloads (a `write` body, a long command) would
@@ -1619,7 +1619,7 @@ export interface Config {
    * scenario; the cap bounds the reminder, never the detection (the chain key
    * always compares the FULL canonical string).
    */
-  argumentsPreviewChars?: number
+  argumentsPreviewChars?: number;
 }
 ```
 
@@ -1641,7 +1641,7 @@ export interface Config {
    * `error.path` equals argv[0] and `error.syscall` is `spawn` or `spawn <runner>`, or
    * when `error.path` is absent and `error.syscall` is exactly `spawn <runner>`.
    */
-  runnerCommand?: string[]
+  runnerCommand?: string[];
   /**
    * Case-insensitive stderr substrings emitted when a configured
    * {@link runnerCommand} refuses its profile before executing the wrapped
@@ -1649,9 +1649,9 @@ export interface Config {
    * it. Each entry is a non-empty, single-line, case-insensitive substring
    * covering the executable runner's own failure dialect.
    */
-  runnerFailureSignatures?: string[]
+  runnerFailureSignatures?: string[];
   /** Positive timeout for each functional probe; zero would mean unbounded to Node. */
-  probeTimeoutMs?: number
+  probeTimeoutMs?: number;
 }
 ```
 
@@ -1671,12 +1671,12 @@ export interface Config {
  */
 export interface Config {
   /** File-sandbox mode a session starts from (default: `read-only`). */
-  mode?: SandboxMode
+  mode?: SandboxMode;
   /**
    * Fallback root for agentless calls and sessions without a cwd (default:
    * `process.cwd()`). Normal agent calls use their session cwd instead.
    */
-  workspaceRoot?: string
+  workspaceRoot?: string;
 }
 ```
 
@@ -1694,13 +1694,13 @@ export interface Config {
 /** JSON-RPC deployment config plus runtime-only test hooks. */
 export interface JsonRpcConfig {
   /** Report max-token turn/subagent termination as a successful SDK result. */
-  maxTokensAsSuccess?: boolean
+  maxTokensAsSuccess?: boolean;
   /** Transport input override; production uses `process.stdin`. */
-  input?: Readable
+  input?: Readable;
   /** Transport output override; production uses `process.stdout`. */
-  output?: Writable
+  output?: Writable;
   /** Process-exit override; production uses `process.exit`. */
-  exit?: (code: number) => void
+  exit?: (code: number) => void;
 }
 ```
 
@@ -1724,7 +1724,7 @@ export interface Config {
    * directories, then per-session directories. An existing root must be a
    * readable directory; an absent root is created on first materialization.
    */
-  root: string
+  root: string;
   /**
    * Write runs of consecutive `assistant/chunk` delta events as packed
    * `text-chunks`/`reasoning-chunks`/`tool-call-chunks` rows (lossless,
@@ -1732,17 +1732,17 @@ export interface Config {
    * keeps one `SessionEvent` per line for diagnostics. Reading packed rows is
    * unconditional: a log's layout never depends on this switch.
    */
-  packChunks?: boolean
+  packChunks?: boolean;
   /** Physical encoding; defaults to checksummed Zstandard frames. */
-  compression?: JsonlCompression
+  compression?: JsonlCompression;
   /** Maximum cold Session preparations retained for history-to-resume reuse. */
-  preparedSessionCacheSize?: number
+  preparedSessionCacheSize?: number;
   /** Fixed live-event coalescing window; not a backend completion deadline. */
-  writeBatchMaxDelayMs?: number
+  writeBatchMaxDelayMs?: number;
 }
 
 /** Physical encoding selected for JSONL session artifacts. */
-export type JsonlCompression = 'zstd' | 'none'
+export type JsonlCompression = "zstd" | "none";
 ```
 
 来源：[`packages/session/session-persistence-jsonl/src/index.ts:60`](../packages/session/session-persistence-jsonl/src/index.ts)
@@ -1757,19 +1757,19 @@ export type JsonlCompression = 'zstd' | 'none'
 /** Plugin configuration. */
 export interface Config {
   /** SQLite database path, or `:memory:` for an in-process database. */
-  path: string
+  path: string;
   /** Durable SQLite journal mode; defaults to `wal`. */
-  journalMode?: JournalMode
+  journalMode?: JournalMode;
   /** Maximum wait for another SQLite connection's lock; defaults to 5,000 ms. */
-  busyTimeoutMs?: number
+  busyTimeoutMs?: number;
   /** Maximum cold Session preparations retained for history-to-resume reuse. */
-  preparedSessionCacheSize?: number
+  preparedSessionCacheSize?: number;
   /** Fixed live-event coalescing window; not a backend completion deadline. */
-  writeBatchMaxDelayMs?: number
+  writeBatchMaxDelayMs?: number;
 }
 
 /** Durable journal modes accepted by the backend. */
-export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
+export type JournalMode = "wal" | "delete" | "truncate" | "persist";
 ```
 
 来源：[`packages/session/session-persistence-sqlite/src/index.ts:36`](../packages/session/session-persistence-sqlite/src/index.ts)
@@ -1789,9 +1789,9 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
  */
 export interface Config {
   /** Committed events per session that force a durable checkpoint write between mandatory points. */
-  writeEveryEvents: number
+  writeEveryEvents: number;
   /** Longest time (milliseconds) a dirty checkpoint may stay unwritten between mandatory points. */
-  writeIntervalMs: number
+  writeIntervalMs: number;
 }
 ```
 
@@ -1811,7 +1811,7 @@ export interface Config extends SessionQueryConfig {
    * indexes. Missing directories and database files are created owner-only on
    * POSIX filesystems; existing modes are preserved.
    */
-  path: string
+  path: string;
   /**
    * Open the SQLite module and handle at service activation or the first
    * search, or `never` to disable full-text search: the inherited exact
@@ -1819,24 +1819,24 @@ export interface Config extends SessionQueryConfig {
    * `searchEvents` fail with `SESSION_QUERY_SEARCH_DISABLED` and SQLite is
    * never imported or opened. Defaults to `startup`.
    */
-  openAt?: OpenAt
+  openAt?: OpenAt;
   /** SQLite journal mode. Defaults to `wal`. */
-  journalMode?: JournalMode
+  journalMode?: JournalMode;
   /** Page size when a request omits `limit`. At most `Number.MAX_SAFE_INTEGER - 1`; defaults to 20. */
-  defaultLimit?: number
+  defaultLimit?: number;
   /** Largest accepted page size. At most `Number.MAX_SAFE_INTEGER - 1`; defaults to 100. */
-  maxLimit?: number
+  maxLimit?: number;
   /** Maximum snippet length in Unicode code points. Defaults to 240. */
-  snippetChars?: number
+  snippetChars?: number;
   /** Maximum concurrent persisted-log inspections in one inherited batch read. Defaults to 4. */
-  persistedInspectConcurrency?: number
+  persistedInspectConcurrency?: number;
 }
 
 /** SQLite module/handle opening phase; `never` disables full-text search entirely. */
-export type OpenAt = 'startup' | 'first-search' | 'never'
+export type OpenAt = "startup" | "first-search" | "never";
 
 /** Supported SQLite journal modes. */
-export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
+export type JournalMode = "wal" | "delete" | "truncate" | "persist";
 ```
 
 依赖：[`SessionQueryConfig`](../packages/session-query/session-query/src/index.ts)
@@ -1853,11 +1853,11 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 /** Session-reference service configuration. */
 export interface Config {
   /** Maximum distinct source sessions referenced by one message, from one to three. */
-  maxReferences?: number
+  maxReferences?: number;
   /** Default host candidate-list limit. */
-  candidateLimit?: number
+  candidateLimit?: number;
   /** Maximum rendered UTF-8 bytes for one source snapshot. */
-  maxReferenceBytes?: number
+  maxReferenceBytes?: number;
 }
 ```
 
@@ -1877,7 +1877,7 @@ export interface Config {
  */
 export interface Config {
   /** Sharing policy; defaults to local-only `DISABLED` behavior. */
-  mode?: SessionTelemetryMode
+  mode?: SessionTelemetryMode;
   /**
    * Passed verbatim to the SDK's OTLP/HTTP log exporter — the complete
    * `OTLPExporterNodeConfigBase` shape (`headers`, `timeoutMillis`,
@@ -1886,22 +1886,22 @@ export interface Config {
    */
   exporter?: OTLPExporterNodeConfigBase & {
     /** Full logs endpoint (e.g. `https://collector.example.com/v1/logs`). Required outside `DISABLED`; validated at load. */
-    url?: string
-  }
+    url?: string;
+  };
   /**
    * Passed verbatim to `BatchLogRecordProcessor` (minus the exporter slot,
    * which this plugin fills); the SDK owns and documents these knobs.
    */
-  processor?: Omit<BatchLogRecordProcessorOptions, 'exporter'>
+  processor?: Omit<BatchLogRecordProcessorOptions, "exporter">;
   /** Maximum time spent awaiting the SDK provider's complete shutdown path. */
-  shutdownTimeoutMillis?: number
+  shutdownTimeoutMillis?: number;
 }
 
 /** Session-sharing policy selected by {@link Config.mode}. */
 export enum SessionTelemetryMode {
-  FULL = 'FULL',
-  FEEDBACK_ONLY = 'FEEDBACK_ONLY',
-  DISABLED = 'DISABLED',
+  FULL = "FULL",
+  FEEDBACK_ONLY = "FEEDBACK_ONLY",
+  DISABLED = "DISABLED",
 }
 ```
 
@@ -1919,11 +1919,11 @@ export enum SessionTelemetryMode {
 /** Required deterministic fallback and accepted-title limits. */
 export interface Config {
   /** Maximum whitespace-delimited words in the built-in fallback. */
-  readonly fallbackMaxWords: number
+  readonly fallbackMaxWords: number;
   /** Maximum UTF-8 bytes in the built-in fallback. */
-  readonly fallbackMaxBytes: number
+  readonly fallbackMaxBytes: number;
   /** Maximum UTF-8 bytes in any accepted title. */
-  readonly maxTitleBytes: number
+  readonly maxTitleBytes: number;
 }
 ```
 
@@ -1937,7 +1937,7 @@ export interface Config {
 
 ```ts config-catalog
 /** Required LLM policy; this plugin adds no defaults. */
-export type Config = SessionTitleLlmConfig
+export type Config = SessionTitleLlmConfig;
 ```
 
 依赖：[`SessionTitleLlmConfig`](../packages/session/session-title-llm/src/index.ts)
@@ -1952,7 +1952,7 @@ export type Config = SessionTitleLlmConfig
 
 ```ts config-catalog
 /** Required LLM policy; this plugin adds no defaults. */
-export type Config = SessionTitleLlmConfig
+export type Config = SessionTitleLlmConfig;
 ```
 
 依赖：[`SessionTitleLlmConfig`](../packages/session/session-title-llm/src/index.ts)
@@ -1967,13 +1967,13 @@ export type Config = SessionTitleLlmConfig
 /** Plugin config: file location and hot-reload behavior. */
 export interface Config {
   /** Settings document path; defaults to `settings.yaml` under the harness home. */
-  path?: string
+  path?: string;
   /** Harness home used when `path` is omitted; defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  dshHome?: string;
   /** Watch the document and hot-publish external edits; defaults to true. */
-  watch?: boolean
+  watch?: boolean;
   /** Watcher write-settle window in milliseconds; defaults to 100. */
-  debounceMs?: number
+  debounceMs?: number;
 }
 ```
 
@@ -1987,7 +1987,7 @@ export interface Config {
 /** Plugin config (all optional — the built-in facts resolve without defaults). */
 export interface Config {
   /** DeepSeek Harness home directory exposed as `DSH_HOME`; defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  dshHome?: string;
 }
 ```
 
@@ -2001,7 +2001,7 @@ export interface Config {
 /** Skill registry configuration. */
 export interface Config {
   /** Maximum number of completed cwd/provider catalogs kept in memory. */
-  readonly collectCacheMaxEntries?: number
+  readonly collectCacheMaxEntries?: number;
 }
 ```
 
@@ -2017,29 +2017,29 @@ export interface Config {
 /** Local filesystem skill provider configuration. */
 export interface Config {
   /** Unique provider name. Defaults to `local`. */
-  providerName?: string
+  providerName?: string;
   /** Whether project and user roots are included around custom roots. */
-  includeDefaultRoots?: boolean
+  includeDefaultRoots?: boolean;
   /** DeepSeek Harness config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
-  dshHome?: string
+  dshHome?: string;
   /** Shared agent config root. Defaults to `$DSH_AGENTS_HOME` or `~/.agents`. */
-  agentsHome?: string
+  agentsHome?: string;
   /** Additional skill roots scanned after project roots and before user roots. */
-  customSkillDirs?: string[]
+  customSkillDirs?: string[];
   /** Whether host-local skill roots are watched for catalog changes. */
-  watch?: boolean
+  watch?: boolean;
   /** Whether Chokidar uses polling instead of native filesystem events. */
-  watchUsePolling?: boolean
+  watchUsePolling?: boolean;
   /** Milliseconds a changed skill entry must remain stable before it is observed. */
-  watchStabilityThresholdMs?: number
+  watchStabilityThresholdMs?: number;
   /** Milliseconds between Chokidar stability or polling probes. */
-  watchPollIntervalMs?: number
+  watchPollIntervalMs?: number;
   /** Maximum distinct project roots whose skill directories remain watched. */
-  watchMaxProjects?: number
+  watchMaxProjects?: number;
   /** Whether watched symbolic links follow their target files. */
-  watchFollowSymlinks?: boolean
+  watchFollowSymlinks?: boolean;
   /** Bundled skill root; defaults to `$DSH_BUNDLED_SKILL_DIR` when default roots are included, otherwise mounts none. */
-  bundledSkillDir?: string
+  bundledSkillDir?: string;
 }
 ```
 
@@ -2057,7 +2057,7 @@ export interface Config {
    * (0700) per-process directory under the OS temp dir — the safe default for
    * a local deployment. Set it to keep spill files under a known location.
    */
-  root?: string
+  root?: string;
 }
 ```
 
@@ -2077,7 +2077,7 @@ export interface Config {
    * Omitted disables the policy entirely (no-op). When set, a result larger than
    * this is spilled and replaced with a preview derived from this same budget.
    */
-  maxInlineBytes?: number
+  maxInlineBytes?: number;
 }
 ```
 
@@ -2098,9 +2098,9 @@ export interface Config {
  */
 export interface Config {
   /** Default backend name for every domain without an explicit route. Required: there is no universally correct medium. */
-  backend: string
+  backend: string;
   /** Per-domain overrides: domain name → backend name. */
-  routes?: Record<string, string>
+  routes?: Record<string, string>;
 }
 ```
 
@@ -2121,7 +2121,7 @@ export interface Config {
  */
 export interface Config {
   /** Directory holding one `<unit>.json` file per unit. */
-  root: string
+  root: string;
 }
 ```
 
@@ -2145,14 +2145,14 @@ export interface Config {
    * integrity when another principal can replace the database entry in its
    * parent directory.
    */
-  path: string
+  path: string;
   /**
    * SQLite `journal_mode` pragma. `wal` (the default) suits local disks; pick
    * a rollback-journal mode (`delete`/`truncate`/`persist`) on filesystems
    * where WAL's shared-memory files do not work (network mounts). See
    * {@link JournalMode}.
    */
-  journalMode?: JournalMode
+  journalMode?: JournalMode;
 }
 
 /**
@@ -2162,7 +2162,7 @@ export interface Config {
  * `memory`/`off` are excluded: dropping journal durability silently
  * contradicts the durability clause of the KV backend contract.
  */
-export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
+export type JournalMode = "wal" | "delete" | "truncate" | "persist";
 ```
 
 来源：[`packages/storage/storage-sqlite/src/index.ts:24`](../packages/storage/storage-sqlite/src/index.ts)
@@ -2177,11 +2177,11 @@ export type JournalMode = 'wal' | 'delete' | 'truncate' | 'persist'
 /** Config: how to spawn and drive the child ACP agent process. */
 export interface Config {
   /** Provider name on `ctx.subagents` (default `acp`). */
-  providerName: string
+  providerName: string;
   /** The executable to spawn for each run (the child ACP agent). */
-  command: string
+  command: string;
   /** Arguments passed to {@link command}. */
-  args: string[]
+  args: string[];
   /**
    * Working directory override for the child process and its ACP session.
    * Must be non-empty; a relative path resolves against the harness launch
@@ -2189,33 +2189,33 @@ export interface Config {
    * omitted, each child inherits its delegating parent session's cwd — and
    * starting one from a parent session that has no cwd fails.
    */
-  cwd?: string
+  cwd?: string;
   /**
    * How to auto-answer the child's `session/request_permission` prompts:
    * `reject` (default — decline every prompt) or `allow` (approve via the first
    * `allow_once` or `allow_always` option). No prompt is surfaced to a human.
    */
-  permission: PermissionPolicy
+  permission: PermissionPolicy;
   /**
    * Extra environment variables for the child process — e.g. the child
    * harness's own `DEEPSEEK_API_KEY`. Forwarded on top of a credential-scrubbed
    * copy of the parent env, so an explicit key here reaches the child while
    * ambient secrets do not leak implicitly.
    */
-  env: Record<string, string>
+  env: Record<string, string>;
   /**
    * Grace period (ms) for the child's EOF-driven quiesce on dispose — its
    * window to flush persistence and tear down its own nested subprocesses
    * before the parent escalates to a signal. Must not exceed
    * `MAX_TIMER_DELAY_MS`.
    */
-  disposeEofGraceMs?: number
+  disposeEofGraceMs?: number;
   /** Termination-escalation grace (ms); must not exceed `MAX_TIMER_DELAY_MS`. */
-  disposeGraceMs?: number
+  disposeGraceMs?: number;
 }
 
 /** Fixed response to child permission requests: reject by default, or select the first allow option. */
-export type PermissionPolicy = 'allow' | 'reject'
+export type PermissionPolicy = "allow" | "reject";
 ```
 
 来源：[`packages/subagent/subagent-acp/src/index.ts:27`](../packages/subagent/subagent-acp/src/index.ts)
@@ -2230,25 +2230,25 @@ export type PermissionPolicy = 'allow' | 'reject'
 /** Deployment-owned permission, environment, and process-release settings. */
 export interface Config {
   /** Provider name on `ctx.subagents` (default `claude-code`). */
-  providerName?: string
+  providerName?: string;
   /**
    * Explicit environment entries layered over the subprocess seam's
    * credential-scrubbed parent environment.
    */
-  env?: Record<string, string>
+  env?: Record<string, string>;
   /**
    * Native non-interactive mode fixed for this Provider instance. Defaults to
    * `dontAsk`; `acceptEdits` accepts edits, `auto` uses the native classifier,
    * `plan` returns a plan without approving execution, and
    * `bypassPermissions` explicitly skips permission checks.
    */
-  permissionMode?: ClaudeCodePermissionMode
+  permissionMode?: ClaudeCodePermissionMode;
   /** Grace in milliseconds for Claude Code process-tree termination. */
-  disposeGraceMs?: number
+  disposeGraceMs?: number;
 }
 
 /** Profile-selectable non-interactive Claude Code permission mode. */
-export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[number]
+export type ClaudeCodePermissionMode = (typeof CLAUDE_CODE_PERMISSION_MODES)[number];
 ```
 
 来源：[`packages/subagent/subagent-claude-code/src/index.ts:38`](../packages/subagent/subagent-claude-code/src/index.ts)
@@ -2263,23 +2263,20 @@ export type ClaudeCodePermissionMode = typeof CLAUDE_CODE_PERMISSION_MODES[numbe
 /** Deployment-owned permission, environment, and process-release settings. */
 export interface Config {
   /** Provider name on `ctx.subagents` (default `codex`). */
-  providerName?: string
+  providerName?: string;
   /**
    * Explicit environment entries layered over the subprocess seam's
    * credential-scrubbed parent environment.
    */
-  env?: Record<string, string>
+  env?: Record<string, string>;
   /** Native non-interactive permission mode fixed for this Provider instance. */
-  permissionMode?: CodexPermissionMode
+  permissionMode?: CodexPermissionMode;
   /** Grace in milliseconds for app-server process-tree termination. */
-  disposeGraceMs?: number
+  disposeGraceMs?: number;
 }
 
 /** Profile-selectable non-interactive Codex permission mode. */
-export type CodexPermissionMode =
-  | 'never'
-  | 'approve-for-me'
-  | 'dangerously-bypass-approvals-and-sandbox'
+export type CodexPermissionMode = "never" | "approve-for-me" | "dangerously-bypass-approvals-and-sandbox";
 ```
 
 来源：[`packages/subagent/subagent-codex/src/index.ts:36`](../packages/subagent/subagent-codex/src/index.ts)
@@ -2294,11 +2291,11 @@ export type CodexPermissionMode =
 /** Config: how to spawn and drive the child SDK runtime process. */
 export interface Config {
   /** Provider name on `ctx.subagents` (default `dsh-sdk`). */
-  providerName: string
+  providerName: string;
   /** The executable to spawn for each run (the child runtime bin or packaged exe). */
-  command: string
+  command: string;
   /** Arguments passed to {@link command} (typically the child's `cordis.yml` path). */
-  args: string[]
+  args: string[];
   /**
    * Working directory override for the child process and its SDK session
    * workspace. Must be non-empty; a relative path resolves against the
@@ -2307,13 +2304,13 @@ export interface Config {
    * session's cwd — and starting one from a parent session that has no cwd
    * fails.
    */
-  cwd?: string
+  cwd?: string;
   /** Provider route the child runtime initializes with (default `deepseek-official`). */
-  provider: string
+  provider: string;
   /** Model the child runtime initializes with (default `deepseek-v4-flash`). */
-  model: string
+  model: string;
   /** Optional per-request output-token cap for the child runtime. */
-  maxTokens?: number
+  maxTokens?: number;
   /**
    * Extra environment variables for the child process — e.g. the child
    * runtime's own `DEEPSEEK_API_KEY`, or `DSH_CORDIS_CONFIG` naming its
@@ -2321,17 +2318,17 @@ export interface Config {
    * env, so an explicit key here reaches the child while ambient secrets do
    * not leak implicitly.
    */
-  env: Record<string, string>
+  env: Record<string, string>;
   /** Bound (ms) on the protocol `shutdown` exchange during dispose. */
-  shutdownTimeoutMs?: number
+  shutdownTimeoutMs?: number;
   /**
    * Grace period (ms) for the child's EOF-driven quiesce on dispose — its
    * window to flush persistence and tear down its own nested subprocesses
    * before the parent escalates to a signal.
    */
-  disposeEofGraceMs?: number
+  disposeEofGraceMs?: number;
   /** Termination confirmation window (ms), including forced exit on every platform. */
-  disposeGraceMs?: number
+  disposeGraceMs?: number;
 }
 ```
 
@@ -2347,7 +2344,7 @@ export interface Config {
 /** Config: the registry name to register the provider under. */
 export interface Config {
   /** Provider name on `ctx.subagents` (default `fork`). */
-  providerName: string
+  providerName: string;
 }
 ```
 
@@ -2363,7 +2360,7 @@ export interface Config {
 /** Config: the registry name to register the provider under. */
 export interface Config {
   /** Provider name on `ctx.subagents` (default `spawn`). */
-  providerName: string
+  providerName: string;
 }
 ```
 
@@ -2379,7 +2376,7 @@ export interface Config {
 /** Configuration for the E2B subprocess adapter. */
 export interface Config {
   /** Remote status/liveness poll cadence in milliseconds; each tick is one control-plane request. */
-  pollMs?: number
+  pollMs?: number;
 }
 ```
 
@@ -2393,20 +2390,20 @@ export interface Config {
 /** Plugin config: the deployment-authored fragment of the system prompt (see {@link Config.persona} for its contract). */
 export interface Config {
   /** Include the fixed DeepSeek Harness identity before the deployment persona (default true). */
-  includeHarnessIdentity?: boolean
+  includeHarnessIdentity?: boolean;
   /** Include dynamic runtime-context snapshots in model history (default true). */
-  includeRuntimeContext?: boolean
+  includeRuntimeContext?: boolean;
   /**
    * Deployment-wide order-0 persona template. A scoped section named
    * `deployment:persona` shadows it; `{{variable}}` references are strict.
    */
-  persona?: string
+  persona?: string;
   /**
    * Model-facing tool names in order, with {@link TOOL_ORDER_REST} exactly once.
    * Invalid fields fail at load and unknown names fail at assembly; known names
    * hidden in one scope may be absent there. Omitted means lexicographic order.
    */
-  toolOrder?: string[]
+  toolOrder?: string[];
 }
 ```
 
@@ -2422,42 +2419,42 @@ export interface Config {
 /** Public plugin configuration. */
 export interface Config {
   /** Backend registry type (default: `shell`). */
-  backendType?: string
+  backendType?: string;
   /** Interactive shell dialect (default: `bash`); selects the argv/env/startup defaults. */
-  shellDialect?: ShellDialect
+  shellDialect?: ShellDialect;
   /** Interactive shell executable (default per dialect: `/bin/bash`, or the resolved pwsh). */
-  shellPath?: string
+  shellPath?: string;
   /** Shell arguments (default per dialect: bash `--noprofile --norc -i`, pwsh `-NoLogo -NoProfile`). */
-  shellArgs?: string[]
+  shellArgs?: string[];
   /** Terminal rows. */
-  rows?: number
+  rows?: number;
   /** Terminal columns. */
-  cols?: number
+  cols?: number;
   /** Maximum retained logical lines. */
-  scrollbackLines?: number
+  scrollbackLines?: number;
   /** Maximum retained UTF-8 bytes. */
-  scrollbackMaxBytes?: number
+  scrollbackMaxBytes?: number;
   /** Maximum bytes returned by one read or settled viewport. */
-  maxReadBytes?: number
+  maxReadBytes?: number;
   /** Readiness polling interval. */
-  pollIntervalMs?: number
+  pollIntervalMs?: number;
   /** Delay before Linux exact syscall probes. */
-  exactProbeAfterMs?: number
+  exactProbeAfterMs?: number;
   /** Silence duration that yields `inferred_idle`. */
-  idleSilenceMs?: number
+  idleSilenceMs?: number;
   /**
    * Extra wait beyond `idleSilenceMs`, once a prompt marker was seen, for the shell to
    * regain the foreground before `inferred_idle` settles; at least one `pollIntervalMs`.
    */
-  handoffGraceMs?: number
+  handoffGraceMs?: number;
   /** Absolute send wait bound. */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** Grace before teardown escalates to `SIGKILL`. */
-  disposeGraceMs?: number
+  disposeGraceMs?: number;
 }
 
 /** One supported interactive shell dialect. */
-export type ShellDialect = 'bash' | 'pwsh'
+export type ShellDialect = "bash" | "pwsh";
 ```
 
 来源：[`packages/terminal/terminal-bash/src/config.ts:10`](../packages/terminal/terminal-bash/src/config.ts)
@@ -2472,9 +2469,9 @@ export type ShellDialect = 'bash' | 'pwsh'
 /** Request-preparation clock formatting and append scheduling. Invalid values fail plugin load. */
 export interface Config {
   /** Fallback display zone when the open turn has no unique browser zone. Omit to use the process zone. */
-  timeZone?: string
+  timeZone?: string;
   /** Minimum milliseconds between durable injections in one session. Omit or set to 0 to inject at every eligible step. */
-  refreshIntervalMs?: number
+  refreshIntervalMs?: number;
 }
 ```
 
@@ -2490,7 +2487,7 @@ export interface Config {
 /** Per-turn tmux-location scheduling. Invalid values fail plugin load. */
 export interface Config {
   /** Minimum milliseconds between durable injections in one session. Omit or set to 0 to inject on every eligible change. */
-  refreshIntervalMs?: number
+  refreshIntervalMs?: number;
 }
 ```
 
@@ -2502,7 +2499,7 @@ export interface Config {
 
 ```ts config-catalog
 /** Token-meter plugin configuration; the fixed estimator has no settings. */
-export type TokenMeterConfig = Record<string, never>
+export type TokenMeterConfig = Record<string, never>;
 ```
 
 来源：[`packages/llm/token-meter/src/types.ts:12`](../packages/llm/token-meter/src/types.ts)
@@ -2517,7 +2514,7 @@ export type TokenMeterConfig = Record<string, never>
 /** Configuration for the bash tool. */
 export interface Config {
   /** Expose `run_in_background` (default true); disabled calls are also rejected. */
-  enableRunInBackground?: boolean
+  enableRunInBackground?: boolean;
 }
 ```
 
@@ -2533,13 +2530,13 @@ export interface Config {
 /** Configuration for the persistent Bash tool. */
 export interface Config {
   /** PTY backend used for each owner-isolated persistent shell (default `shell`). */
-  backendType?: string
+  backendType?: string;
   /** Wall-clock limit for one command (default 300000). */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** Maximum returned command-output characters before clipping (default 16000). */
-  maxOutputChars?: number
+  maxOutputChars?: number;
   /** Model-facing tool description; deployments may describe their environment. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -2555,13 +2552,13 @@ export interface Config {
 /** Plugin config (all optional — `Config` supplies the defaults). */
 export interface Config {
   /** Default and maximum number of lines returned by one `read` call. */
-  readLimit?: number
+  readLimit?: number;
   /** Maximum characters returned for a single line before truncation. */
-  readMaxLineLength?: number
+  readMaxLineLength?: number;
   /** Maximum bytes returned for the selected lines of one `read` call. */
-  readMaxBytes?: number
+  readMaxBytes?: number;
   /** Files at or above this size stream instead of loading whole into memory. */
-  readStreamMinSize?: number
+  readStreamMinSize?: number;
 }
 ```
 
@@ -2577,26 +2574,26 @@ export interface Config {
 /** Plugin config; over-cap glob sampling is an explicit deployment choice and the remaining fields have defaults. */
 export interface Config {
   /** Whether an over-cap `glob` page is sampled across top-level entries instead of taking the modification-time head. */
-  sampleOverCapGlobResults: boolean
+  sampleOverCapGlobResults: boolean;
   /** Max paths one `glob` call retains inline; later paths go to the formatted spill file. */
-  globMaxResults?: number
+  globMaxResults?: number;
   /** Max flat matches one `grep` call retains inline; later matches go to the formatted spill file. */
-  grepMaxMatches?: number
+  grepMaxMatches?: number;
   /** Max bytes retained for one matched-line preview (the cut preserves UTF-8 boundaries). */
-  grepMaxLineBytes?: number
+  grepMaxLineBytes?: number;
   /** Max bytes of one search's serialized `presentationMeta`; trailing groups/paths drop past it so the persisted card stays bounded. */
-  searchMetaMaxBytes?: number
+  searchMetaMaxBytes?: number;
   /** Max complete raw `rg` stdout bytes a search will parse; larger raw output fails with `SEARCH_RAW_OUTPUT_OVERFLOW`. */
-  rawOutputMaxBytes?: number
+  rawOutputMaxBytes?: number;
   /** Terminate-escalation grace (ms), handed to the subprocess seam and bounded by `MAX_TIMER_DELAY_MS`. */
-  graceMs?: number
+  graceMs?: number;
   /** Max bytes retained for one search's stderr tail; the excerpt is embedded in `SEARCH_*` error messages, never shown on success. */
-  stderrMaxBytes?: number
+  stderrMaxBytes?: number;
   /**
    * Cooperative tool-call timeout budget (ms) on both tools, enforced by
    * `@deepseek-ai/dsh-tool-call-timeout-policy` through `exec.signal`.
    */
-  timeoutMs?: number
+  timeoutMs?: number;
 }
 ```
 
@@ -2612,7 +2609,7 @@ export interface Config {
 /** Model policy and hard lower bounds for goal-state updates. */
 export interface Config {
   /** Minimum admitted goal rounds before the model may self-report `blocked`. */
-  blockedAfterConsecutiveRounds?: number
+  blockedAfterConsecutiveRounds?: number;
 }
 ```
 
@@ -2628,18 +2625,18 @@ export interface Config {
 /** Configures bounded `job_output` waits and completion-notice delivery. */
 export interface Config {
   /** Wait duration applied when `job_output` sets `wait` without `timeout_ms` (default 30s). */
-  waitTimeoutMs?: number
+  waitTimeoutMs?: number;
   /** Hard cap on any single wait; a larger model-supplied `timeout_ms` is clamped down to it (default 10min). */
-  maxWaitTimeoutMs?: number
+  maxWaitTimeoutMs?: number;
   /** Whether a completion opens a turn on an idle owner (default `wakeup`). */
-  completionDelivery?: CompletionDelivery
+  completionDelivery?: CompletionDelivery;
   /**
    * Turns one owner may have opened by completion wakes before the next
    * notice degrades to injection, reset by any user-authored input (default 3).
    * Bounds the self-exciting chain where a woken turn starts the job whose
    * completion wakes it again.
    */
-  maxConsecutiveWakes?: number
+  maxConsecutiveWakes?: number;
 }
 
 /**
@@ -2647,7 +2644,7 @@ export interface Config {
  * opens a turn for it, `quiet` leaves it pending until something else wakes the
  * owner. A busy owner is injected either way.
  */
-export type CompletionDelivery = 'quiet' | 'wakeup'
+export type CompletionDelivery = "quiet" | "wakeup";
 ```
 
 来源：[`packages/jobs/tool-jobs/src/index.ts:32`](../packages/jobs/tool-jobs/src/index.ts)
@@ -2662,11 +2659,11 @@ export type CompletionDelivery = 'quiet' | 'wakeup'
 /** Plugin configuration: result caps and the timeout budget. */
 export interface Config {
   /** Largest number of rendered locations before an omission marker (default 100). */
-  maxLocations?: number
+  maxLocations?: number;
   /** Largest complete rendered result in characters, including truncation metadata (default 16000). */
-  maxResultChars?: number
+  maxResultChars?: number;
   /** Tool-call timeout budget in ms (default 60000). */
-  timeoutMs?: number
+  timeoutMs?: number;
 }
 ```
 
@@ -2682,7 +2679,7 @@ export interface Config {
 /** Configuration for the pwsh tool. */
 export interface Config {
   /** Expose `run_in_background` (default true); disabled calls are also rejected. */
-  enableRunInBackground?: boolean
+  enableRunInBackground?: boolean;
 }
 ```
 
@@ -2698,13 +2695,13 @@ export interface Config {
 /** Configuration for the persistent pwsh tool. */
 export interface Config {
   /** PTY backend used for each owner-isolated persistent shell (default `shell`). */
-  backendType?: string
+  backendType?: string;
   /** Wall-clock limit for one command (default 300000). */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** Maximum returned command-output characters before clipping (default 16000). */
-  maxOutputChars?: number
+  maxOutputChars?: number;
   /** Model-facing tool description; deployments may describe their environment. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -2720,13 +2717,13 @@ export interface Config {
 /** Deployment policy for the fixed Ralph workflow. */
 export interface Config {
   /** Fresh structured-output provider used for every round (default `spawn`). */
-  subagentProvider?: string
+  subagentProvider?: string;
   /** Default and deployment ceiling for one call's round count (default 256). */
-  maxRounds?: number
+  maxRounds?: number;
   /** Maximum serialized characters in one structured handoff (default 16384). */
-  maxHandoffChars?: number
+  maxHandoffChars?: number;
   /** Maximum characters in a successful parent-facing terminal text (default 16384). */
-  maxResultChars?: number
+  maxResultChars?: number;
 }
 ```
 
@@ -2742,9 +2739,9 @@ export interface Config {
 /** Deployment-owned search count and timeout bounds. */
 export interface Config {
   /** Maximum authorized hits returned by one search call. Defaults to 100. */
-  maxSearchResults?: number
+  maxSearchResults?: number;
   /** Cooperative full-text search deadline in milliseconds. Defaults to 30000. */
-  searchTimeoutMs?: number
+  searchTimeoutMs?: number;
 }
 ```
 
@@ -2760,7 +2757,7 @@ export interface Config {
 /** Model-facing skill catalog configuration. */
 export interface Config {
   /** Maximum normalized description length rendered in the session catalog; minimum 3. */
-  catalogDescriptionMaxLength?: number
+  catalogDescriptionMaxLength?: number;
 }
 ```
 
@@ -2776,9 +2773,9 @@ export interface Config {
 /** Configuration for the string-replacement editor tool. */
 export interface Config {
   /** Maximum returned view characters before clipping (default 16000). */
-  maxOutputChars?: number
+  maxOutputChars?: number;
   /** Model-facing tool description. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -2794,33 +2791,33 @@ export interface Config {
 /** Config: which registered provider this tool delegates to, plus child defaults. */
 export interface Config {
   /** The `ctx.subagents` provider name to start runs on (e.g. `spawn`, `acp`). */
-  provider: string
+  provider: string;
   /**
    * Model-facing tool name (default `subagent`). Each loaded instance must use
    * a distinct name.
    */
-  toolName?: string
+  toolName?: string;
   /**
    * Expose `run_in_background` (default true). Disabled instances omit the
    * parameter and reject forced background calls.
    */
-  enableRunInBackground?: boolean
+  enableRunInBackground?: boolean;
   /**
    * Background execution policy (default `one-shot`). `one-shot` defaults calls
    * to foreground; `continuable` defaults them to background, requires a provider
    * with the `prepareContinuable` capability, and returns the durable child id.
    * Follow-up adapters remain independently optional.
    */
-  backgroundMode?: 'one-shot' | 'continuable'
+  backgroundMode?: "one-shot" | "continuable";
   /**
    * Agent options applied to every child; omitted fields use child-loop defaults.
    */
-  agentOptions?: AgentOptions
+  agentOptions?: AgentOptions;
   /**
    * Per-child persona that shadows `deployment:persona`. Requires the
    * provider's `persona` capability; omission preserves the deployment persona.
    */
-  persona?: string
+  persona?: string;
   /**
    * Tool filter applied to every child. Filtered tools disappear from its
    * prompt and reject execution. Requires the provider's `toolFilter`
@@ -2828,10 +2825,10 @@ export interface Config {
    */
   toolFilter?: {
     /** Global tool names the child keeps; everything else is removed. */
-    allow?: string[]
+    allow?: string[];
     /** Global tool names removed from the child. */
-    deny?: string[]
-  }
+    deny?: string[];
+  };
   /**
    * Maximum child depth: a non-negative safe integer (default `3`; `0` forbids
    * delegation entirely), or `'provider-managed'` to send no cap. A numeric cap
@@ -2841,7 +2838,7 @@ export interface Config {
    * `'provider-managed'` is for an out-of-process provider whose recursion
    * budget belongs to the child runtime or its own deployment.
    */
-  maxDepth?: number | 'provider-managed'
+  maxDepth?: number | "provider-managed";
 }
 ```
 
@@ -2863,7 +2860,7 @@ export interface Config {
    * enters at its nearest step boundary; `quiet` adds the same context without
    * waking, so a parked parent waits for another waking input.
    */
-  reportDelivery?: SubagentReportDelivery
+  reportDelivery?: SubagentReportDelivery;
 }
 ```
 
@@ -2881,9 +2878,9 @@ export interface Config {
 /** Model-facing terminal tool configuration. */
 export interface Config {
   /** Expose `run_in_background` and accept background sends (default true). */
-  enableRunInBackground?: boolean
+  enableRunInBackground?: boolean;
   /** Maximum UTF-8 bytes in one complete terminal or task-output result. */
-  maxResultBytes?: number
+  maxResultBytes?: number;
 }
 ```
 
@@ -2905,7 +2902,7 @@ export interface Config {
    * single-active discipline: the description asks for exactly one, and a call marking more is
    * rejected.
    */
-  allowParallelInProgress: boolean
+  allowParallelInProgress: boolean;
 }
 ```
 
@@ -2921,19 +2918,19 @@ export interface Config {
 /** Plugin config: which web tools to register, search bounds, per-tool budgets, and the fetch output cap. */
 export interface Config {
   /** Register `web_search`. Defaults to true. */
-  search?: boolean
+  search?: boolean;
   /** Register `web_fetch`. Defaults to true. */
-  fetch?: boolean
+  fetch?: boolean;
   /** Upper bound on sources returned by one `web_search` call. */
-  searchMaxResults?: number
+  searchMaxResults?: number;
   /** Upper bound on queries accepted by one `web_search` call. */
-  searchMaxQueries?: number
+  searchMaxQueries?: number;
   /** Cooperative timeout budget (ms) for `web_fetch`. Defaults to 30000. */
-  fetchTimeoutMs?: number
+  fetchTimeoutMs?: number;
   /** Cooperative timeout budget (ms) for `web_search`. Defaults to 30000. */
-  searchTimeoutMs?: number
+  searchTimeoutMs?: number;
   /** Cap on source characters converted and complete `web_fetch` output characters. Defaults to 200000. */
-  fetchMaxOutputChars?: number
+  fetchMaxOutputChars?: number;
 }
 ```
 
@@ -2949,9 +2946,9 @@ export interface Config {
 /** Config: the model-facing tool name plus result rendering caps. */
 export interface Config {
   /** The model-facing tool name to register (default `workflow`). */
-  toolName?: string
+  toolName?: string;
   /** Rendered-result ceiling, in characters: a longer JSON value is truncated with a notice (default 50000). */
-  maxResultChars?: number
+  maxResultChars?: number;
 }
 ```
 
@@ -2976,7 +2973,7 @@ export interface Config {
    * assembly when it is absent or has no renderer. Under `code`, native names
    * in `toolOrder` are invalid.
    */
-  mode?: ToolPresentationMode
+  mode?: ToolPresentationMode;
   /**
    * Concurrency cap for a `run_code` program's overlapping sub-calls
    * (default 10, the loop scheduler's own default). Sub-calls follow the
@@ -2984,11 +2981,11 @@ export interface Config {
    * concurrency-safe overlap; exclusive calls form barriers — so `1`
    * restores strictly serial dispatch. Must be a positive integer.
    */
-  maxParallelSubCalls?: number
+  maxParallelSubCalls?: number;
 }
 
 /** How the registry presents its tools to the model (see {@link Config.mode}). */
-export type ToolPresentationMode = 'native' | 'code' | 'both'
+export type ToolPresentationMode = "native" | "code" | "both";
 ```
 
 来源：[`packages/core/tools/src/index.ts:654`](../packages/core/tools/src/index.ts)
@@ -3003,7 +3000,7 @@ export type ToolPresentationMode = 'native' | 'code' | 'both'
 /** Additional package artifacts whose owning plugins are nested behind another Loader entry. */
 export interface Config {
   /** Exact npm package names that must resolve and export `./typert`. */
-  packages?: string[]
+  packages?: string[];
 }
 ```
 
@@ -3022,7 +3019,7 @@ export interface Config {
    * (fail-closed with none); `'never'` auto-rejects every ask without
    * prompting (the deterministic CI/unattended stance).
    */
-  readonly policy?: ApprovalPolicy
+  readonly policy?: ApprovalPolicy;
 }
 
 /**
@@ -3035,7 +3032,7 @@ export interface Config {
  *   deterministically. The strict headless stance (CI, unattended runs) and
  *   the policy whose outcome is knowable without asking.
  */
-export type ApprovalPolicy = 'ask' | 'never'
+export type ApprovalPolicy = "ask" | "never";
 ```
 
 来源：[`packages/interaction/user-approval/src/index.ts:177`](../packages/interaction/user-approval/src/index.ts)
@@ -3053,9 +3050,9 @@ export type ApprovalPolicy = 'ask' | 'never'
  */
 export interface WebRuntimeConfig {
   /** Explicit search provider id. Omitted = auto-select when exactly one usable. */
-  readonly searchProvider?: string
+  readonly searchProvider?: string;
   /** Explicit fetch provider id. Omitted = auto-select when exactly one usable. */
-  readonly fetchProvider?: string
+  readonly fetchProvider?: string;
 }
 ```
 
@@ -3071,18 +3068,18 @@ export interface WebRuntimeConfig {
 /** Plugin config: composed deployment settings plus per-invocation command-line values. */
 export interface Config {
   /** Permit default-browser handoff after the Loader tree settles; an SSH launch suppresses it. */
-  openBrowser: boolean
+  openBrowser: boolean;
   /** Print the URL line on activation; a non-interactive layer can turn it off. */
-  printUrl: boolean
+  printUrl: boolean;
   /**
    * Register the model-visible surface context (the `app:web-surface` prompt
    * section and the `DSH_WEB_URL` bash variable). A one-shot non-interactive
    * layer can turn it off when its user is not in the GUI, so the
    * orientation text would be false.
    */
-  surfaceContext: boolean
+  surfaceContext: boolean;
   /** Explicit `--trusted-host` authorities from this invocation. */
-  trustedHosts: string[]
+  trustedHosts: string[];
 }
 ```
 
@@ -3098,17 +3095,17 @@ export interface Config {
 /** Plugin config: the provider's transport and size limits plus its `User-Agent` (all defaulted). */
 export interface Config {
   /** Maximum accepted request URL length. */
-  maxUrlLength?: number
+  maxUrlLength?: number;
   /** Maximum response body size in bytes. */
-  maxResponseBytes?: number
+  maxResponseBytes?: number;
   /** Maximum decoded body length in characters. */
-  maxBodyChars?: number
+  maxBodyChars?: number;
   /** Default fetch timeout in milliseconds, within Node's timer range. */
-  timeoutMs?: number
+  timeoutMs?: number;
   /** Maximum number of same-origin redirect hops to follow. */
-  maxRedirects?: number
+  maxRedirects?: number;
   /** `User-Agent` header sent on every request. */
-  userAgent?: string
+  userAgent?: string;
 }
 ```
 
@@ -3124,19 +3121,19 @@ export interface Config {
 /** Plugin config (all optional — `apply` fills env-var and constant defaults). */
 export interface Config {
   /** Literal DeepSeek API key; prefer {@link apiKeyEnv} so no secret enters configuration files. */
-  apiKey?: string
+  apiKey?: string;
   /** Credential reference resolved for each search; defaults to `DEEPSEEK_API_KEY`. */
-  apiKeyEnv?: string
+  apiKeyEnv?: string;
   /** Anthropic-compatible endpoint base; `/messages` is appended. */
-  baseURL?: string
+  baseURL?: string;
   /** Anthropic-format model name. Defaults to `deepseek-v4-flash`. */
-  model?: string
+  model?: string;
   /** `anthropic-version` header value. Defaults to `2023-06-01`. */
-  apiVersion?: string
+  apiVersion?: string;
   /** Upper bound on generated tokens for the Messages request. Defaults to 4096. */
-  maxTokens?: number
+  maxTokens?: number;
   /** Maximum `web_search` server-tool uses per request. Defaults to 5. */
-  maxUses?: number
+  maxUses?: number;
 }
 ```
 
@@ -3152,15 +3149,15 @@ export interface Config {
 /** Plugin config (all optional — `apply` fills env-var and constant defaults). */
 export interface Config {
   /** Exa API key. Falls back to `$EXA_API_KEY`. Empty → provider unavailable. */
-  apiKey?: string
+  apiKey?: string;
   /** Endpoint base; `/search` is appended. Defaults to the public API. */
-  baseURL?: string
+  baseURL?: string;
   /** Retrieval mode sent as Exa's `type`. Defaults to `auto`. */
-  searchType?: 'auto' | 'keyword' | 'neural'
+  searchType?: "auto" | "keyword" | "neural";
   /** Default result count when a request carries no `maxResults`. Omitted = none. */
-  numResults?: number
+  numResults?: number;
   /** Highlight sentences requested per result. Defaults to 1. */
-  highlightsPerResult?: number
+  highlightsPerResult?: number;
 }
 ```
 
@@ -3176,15 +3173,15 @@ export interface Config {
 /** Plugin config (all optional — `apply` fills env-var and constant defaults). */
 export interface Config {
   /** Perplexity API key. Falls back to `$PERPLEXITY_API_KEY`. Empty → unavailable. */
-  apiKey?: string
+  apiKey?: string;
   /** Endpoint base; `/chat/completions` is appended. Defaults to the public API. */
-  baseURL?: string
+  baseURL?: string;
   /** Search model name. Defaults to `sonar`. */
-  model?: string
+  model?: string;
   /** Upper bound on generated answer tokens. Defaults to 1024. */
-  maxTokens?: number
+  maxTokens?: number;
   /** Recency window sent as `search_recency_filter`. Omitted = no filter. */
-  searchRecency?: 'day' | 'week' | 'month' | 'year'
+  searchRecency?: "day" | "week" | "month" | "year";
 }
 ```
 
@@ -3200,21 +3197,21 @@ export interface Config {
 /** Plugin config (all optional — `static Config` supplies the defaults). */
 export interface Config {
   /** The `ctx.subagents` provider children run on (default `spawn`). */
-  provider?: string
+  provider?: string;
   /** Concurrent `agent()` ceiling; `0` (the default) auto-resolves to `min(16, max(1, cores - 2))`. */
-  maxConcurrentAgents?: number
+  maxConcurrentAgents?: number;
   /** Total `agent()` calls one run may start — the runaway-loop backstop (default 1000). */
-  maxTotalAgents?: number
+  maxTotalAgents?: number;
   /** Items accepted by a single `parallel()`/`pipeline()` call (default 4096). */
-  maxItemsPerCall?: number
+  maxItemsPerCall?: number;
   /** vm timeout for the script's initial synchronous slice, inside the worker (default 5000 ms). */
-  syncTimeoutMs?: number
+  syncTimeoutMs?: number;
   /**
    * How long after a cancellation an unsettled script may keep running before
    * the run force-settles `cancelled` and its worker is TERMINATED (default
    * 5000 ms); also bounds `dispose()`.
    */
-  disposeGraceMs?: number
+  disposeGraceMs?: number;
 }
 ```
 
@@ -3315,6 +3312,7 @@ export interface Config {
 - `@deepseek-ai/dsh-spill` — 抽象 `SpillStore`（[`packages/spill/spill/src/index.ts`](../packages/spill/spill/src/index.ts)）
 - `@deepseek-ai/dsh-subprocess` — 抽象 `SubprocessRuntime`（[`packages/subprocess/subprocess/src/index.ts`](../packages/subprocess/subprocess/src/index.ts)）
 - `@deepseek-ai/dsh-workflow` — 抽象 `WorkflowEngine`（[`packages/workflow/workflow/src/index.ts`](../packages/workflow/workflow/src/index.ts)）
+
 ## 库包（无插件入口）
 
 由其他包作为库导入；`cordis.yml` 无法加载它们。

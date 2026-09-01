@@ -21,11 +21,15 @@ Client 工具展示插件。`ui-conversation` 通过 `conversation.chat.node` �
 拥有该视图的业务包将其 wire 工具名称注册进 `tool.call.toolview`：
 
 ```ts ignore-check
-ctx.slots.inject('tool.call.toolview', () =>
-  ctx.slots.register({
-    name: 'tool.call.toolview',
-    key: '<wire tool name>',
-  }, BusinessToolRow))
+ctx.slots.inject("tool.call.toolview", () =>
+  ctx.slots.register(
+    {
+      name: "tool.call.toolview",
+      key: "<wire tool name>",
+    },
+    BusinessToolRow,
+  ),
+);
 ```
 
 owner 载荷为 `ToolCallOwnerProps`：`callId`、`toolName`、冻结的 `block`、可选 `cwd` 与 `home`，以及普通的 `openFile`、`inspect` 回调。路径摘要先相对会话 cwd 缩短，再把剩余的 POSIX 宿主家目录写成 `~`；`filePath` 与 Host 打开仍使用作者给出的文件系统路径。注册项会收到常规的会话 slot 运行时共享数据，但不会收到 React node、运行时服务或 root/subcall 知识。

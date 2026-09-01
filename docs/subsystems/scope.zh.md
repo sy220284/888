@@ -12,7 +12,7 @@
 
 ```ts type-equiv
 /** An opaque, identity-compared scope key. */
-type ScopeKey = object
+type ScopeKey = object;
 ```
 
 `Scoped<T>` 是编译期品牌标记，标注在 `scopeTarget(base, key)` 返回的不透明路由接收器上。作用域过滤的事件声明要求以此载体作为 `this` 类型，而真正的事件主体仍作为显式参数传入。
@@ -23,7 +23,7 @@ type ScopeKey = object
  * parameter records the subject type for dispatch checking; the carrier does
  * not expose the subject's properties. Event payloads carry the real subject.
  */
-type Scoped<T extends object> = object & { readonly [ScopedBrand]: T }
+type Scoped<T extends object> = object & { readonly [ScopedBrand]: T };
 ```
 
 ## 拥有所有权的注册上下文
@@ -34,11 +34,11 @@ type Scoped<T extends object> = object & { readonly [ScopedBrand]: T }
 /** A minted registration scope and its quiescent disposal boundaries. */
 interface Scope {
   /** Context through which scope-owned registrations are made. */
-  ctx: Context
+  ctx: Context;
   /** Exact Cordis disposer, used when nesting this scope in an ordered composite effect. */
-  rawDispose: () => Promise<void> | void
+  rawDispose: () => Promise<void> | void;
   /** Dispose every scope-owned registration; racing calls await the same completion. */
-  dispose(): Promise<void>
+  dispose(): Promise<void>;
 }
 ```
 
@@ -50,7 +50,7 @@ interface Scope {
 /** One scope's aggregate contribution to a registry. */
 interface ScopeLayer {
   /** Whether every table in this layer is empty. */
-  isEmpty(): boolean
+  isEmpty(): boolean;
 }
 ```
 

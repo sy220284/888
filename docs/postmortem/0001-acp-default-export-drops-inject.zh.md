@@ -29,11 +29,13 @@ ACP 服务器无法创建或加载任何一个会话——而这正是编辑器�
 `packages/acp/acp/src/index.ts` 是一个*命名空间插件*：它将 `name`、`inject`、`Config` 和 `apply` 作为独立的命名导出，仓库中其他所有插件（`invariants`、`llm-deepseek`、`tool-bash`、`tui` 等）也是如此。但它*还*多了一行其他插件都没有的代码：
 
 ```ts ignore-check
-export const name = 'acp'
-export const inject = ['agents', 'sessions', 'sessionPersistence']
-export function apply(ctx: Context, config: AcpConfig): void { /* … */ }
+export const name = "acp";
+export const inject = ["agents", "sessions", "sessionPersistence"];
+export function apply(ctx: Context, config: AcpConfig): void {
+  /* … */
+}
 // …
-export default apply   // ← the bug
+export default apply; // ← the bug
 ```
 
 当插件从 `cordis.yml` 加载时，Cordis Loader 通过 `Loader.unwrapExports`（`vendor/loader/src/index.ts`）对导入的模块进行规范化：
@@ -59,27 +61,29 @@ unwrapExports(exports: any) {
 
 `session/load` 调用 `agents.resume(...)`，后者委托给 `AgentLoop.resume()`，其中读取了 `this.ctx.sessionPersistence`。`AgentLoop` 的 `static inject` 故意不包含 `sessionPersistence`——注入它会导致非持久化的演示永远挂起，等待一个永远不会加载的后端。该服务由一个独立的兄弟插件/fiber 提供，以机会性方式读取。
 
-Cordis 中的服务访问通过上下文代理（`vendor/cordis/src/reflect.ts`）进行。当通过从另一条 fiber 获取的*可追踪代理*调用服务方法时（此处：bridge fiber 调用 `ctx.agents.resume`，注册表返回 `this.factory`——即 `AgentLoop`——重新包装为绑定到调用方的新 traceable 代理），`createShadowMethod`（`vendor/cordis/src/utils.ts`）将 `this` 重新绑定到一个 *shadow* 对象，其 `ctx` 携带 `[symbols.shadow]` 指向 `AgentLoop` 自身的构造上下文。在 `resume` 内部，`this.ctx.sessionPersistence` 的解析从 shadow 的 fiber 开始遍历：
+Cordis 中的服务访问通过上下文代理（`vendor/cordis/src/reflect.ts`）进行。当通过从另一条 fiber 获取的*可追踪代理*调用服务方法时（此处：bridge fiber 调用 `ctx.agents.resume`，注册表返回 `this.factory`——即 `AgentLoop`——重新包装为绑定到调用方的新 traceable 代理），`createShadowMethod`（`vendor/cordis/src/utils.ts`）将 `this` 重新绑定到一个 _shadow_ 对象，其 `ctx` 携带 `[symbols.shadow]` 指向 `AgentLoop` 自身的构造上下文。在 `resume` 内部，`this.ctx.sessionPersistence` 的解析从 shadow 的 fiber 开始遍历：
 
 ```ts ignore-check
 // reflect.ts get handler
-let fiber = (ctx[symbols.shadow] as Context ?? ctx).fiber   // ← starts at AgentLoop's fiber
+let fiber = ((ctx[symbols.shadow] as Context) ?? ctx).fiber; // ← starts at AgentLoop's fiber
 while (true) {
-  const impl = fiber.store?.[prop]
-  if (impl) return getTraceable(ctx, impl.value)
-  if (prop in fiber.inject) { /* inactive-context error */ }
-  if (!fiber.runtime) throw error                            // ← reached root, throw
-  if (fiber.parent[symbols.isolate][prop] !== key) throw error
-  fiber = fiber.parent.fiber                                 // ← ancestor-only
+  const impl = fiber.store?.[prop];
+  if (impl) return getTraceable(ctx, impl.value);
+  if (prop in fiber.inject) {
+    /* inactive-context error */
+  }
+  if (!fiber.runtime) throw error; // ← reached root, throw
+  if (fiber.parent[symbols.isolate][prop] !== key) throw error;
+  fiber = fiber.parent.fiber; // ← ancestor-only
 }
 ```
 
 遍历**仅向祖先方向**进行。`sessionPersistence` 既不在 `AgentLoop` 的 fiber store 中（不在其 `static inject` 中），也不在通往 root 的任何祖先上（它位于一个*兄弟*分支），因此遍历到达根 fiber 后抛错。
 
-为什么内存中的 `AgentLoop` 恢复测试没有捕获这个问题？因为它们从测试代码直接调用 `ctx.agents.resume(...)`——*在任何插件 fiber 之外*。此时 `ctx.fiber.runtime` 为 `null`，代理处理器走了一条提前绕过的路径：
+为什么内存中的 `AgentLoop` 恢复测试没有捕获这个问题？因为它们从测试代码直接调用 `ctx.agents.resume(...)`——_在任何插件 fiber 之外_。此时 `ctx.fiber.runtime` 为 `null`，代理处理器走了一条提前绕过的路径：
 
 ```ts ignore-check
-if (!ctx.fiber.runtime) return ctx.reflect.get(prop, false)   // ← direct global-store lookup, no fiber walk
+if (!ctx.fiber.runtime) return ctx.reflect.get(prop, false); // ← direct global-store lookup, no fiber walk
 ```
 
 `ctx.reflect.get(name, false)` 是基于 isolate symbol 的全局服务 store 直接查找——完全忽略 fiber 拓扑，能找到服务。因此从顶层测试读取可以成功；而从真实插件 fiber 内部、经由 shadow 到达时则抛错。bridge 恰好是后者。
@@ -90,7 +94,7 @@ if (!ctx.fiber.runtime) return ctx.reflect.get(prop, false)   // ← direct glob
 
 两个 bug 都源于同一个根本流程缺口：**没有任何测试通过插件的真实加载路径或真实调用拓扑来驱动它。**
 
-- 内存 harness 通过手动构建插件对象来挂载 bridge：`ctx.plugin({ name, inject, apply })`。这手动提供了 `inject`，因此永远无法复现 Bug #1——`unwrapExports` 只被 *Loader* 调用，`ctx.plugin` 从不调用它。即使 `ctx.plugin(NamespaceImport)` 也无法捕获。
+- 内存 harness 通过手动构建插件对象来挂载 bridge：`ctx.plugin({ name, inject, apply })`。这手动提供了 `inject`，因此永远无法复现 Bug #1——`unwrapExports` 只被 _Loader_ 调用，`ctx.plugin` 从不调用它。即使 `ctx.plugin(NamespaceImport)` 也无法捕获。
 - 同一个 harness 将所有内容平铺挂载在一个根上下文上，因此从中触达的 `AgentLoop` 恢复要么运行在顶层（`!runtime` 绕过），要么经由 shadow 运行，而该 shadow 的 origin 仍然解析到 root——掩盖了 Bug #2 的祖先遍历失败。
 - 唯一的无 key e2e 发送 `initialize` 并检查 stdout 纯净性。`initialize` 从不触达 factory，因此两个 bug 都安然通过。
 - 唯一驱动 `session/new`/`session/load` 的测试需要 key 才能运行，因此 CI（无 key）跳过了它——而本地它之所以「通过」，只是因为一个陈旧的已构建 `lib/`（包含旧代码）恰好满足了模块解析。

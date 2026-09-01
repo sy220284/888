@@ -8,10 +8,10 @@ Six model-facing tools over `ctx.terminals`: `terminal_open`, `terminal_send`, `
 
 ## Config
 
-| key | default | meaning |
-|---|---:|---|
-| `enableRunInBackground` | `true` | expose and accept `run_in_background`; false omits the schema field and rejects a forced undeclared argument |
-| `maxResultBytes` | `262144` | UTF-8 cap (minimum `64`) for each complete terminal result or PTY job output after wait, session, pagination, truncation, and task-status metadata |
+| key                     |  default | meaning                                                                                                                                            |
+| ----------------------- | -------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `enableRunInBackground` |   `true` | expose and accept `run_in_background`; false omits the schema field and rejects a forced undeclared argument                                       |
+| `maxResultBytes`        | `262144` | UTF-8 cap (minimum `64`) for each complete terminal result or PTY job output after wait, session, pagination, truncation, and task-status metadata |
 
 Both values are validated at load. The minimum result cap keeps every registry-issued session or job id visible in its creation acknowledgement. When a result exceeds `maxResultBytes`, rendering reserves space for control metadata and a truncation marker when they fit; cuts preserve UTF-8 boundaries. Each terminal definition's final-content callback applies the same cap after normalized pre-, around-, and post-execute policy failures, denials, short-circuits, replacements, or blocks; a structured multi-block policy result retains its shape.
 

@@ -20,22 +20,22 @@
 
 无法识别的配置键会使插件在构造时失败。已解析配置与输入脱离，并且深度不可变。
 
-| 配置键 | 必填 | 含义 |
-|---|---|---|
+| 配置键           | 必填              | 含义                                  |
+| ---------------- | ----------------- | ------------------------------------- |
 | `thresholdChars` | 否（默认 `8192`） | 合并文本超过此 Unicode 码点数时剪枝。 |
-| `headChars` | 否（默认 `4096`） | 保留的开头 Unicode 码点数。 |
-| `tailChars` | 否（默认 `1024`） | 保留的末尾 Unicode 码点数。 |
+| `headChars`      | 否（默认 `4096`） | 保留的开头 Unicode 码点数。           |
+| `tailChars`      | 否（默认 `1024`） | 保留的末尾 Unicode 码点数。           |
 
 所有值都必须是整数；阈值必须为正数，头部／尾部必须为非负数。`headChars + marker + tailChars` 之和不得超过 `thresholdChars`，因此有效配置可以剪枝每个超出预算的结果，不会增长或重复改写。
 
 ## 用法
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import ToolResultPruner from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+import type { Context } from "@deepseek-ai/cordis";
+import ToolResultPruner from "@deepseek-ai/dsh-compaction-tool-result-pruner";
 
 export function apply(ctx: Context): void {
-  ctx.plugin(ToolResultPruner)
+  ctx.plugin(ToolResultPruner);
 }
 ```
 

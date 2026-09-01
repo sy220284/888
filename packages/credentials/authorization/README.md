@@ -13,36 +13,37 @@ Authorization Service Definition (`ctx.authorization`). Some credentials cannot 
 ## Surface
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { AuthorizationDeclinedError, type AuthorizationSession } from '@deepseek-ai/dsh-authorization'
-import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { Context } from "@deepseek-ai/cordis";
+import { AuthorizationDeclinedError, type AuthorizationSession } from "@deepseek-ai/dsh-authorization";
+import { credentialKey } from "@deepseek-ai/dsh-credentials";
 
-declare const ctx: Context
-declare const exchange: (signal: AbortSignal) => Promise<void>
+declare const ctx: Context;
+declare const exchange: (signal: AbortSignal) => Promise<void>;
 
-const key = credentialKey('llm-pi-ai', 'openai-codex')
+const key = credentialKey("llm-pi-ai", "openai-codex");
 
 const dispose = ctx.authorization.registerFlow({
   key,
-  label: 'ChatGPT (Codex)',
-  methods: [{ id: 'oauth', label: 'Sign in with ChatGPT' }],
+  label: "ChatGPT (Codex)",
+  methods: [{ id: "oauth", label: "Sign in with ChatGPT" }],
   async run(session: AuthorizationSession) {
-    session.notify({ message: 'Continue in your browser', url: 'https://auth.example/start' })
-    const code = await session.prompt({ kind: 'text', message: 'Paste the code' })
+    session.notify({ message: "Continue in your browser", url: "https://auth.example/start" });
+    const code = await session.prompt({ kind: "text", message: "Paste the code" });
     // Commits the record through ctx.credentials before resolving.
-    await exchange(session.signal)
-    void code
+    await exchange(session.signal);
+    void code;
   },
-})
+});
 
-ctx.authorization.list()                    // [{ key, label, methods, inFlight }]
-ctx.authorization.describe(key)             // the same entry, or undefined
-await ctx.authorization.begin({             // { status: 'authorized' | 'cancelled' }
+ctx.authorization.list(); // [{ key, label, methods, inFlight }]
+ctx.authorization.describe(key); // the same entry, or undefined
+await ctx.authorization.begin({
+  // { status: 'authorized' | 'cancelled' }
   key,
   interaction: { notify: () => {}, prompt: () => Promise.reject(new AuthorizationDeclinedError()) },
-})
-ctx.authorization.cancel(key)               // withdraw whatever is running for the key
-dispose()
+});
+ctx.authorization.cancel(key); // withdraw whatever is running for the key
+dispose();
 ```
 
 One attempt per key at a time. A second caller is refused with `ALREADY_IN_FLIGHT` rather than joined, because the two would be prompting different humans through one flow and the second would be answering questions the first was asked. `inFlight` is on the entry so a surface renders the button disabled instead of discovering this by error.

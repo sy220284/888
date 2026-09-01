@@ -30,7 +30,7 @@ Web 客户端使用该插件提供的 `/plan` 命令；其他入口可以直接�
 
 ```yaml
 - id: plan-mode
-  name: '@deepseek-ai/dsh-plan-mode'
+  name: "@deepseek-ai/dsh-plan-mode"
   config:
     section: |
       You are in plan mode. Explore and design before presenting the complete

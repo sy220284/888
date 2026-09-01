@@ -1,13 +1,14 @@
 ---
 name: Feature
 about: 新增或有意改变可观察行为
-title: ''
-labels: ''
-assignees: ''
+title: ""
+labels: ""
+assignees: ""
 type: Feature
 ---
 
 <!-- 标题写中文行动或结果句；外露正文不超过 50 单位。 -->
+
 一句话说明预期结果。
 
 <details>

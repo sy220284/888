@@ -6,12 +6,12 @@
 
 本包拥有四层文件系统栈中的 Service Definition 和提供方约定层；该拆分使每个关注点可以独立演进和替换（见[能力 seam Agent Note](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.zh.md)、[文件系统能力 seam Agent Note](../../../.agents/notes/implemented/architecture/2026-06-17-filesystem-capability-seam.zh.md)、[拆分文件系统 seam Agent Note](../../../.agents/notes/implemented/simplification/2026-06-26-fsspec-style-fs-seam.zh.md)和[文件上下文事件门禁 Agent Note](../../../.agents/notes/implemented/architecture/2026-06-26-file-context-as-event-gate.zh.md)）：
 
-| 层 | 包 | 角色 |
-|---|---|---|
-| 工具/执行器 | `@deepseek-ai/dsh-tool-fs` | 面向模型的 `read`/`write`/`edit` schema、读取窗口和文本渲染；通过 `ctx.fs` 读取/写入/编辑，并分派 `fs/*` 事件 |
-| 政策 | `@deepseek-ai/dsh-fs-observation-policy` | 已观察状态、编辑前读取和版本防护的写入/编辑，通过 `fs/*` 事件门禁贡献（无服务） |
-| 提供方约定 | `@deepseek-ai/dsh-fs`（本包） | `ctx.fs`：执行世界路径、文本 I/O 与原子变更原语（可选版本防护）；拥有 `fs/*` 事件词汇 |
-| 提供方 | `@deepseek-ai/dsh-fs-local` | 宿主文件系统实现 |
+| 层          | 包                                       | 角色                                                                                                          |
+| ----------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 工具/执行器 | `@deepseek-ai/dsh-tool-fs`               | 面向模型的 `read`/`write`/`edit` schema、读取窗口和文本渲染；通过 `ctx.fs` 读取/写入/编辑，并分派 `fs/*` 事件 |
+| 政策        | `@deepseek-ai/dsh-fs-observation-policy` | 已观察状态、编辑前读取和版本防护的写入/编辑，通过 `fs/*` 事件门禁贡献（无服务）                               |
+| 提供方约定  | `@deepseek-ai/dsh-fs`（本包）            | `ctx.fs`：执行世界路径、文本 I/O 与原子变更原语（可选版本防护）；拥有 `fs/*` 事件词汇                         |
+| 提供方      | `@deepseek-ai/dsh-fs-local`              | 宿主文件系统实现                                                                                              |
 
 `fs-sandbox` 与 `fs-e2b` 实现该接口，无需更改政策层和工具层。
 
@@ -19,20 +19,20 @@
 
 后端继承 `FileSystem` 并实现十二个原语。
 
-| 成员 | 语义 |
-|---|---|
-| `resolve(path, opts?)` | 把路径解析为稳定的 `FsTarget`（不透明 `targetKey`、`displayPath`）。`opts.cwd` 是相对 `path` 解析所依据的基准（调用方提供其会话工作区；绝对路径忽略该值；省略时使用后端默认值），`opts.signal` 则中止后端往返。该方法是异步的，因为远程后端可能需要 I/O。经不同路径到达的同一文件必须产生相同 `targetKey`。 |
-| `processPath(target)` | 返回该提供方执行世界中的子进程可以打开的规范化绝对路径。该路径有意与不透明的 `targetKey` 分离。 |
-| `fileUrl(target)` | 返回采用执行世界平台语法的规范化 `file:` URI。编码由后端而非宿主进程负责。 |
-| `contains(parent, child)` | 在不公开或解析目标 key 的情况下，检查规范化身份相等或后代包含关系。两个目标都来自该提供方。 |
-| `stat(target, signal?)` | 返回 `FsInfo` 元数据（`version`、`type`、可选 `size`）；目标不存在时返回 `undefined`。绝不返回内容。 |
-| `lstat(path, opts?, signal?)` | 当最后一个路径组件是符号链接时，不跟随该组件，返回 `FsPathInfo` 元数据。该方法采用路径形态，使消费方能在 `resolve` 跟随仓库所有的符号链接进入目标前拒绝它。 |
-| `readText(target, signal?)` | 把整个普通文本文件读取为一个解码后的字符串。负责普通文件检查、UTF-8 解码和二进制/NUL 拒绝（`FS_NOT_TEXT`）。 |
-| `streamText(target, signal?)` | 为大文件按解码后的分片流式读取相同文本（跨分片 UTF-8 解码仍由此处负责）；需要字节上限的消费方在消费流时执行该上限。 |
-| `readBytes(target, signal, maxBytes)` | 把完整普通文件按原始字节读出，不做解码或二进制拒绝。`maxBytes` 为必填，在该 seam 上限制完整内容：已知或读取中发现的超限以 `FS_TOO_LARGE` 失败，而不是截断或无界缓冲。 |
-| `listDir(target, signal?)` | 按稳定名称顺序列出直接子项。返回条目名称、条目类型、解析后的子目标和低成本元数据（若可用则包括 `version`/文件 `size`）；绝不读取文件内容。缺失目标抛出 `FS_NOT_FOUND`，非目录抛出 `FS_NOT_DIRECTORY`，权限失败抛出 `FS_PERMISSION_DENIED`，其他后端 I/O 失败抛出 `FS_IO_ERROR`。损坏/消失的子项可以作为无元数据的 `other` 返回；子项权限/I/O 失败会使用相同结构化代码使整个列表失败。 |
-| `writeText(target, content, expected?, signal?)` | 原子创建/替换。`expected` 是可选的：省略 ⇒ 无条件创建或覆盖；提供 `FsWriteIntent`（`createIfAbsent`/`replaceIfVersion`）⇒ 添加防护。`createIfAbsent` 必须以不替换的方式发布，使初始探测后抢先创建的文件得到保留。 |
-| `editText(target, edit, expected?, signal?)` | 字面量编辑。`expected` 是可选的：省略 ⇒ 无条件编辑当前内容；提供 `{ version }` ⇒ 添加防护，并在匹配之前校验。无论哪种情况，目标缺失都报告 `FS_STALE_VERSION`。应用和写入以原子方式完成，使用同一个变更临界区。 |
+| 成员                                             | 语义                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolve(path, opts?)`                           | 把路径解析为稳定的 `FsTarget`（不透明 `targetKey`、`displayPath`）。`opts.cwd` 是相对 `path` 解析所依据的基准（调用方提供其会话工作区；绝对路径忽略该值；省略时使用后端默认值），`opts.signal` 则中止后端往返。该方法是异步的，因为远程后端可能需要 I/O。经不同路径到达的同一文件必须产生相同 `targetKey`。                                                                           |
+| `processPath(target)`                            | 返回该提供方执行世界中的子进程可以打开的规范化绝对路径。该路径有意与不透明的 `targetKey` 分离。                                                                                                                                                                                                                                                                                       |
+| `fileUrl(target)`                                | 返回采用执行世界平台语法的规范化 `file:` URI。编码由后端而非宿主进程负责。                                                                                                                                                                                                                                                                                                            |
+| `contains(parent, child)`                        | 在不公开或解析目标 key 的情况下，检查规范化身份相等或后代包含关系。两个目标都来自该提供方。                                                                                                                                                                                                                                                                                           |
+| `stat(target, signal?)`                          | 返回 `FsInfo` 元数据（`version`、`type`、可选 `size`）；目标不存在时返回 `undefined`。绝不返回内容。                                                                                                                                                                                                                                                                                  |
+| `lstat(path, opts?, signal?)`                    | 当最后一个路径组件是符号链接时，不跟随该组件，返回 `FsPathInfo` 元数据。该方法采用路径形态，使消费方能在 `resolve` 跟随仓库所有的符号链接进入目标前拒绝它。                                                                                                                                                                                                                           |
+| `readText(target, signal?)`                      | 把整个普通文本文件读取为一个解码后的字符串。负责普通文件检查、UTF-8 解码和二进制/NUL 拒绝（`FS_NOT_TEXT`）。                                                                                                                                                                                                                                                                          |
+| `streamText(target, signal?)`                    | 为大文件按解码后的分片流式读取相同文本（跨分片 UTF-8 解码仍由此处负责）；需要字节上限的消费方在消费流时执行该上限。                                                                                                                                                                                                                                                                   |
+| `readBytes(target, signal, maxBytes)`            | 把完整普通文件按原始字节读出，不做解码或二进制拒绝。`maxBytes` 为必填，在该 seam 上限制完整内容：已知或读取中发现的超限以 `FS_TOO_LARGE` 失败，而不是截断或无界缓冲。                                                                                                                                                                                                                 |
+| `listDir(target, signal?)`                       | 按稳定名称顺序列出直接子项。返回条目名称、条目类型、解析后的子目标和低成本元数据（若可用则包括 `version`/文件 `size`）；绝不读取文件内容。缺失目标抛出 `FS_NOT_FOUND`，非目录抛出 `FS_NOT_DIRECTORY`，权限失败抛出 `FS_PERMISSION_DENIED`，其他后端 I/O 失败抛出 `FS_IO_ERROR`。损坏/消失的子项可以作为无元数据的 `other` 返回；子项权限/I/O 失败会使用相同结构化代码使整个列表失败。 |
+| `writeText(target, content, expected?, signal?)` | 原子创建/替换。`expected` 是可选的：省略 ⇒ 无条件创建或覆盖；提供 `FsWriteIntent`（`createIfAbsent`/`replaceIfVersion`）⇒ 添加防护。`createIfAbsent` 必须以不替换的方式发布，使初始探测后抢先创建的文件得到保留。                                                                                                                                                                     |
+| `editText(target, edit, expected?, signal?)`     | 字面量编辑。`expected` 是可选的：省略 ⇒ 无条件编辑当前内容；提供 `{ version }` ⇒ 添加防护，并在匹配之前校验。无论哪种情况，目标缺失都报告 `FS_STALE_VERSION`。应用和写入以原子方式完成，使用同一个变更临界区。                                                                                                                                                                        |
 
 无论是否有版本防护，变更都在后端的每目标锁内运行，因此无条件写入/编辑仍是原子的；「无条件」只移除*版本*前置条件，不移除原子性。
 

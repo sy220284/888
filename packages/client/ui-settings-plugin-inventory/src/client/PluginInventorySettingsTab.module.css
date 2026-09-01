@@ -117,7 +117,7 @@
   background: var(--dsw-alias-bg-layer-3);
 }
 
-.card[data-open='true'] {
+.card[data-open="true"] {
   border-color: var(--dsw-alias-border-l1);
   box-shadow: var(--dsw-shadow-lv1);
 }
@@ -140,7 +140,7 @@
 }
 
 .cardContent:hover,
-.card[data-open='true'] > .cardContent {
+.card[data-open="true"] > .cardContent {
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
@@ -176,15 +176,15 @@
   background: var(--dsw-alias-label-tertiary);
 }
 
-.statusDot[data-phase='active'] {
+.statusDot[data-phase="active"] {
   background: var(--dsw-alias-state-success-primary);
 }
 
-.statusDot[data-phase='failed'] {
+.statusDot[data-phase="failed"] {
   background: var(--dsw-alias-state-error-primary);
 }
 
-.statusDot[data-phase='loading'] {
+.statusDot[data-phase="loading"] {
   background: var(--dsw-alias-state-business-primary);
 }
 
@@ -201,7 +201,7 @@
   white-space: nowrap;
 }
 
-.configTag[data-enabled='true'] {
+.configTag[data-enabled="true"] {
   background: color-mix(in srgb, var(--dsw-alias-state-success-primary) 10%, transparent);
   color: var(--dsw-alias-state-success-primary);
 }
@@ -211,7 +211,7 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
-.card[data-open='true'] .chevron {
+.card[data-open="true"] .chevron {
   transform: rotate(180deg);
 }
 

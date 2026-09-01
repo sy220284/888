@@ -33,14 +33,14 @@ interface StorageForms {}
  */
 interface StorageBackend {
   /** Key-value operations; absent when this backend cannot serve them. */
-  readonly kv?: KvFacet
+  readonly kv?: KvFacet;
 
   /**
    * Drain in-flight writes across all open units and release the medium.
    * Idempotent; concurrent and repeated calls resolve once teardown finishes.
    * @returns resolution after the medium is released.
    */
-  close(): Promise<void>
+  close(): Promise<void>;
 }
 ```
 
@@ -54,13 +54,13 @@ interface StorageBackend {
 /** Static declaration of one domain: identity, version, and record layout. */
 interface DomainSpec {
   /** Domain name; must match `UNIT_NAME_RE` (doubles as the backend unit name). */
-  readonly name: string
+  readonly name: string;
   /** Domain format version; a medium stamped with a different version rejects at open. */
-  readonly version: number
+  readonly version: number;
   /** Optional global singleton slot. */
-  readonly global?: DomainGlobalSpec<unknown>
+  readonly global?: DomainGlobalSpec<unknown>;
   /** Table declarations keyed by table name; each name must match `UNIT_NAME_RE`. */
-  readonly tables: Record<string, DomainTableSpec>
+  readonly tables: Record<string, DomainTableSpec>;
 }
 ```
 
@@ -72,16 +72,16 @@ interface DomainSpec {
 /** One open domain, typed by its spec. */
 interface Domain<S extends DomainSpec> {
   /** Domain name from the spec. */
-  readonly name: string
+  readonly name: string;
   /** Global singleton handle; a spec without `global` has no usable handle (`never`). */
-  readonly global: DomainGlobalHandleOf<S>
+  readonly global: DomainGlobalHandleOf<S>;
   /**
    * Resolve one declared table handle. Handles are stable — repeated calls
    * return the same instance.
    * @param name - Declared table name.
    * @returns the typed table handle.
    */
-  table<N extends keyof S['tables'] & string>(name: N): KvTable<TableKeyOf<S, N>, TableValueOf<S, N>>
+  table<N extends keyof S["tables"] & string>(name: N): KvTable<TableKeyOf<S, N>, TableValueOf<S, N>>;
 
   /**
    * Close this domain: reject new writes immediately, drain already-queued
@@ -91,7 +91,7 @@ interface Domain<S extends DomainSpec> {
    * disposer); the facility closes any domain left open when it unmounts.
    * @returns resolution after the unit is released.
    */
-  close(): Promise<void>
+  close(): Promise<void>;
 }
 ```
 
@@ -109,17 +109,17 @@ interface Domain<S extends DomainSpec> {
 /** Shared location fields of one durable domain change. */
 interface DomainChangedBase {
   /** Owning domain name. */
-  readonly domain: string
+  readonly domain: string;
   /** Table name; `''` for a global-singleton write. */
-  readonly table: string
+  readonly table: string;
   /** Record key; `''` for a global-singleton write. */
-  readonly key: string
+  readonly key: string;
 }
 ```
 
 ```ts type-equiv
 /** One durable domain change; a closed union — switch on `operation`. */
-type DomainChanged = DomainChangedPut | DomainChangedDeleted
+type DomainChanged = DomainChangedPut | DomainChangedDeleted;
 ```
 
 `put`（插入、覆写和 global 写入）在 `value` 中携带新快照——绝不携带旧值；需要做差异比较的消费方自行保留上一份快照。`deleted` 是不携带值的墓碑。该事件是通知，不是事务参与者：发出时提交点已经过去，因此同步抛出的监听器会被兜住并记录一条警告，而不会让已经持久的写入被拒绝；发出的值等于发出时刻的内存态。该事件仅限进程内；跨进程的变更推送是一项已记录的限制（[包 README](../../packages/storage/storage-domain/README.zh.md)）。

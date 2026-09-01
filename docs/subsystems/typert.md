@@ -24,15 +24,15 @@ The registry retains a lookup's wire declaration after its resolver unloads. SRC
 /** Stable wire declaration retained after a lookup provider unloads. */
 interface TypertLookupDefinition {
   /** Merge-declared lookup key. */
-  readonly key: string
+  readonly key: string;
   /** Source parameter name recognized by the SRC weak parser. */
-  readonly parameter: string
+  readonly parameter: string;
   /** Wire field replacing the Host object parameter. */
-  readonly wire: string
+  readonly wire: string;
   /** Canonical Host type symbol used by strict generation. */
-  readonly hostTypeSymbol: string
+  readonly hostTypeSymbol: string;
   /** Canonical wire type symbol used by strict generation. */
-  readonly wireTypeSymbol: string
+  readonly wireTypeSymbol: string;
 }
 ```
 
@@ -44,30 +44,30 @@ An `InvocationDescriptor` is local reflection, not a wire message. Host and cons
 /** Codec attached to one invocation parameter or result. */
 type TypertCodec =
   | {
-    readonly mode: 'strict'
-    readonly typeSymbol: string
-    readonly schema: TypertSchema
-  }
+      readonly mode: "strict";
+      readonly typeSymbol: string;
+      readonly schema: TypertSchema;
+    }
   | {
-    readonly mode: 'src-json'
-  }
+      readonly mode: "src-json";
+    };
 ```
 
 ```ts type-equiv
 /** One ordered business parameter in a Remote invocation. */
 interface InvocationParameterDescriptor {
   /** Source-level parameter name. */
-  readonly name: string
+  readonly name: string;
   /** Required key in the wire `args` object. */
-  readonly wire: string
+  readonly wire: string;
   /** Whether the value is JSON or requires a registered Host lookup. */
-  readonly source: 'json' | 'lookup'
+  readonly source: "json" | "lookup";
   /** Lookup key when `source` is `lookup`. */
-  readonly lookup?: string
+  readonly lookup?: string;
   /** Boundary codec for the wire representation. */
-  readonly codec: TypertCodec
+  readonly codec: TypertCodec;
   /** Missing wire fields decode to `undefined` only for an explicitly declared `T | undefined`. */
-  readonly acceptsUndefined?: true
+  readonly acceptsUndefined?: true;
 }
 ```
 
@@ -75,42 +75,42 @@ interface InvocationParameterDescriptor {
 /** Carrier-independent description of one exported method invocation. */
 interface InvocationDescriptor {
   /** Globally stable generated identity. */
-  readonly id: string
+  readonly id: string;
   /** Cordis service key owning the method. */
-  readonly service: string
+  readonly service: string;
   /** Wire namespace, defaulting to the service key. */
-  readonly namespace: string
+  readonly namespace: string;
   /** Public instance method name. */
-  readonly method: string
+  readonly method: string;
   /** Service member invoked when the exported method name is an alias. */
-  readonly implementation?: string
+  readonly implementation?: string;
   /** Receiver selection mode. */
   readonly invocation:
-    | { readonly kind: 'direct' }
+    | { readonly kind: "direct" }
     | {
-      readonly kind: 'context'
-      readonly context: string
-      readonly wire: string
-      readonly codec: TypertCodec
-    }
+        readonly kind: "context";
+        readonly context: string;
+        readonly wire: string;
+        readonly codec: TypertCodec;
+      };
   /** Optional consuming-Context projection for one direct lookup parameter. */
   readonly scope?: {
     /** Context kind whose Client binder supplies the identity. */
-    readonly context: string
+    readonly context: string;
     /** Lookup parameter wire field replaced by the Context identity. */
-    readonly wire: string
-  }
+    readonly wire: string;
+  };
   /** Ordered business parameters. */
-  readonly parameters: readonly InvocationParameterDescriptor[]
+  readonly parameters: readonly InvocationParameterDescriptor[];
   /** Transport cancellation injected after business parameters instead of entering wire args. */
   readonly cancellation?: {
     /** Reserved final Host method parameter. */
-    readonly parameter: 'signal'
-  }
+    readonly parameter: "signal";
+  };
   /** Codec for the resolved method result. */
-  readonly result: TypertCodec
+  readonly result: TypertCodec;
   /** Source declaration used only for diagnostics. */
-  readonly sourceLocation?: InvocationSourceLocation
+  readonly sourceLocation?: InvocationSourceLocation;
 }
 ```
 
@@ -121,10 +121,10 @@ interface InvocationDescriptor {
 ```ts type-equiv
 /** Minimal Typert runtime consumed through dependency inversion. */
 interface TypertRegistryContract {
-  readonly local: TypertLocalRegistry
-  readonly remotes: TypertRemoteRegistry
-  readonly lookups: TypertLookupRegistry
-  readonly contexts: TypertContextRegistry
+  readonly local: TypertLocalRegistry;
+  readonly remotes: TypertRemoteRegistry;
+  readonly lookups: TypertLookupRegistry;
+  readonly contexts: TypertContextRegistry;
 }
 ```
 
@@ -143,36 +143,36 @@ Connection decodes its carrier envelope before calling `ctx.typertGateway`. The 
 /** One Remote method request after a carrier has decoded its envelope. */
 interface InvokeRemoteRequest {
   /** Remote namespace selected by the generated descriptor. */
-  readonly namespace: string
+  readonly namespace: string;
   /** Exported Service method name. */
-  readonly method: string
+  readonly method: string;
   /** Named wire values; fields must exactly match the descriptor. */
-  readonly args: Readonly<Record<string, unknown>>
+  readonly args: Readonly<Record<string, unknown>>;
   /** Carrier or direct-caller cancellation injected only into cancellation-aware methods. */
-  readonly signal?: AbortSignal
+  readonly signal?: AbortSignal;
 }
 ```
 
 ```ts type-equiv
 /** Stable infrastructure and boundary failures emitted before or after business execution. */
 type TypertGatewayErrorCode =
-  | 'ambiguous-endpoint'
-  | 'arguments-invalid'
-  | 'binding-invalid'
-  | 'context-failed'
-  | 'context-not-found'
-  | 'context-unavailable'
-  | 'definition-unavailable'
-  | 'input-invalid'
-  | 'invocation-unavailable'
-  | 'lookup-failed'
-  | 'lookup-not-found'
-  | 'lookup-unavailable'
-  | 'method-unavailable'
-  | 'provider-mismatch'
-  | 'result-invalid'
-  | 'service-unavailable'
-  | 'signature-invalid'
+  | "ambiguous-endpoint"
+  | "arguments-invalid"
+  | "binding-invalid"
+  | "context-failed"
+  | "context-not-found"
+  | "context-unavailable"
+  | "definition-unavailable"
+  | "input-invalid"
+  | "invocation-unavailable"
+  | "lookup-failed"
+  | "lookup-not-found"
+  | "lookup-unavailable"
+  | "method-unavailable"
+  | "provider-mismatch"
+  | "result-invalid"
+  | "service-unavailable"
+  | "signature-invalid";
 ```
 
 ```ts type-equiv
@@ -184,7 +184,7 @@ interface TypertGateway {
    * @returns the validated business result.
    * @throws {@link TypertGatewayError} for dispatch, provider, or boundary failures; lookup-policy and business errors retain identity.
    */
-  invoke(request: InvokeRemoteRequest): Promise<unknown>
+  invoke(request: InvokeRemoteRequest): Promise<unknown>;
 }
 ```
 
@@ -200,7 +200,7 @@ interface TypertClientRemote extends TypertRemoteNamespaceMap {
    * @param contribution - explicitly selected Remote package artifact.
    * @returns disposer after namespace services and concrete methods are ready.
    */
-  $mount(contribution: TypertRemoteContribution): Promise<TypertDisposer>
+  $mount(contribution: TypertRemoteContribution): Promise<TypertDisposer>;
   /**
    * Subscribe to one forwarded Host event; delivery is one-way, in registration
    * order, and isolates a throwing listener from the rest.
@@ -209,7 +209,7 @@ interface TypertClientRemote extends TypertRemoteNamespaceMap {
    * @param listener - receives the Host's argument list as declared by Cordis `Events`.
    * @returns disposer owned by the calling fiber.
    */
-  $on<Event extends TypertRemoteEvent>(event: Event, listener: Events[Event]): () => void
+  $on<Event extends TypertRemoteEvent>(event: Event, listener: Events[Event]): () => void;
   /**
    * Hand one decoded forwarded frame to the subscription table. The carrier
    * owning the Host frame sink calls this; a consumer subscribes with
@@ -221,7 +221,7 @@ interface TypertClientRemote extends TypertRemoteNamespaceMap {
    * @param event - forwarded Host event name, exactly as the Host emitted it.
    * @param args - the Host argument list, already JSON-decoded.
    */
-  $dispatch(event: string, args: readonly unknown[]): void
+  $dispatch(event: string, args: readonly unknown[]): void;
 }
 ```
 

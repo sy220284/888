@@ -9,16 +9,16 @@ Unlike the Python SDK, the launch spec is fully explicit (`command`/`args`): thi
 ## DeepSeekHarness
 
 ```ts
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
+import { DeepSeekHarness } from "@deepseek-ai/dsh-sdk-client";
 
 await using harness = new DeepSeekHarness({
-  launch: { command: 'node', args: ['lib/bin.js', 'cordis.yml'] },
-  provider: 'deepseek-official',
-  model: 'deepseek-v4-flash',
+  launch: { command: "node", args: ["lib/bin.js", "cordis.yml"] },
+  provider: "deepseek-official",
+  model: "deepseek-v4-flash",
   maxTokens: 49_152,
-})
-const result = await harness.run('say hi')
-console.log(result.finalResponse)
+});
+const result = await harness.run("say hi");
+console.log(result.finalResponse);
 ```
 
 The subprocess starts lazily on first use and stays owned by the instance across `run()` calls; `close()` (or `await using`) is required so the child is always reaped. `start()` memoizes the `initialize` handshake (the workspace cwd — resolved absolute before it crosses the wire — plus the provider/model route and optional positive `maxTokens` output cap); a failed handshake reaps the runtime and swaps in a fresh client, so a later call retries with a new subprocess (until `close()`, which is terminal). The cap applies to each root-agent request and is inherited by in-process descendants; compaction plugins own their separate summary limits. `session(id?)` opens a named or fresh session handle.

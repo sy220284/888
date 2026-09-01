@@ -27,10 +27,7 @@
             "description": "Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies."
           }
         },
-        "required": [
-          "command",
-          "description"
-        ]
+        "required": ["command", "description"]
       }
     },
     {
@@ -48,9 +45,7 @@
             "description": "Optional short reason, recorded in the log and forwarded to the task."
           }
         },
-        "required": [
-          "job_id"
-        ]
+        "required": ["job_id"]
       }
     },
     {
@@ -80,9 +75,7 @@
             "description": "Max wait in milliseconds (only meaningful with wait: true). Defaults to the configured wait timeout; capped by the configured maximum."
           }
         },
-        "required": [
-          "job_id"
-        ]
+        "required": ["job_id"]
       }
     }
   ],

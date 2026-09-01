@@ -28,12 +28,12 @@ One host registry may carry several mounts of this plugin — one per agent pres
 
 ## Config
 
-| key | default | meaning |
-|---|---|---|
-| `waitTimeoutMs` | `30000` | wait used when `wait: true` omits `timeout_ms` |
-| `maxWaitTimeoutMs` | `600000` | cap for model-supplied waits |
-| `completionDelivery` | `wakeup` | `wakeup` opens a turn on an idle owner; `quiet` leaves the notice pending |
-| `maxConsecutiveWakes` | `3` | turns one owner may open by wake before notices degrade to injection |
+| key                   | default  | meaning                                                                   |
+| --------------------- | -------- | ------------------------------------------------------------------------- |
+| `waitTimeoutMs`       | `30000`  | wait used when `wait: true` omits `timeout_ms`                            |
+| `maxWaitTimeoutMs`    | `600000` | cap for model-supplied waits                                              |
+| `completionDelivery`  | `wakeup` | `wakeup` opens a turn on an idle owner; `quiet` leaves the notice pending |
+| `maxConsecutiveWakes` | `3`      | turns one owner may open by wake before notices degrade to injection      |
 
 A default above the cap fails at load.
 

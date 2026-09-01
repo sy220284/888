@@ -18,8 +18,8 @@
   cursor: pointer;
 }
 
-.card[data-state='running'] .row::after {
-  content: '';
+.card[data-state="running"] .row::after {
+  content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 300px;
@@ -34,8 +34,13 @@
 }
 
 @keyframes dsh-skill-row-sweep {
-  0% { left: -300px; }
-  90%, 100% { left: 100%; }
+  0% {
+    left: -300px;
+  }
+  90%,
+  100% {
+    left: 100%;
+  }
 }
 
 .leading {
@@ -199,7 +204,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card[data-state='running'] .row::after {
+  .card[data-state="running"] .row::after {
     animation: none;
     display: none;
   }

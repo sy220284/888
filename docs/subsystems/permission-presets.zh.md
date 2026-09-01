@@ -14,13 +14,13 @@
 /** One preset's sandbox/approval bundle and optional client presentation. */
 interface PresetSpec {
   /** The `sandbox/mode` value the preset writes through. */
-  sandbox: SandboxMode
+  sandbox: SandboxMode;
   /** The `approval/policy` value the preset writes through. */
-  approval: ApprovalPolicy
+  approval: ApprovalPolicy;
   /** The display label a client shows for this preset; the raw table key when omitted. */
-  name?: string
+  name?: string;
   /** One user-facing sentence on what the preset means; omitted when not configured. */
-  description?: string
+  description?: string;
 }
 ```
 
@@ -32,12 +32,12 @@ interface Config {
    * (workspace-write + ask) and `danger-full-access` (danger-full-access +
    * never). The name `custom` is reserved for the derived not-a-preset state.
    */
-  presets?: Record<string, PresetSpec>
+  presets?: Record<string, PresetSpec>;
   /**
    * Default for new sessions. When omitted, the preset matching the composed
    * sandbox and approval defaults is used.
    */
-  defaultPreset?: string
+  defaultPreset?: string;
 }
 ```
 
@@ -53,11 +53,11 @@ interface Config {
 /** The select-option shape a presentation layer advertises for one preset (or for the derived `custom` state). */
 interface PresetOption {
   /** Stable option value: the table key, or `custom`. */
-  value: string
+  value: string;
   /** The display label. */
-  name: string
+  name: string;
   /** One user-facing sentence on what the value means; omitted when not configured. */
-  description?: string
+  description?: string;
 }
 ```
 

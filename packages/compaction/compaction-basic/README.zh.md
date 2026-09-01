@@ -27,18 +27,18 @@
 
 所有设置都可选。顶层策略字段是每个已路由模型的默认值；`modelPolicies` 对精确提供方／模型对应用部分覆盖。出现压力时，compaction-basic 会请求所属 LLM（大语言模型）适配器提供该路由的上下文容量，并解析绝对预算。无法识别的配置键、重复目标、互斥保留形式，以及合并后的 `retainRatio` 不低于 `thresholdRatio`，都会使插件加载失败。不低于缩放后阈值的绝对 `retainTokens` 预算会在首次解析出目标时导致失败，因为该比较需要模型容量。
 
-| Key | 必填 | 含义 |
-|---|---|---|
-| `thresholdRatio` | 否（默认 `0.8`） | 在 `floor(routedContextWindow × ratio)` 处压缩。 |
-| `retainRatio` | 否（默认 `0.16`） | 以已路由上下文窗口的一部分表示逐字保留的近期表层预算；与 `retainTokens` 互斥。 |
-| `retainTokens` | 否 | 逐字保留的近期表层绝对预算；与 `retainRatio` 互斥，并且必须低于已解析阈值。 |
-| `summarizationProvider` | 否（默认 `''`） | 与 `summarizationModel` 一起设置；空对会解析为最新已记录请求目标，再回退到 `AgentOptions` 对。 |
-| `summarizationModel` | 否（默认 `''`） | 与 `summarizationProvider` 一起设置；空对会解析为最新已记录请求目标，再回退到 `AgentOptions` 对。 |
-| `maxTokens` | 否（默认 `8192`） | 摘要调用的提供方生成上限；可包含推理 token。 |
-| `compactionRetries` | 否（默认 `1`） | 压力仍高于阈值时，在首次尝试后进行的额外尝试次数。 |
-| `maxOverflowRetries` | 否（默认 `1`） | 规范上下文窗口溢出后的最大重试次数；`0` 只禁用恢复。 |
-| `modelPolicies` | 否（默认 `[]`） | 精确的 `{ provider, model, ...partialPolicy }` 覆盖；匹配使用两个字段，不依赖 `listModels()`。 |
-| `auto` | 否（默认 `true`） | 注册步骤边界压力与溢出恢复 listener。设为 `false` 则仅手动执行。 |
+| Key                     | 必填              | 含义                                                                                              |
+| ----------------------- | ----------------- | ------------------------------------------------------------------------------------------------- |
+| `thresholdRatio`        | 否（默认 `0.8`）  | 在 `floor(routedContextWindow × ratio)` 处压缩。                                                  |
+| `retainRatio`           | 否（默认 `0.16`） | 以已路由上下文窗口的一部分表示逐字保留的近期表层预算；与 `retainTokens` 互斥。                    |
+| `retainTokens`          | 否                | 逐字保留的近期表层绝对预算；与 `retainRatio` 互斥，并且必须低于已解析阈值。                       |
+| `summarizationProvider` | 否（默认 `''`）   | 与 `summarizationModel` 一起设置；空对会解析为最新已记录请求目标，再回退到 `AgentOptions` 对。    |
+| `summarizationModel`    | 否（默认 `''`）   | 与 `summarizationProvider` 一起设置；空对会解析为最新已记录请求目标，再回退到 `AgentOptions` 对。 |
+| `maxTokens`             | 否（默认 `8192`） | 摘要调用的提供方生成上限；可包含推理 token。                                                      |
+| `compactionRetries`     | 否（默认 `1`）    | 压力仍高于阈值时，在首次尝试后进行的额外尝试次数。                                                |
+| `maxOverflowRetries`    | 否（默认 `1`）    | 规范上下文窗口溢出后的最大重试次数；`0` 只禁用恢复。                                              |
+| `modelPolicies`         | 否（默认 `[]`）   | 精确的 `{ provider, model, ...partialPolicy }` 覆盖；匹配使用两个字段，不依赖 `listModels()`。    |
+| `auto`                  | 否（默认 `true`） | 注册步骤边界压力与溢出恢复 listener。设为 `false` 则仅手动执行。                                  |
 
 每个 `modelPolicies` 配置项都接受上述策略字段，但不接受 `auto` 和 `modelPolicies` 自身。如果配置项提供任意一个保留字段，就替换默认策略的保留选择；否则继承保留设置。摘要提供方／模型在每个配置项内仍然成对。
 
@@ -49,18 +49,18 @@
 `BasicCompactionEngine` 需要 `ctx.llm`、`ctx.tokenMeter` 和 `ctx.sessions`。以下组合从其宿主接收 `ctx.llm`，并安装另外两项服务：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { BasicCompactionEngine } from '@deepseek-ai/dsh-compaction-basic'
-import SessionStore from '@deepseek-ai/dsh-session'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
+import type { Context } from "@deepseek-ai/cordis";
+import { BasicCompactionEngine } from "@deepseek-ai/dsh-compaction-basic";
+import SessionStore from "@deepseek-ai/dsh-session";
+import TokenMeter from "@deepseek-ai/dsh-token-meter";
 
-export const name = 'compaction-basic'
-export const inject = ['llm']
+export const name = "compaction-basic";
+export const inject = ["llm"];
 
 export function apply(ctx: Context): void {
-  ctx.plugin(SessionStore)
-  ctx.plugin(TokenMeter)
-  ctx.plugin(BasicCompactionEngine)
+  ctx.plugin(SessionStore);
+  ctx.plugin(TokenMeter);
+  ctx.plugin(BasicCompactionEngine);
 }
 ```
 
@@ -69,7 +69,7 @@ export function apply(ctx: Context): void {
 例如，同一个压缩插件可以安全服务于容量不同的模型，并应用一项目标特定策略：
 
 ```yaml
-- name: '@deepseek-ai/dsh-compaction-basic'
+- name: "@deepseek-ai/dsh-compaction-basic"
   config:
     thresholdRatio: 0.8
     retainRatio: 0.16
@@ -116,30 +116,39 @@ You are now acting as a compaction engine for this AI coding assistant. Condense
 Output EXACTLY the Markdown structure below: keep every section, in order. Use terse bullets, not prose paragraphs. Write "(none)" for an empty section — never drop a section.
 
 ## Primary Request and Intent
+
 - [the user's original and evolving goals; quote verbatim where the exact wording matters]
 
 ## Key Technical Concepts
+
 - [technologies, frameworks, patterns, and conventions in play]
 
 ## Files and Code
+
 - [exact path: why it matters, key changes or snippets]
 
 ## Errors and Fixes
+
 - [error: how it was resolved, plus any related user feedback]
 
 ## Pending Jobs
+
 - [explicitly requested work not yet completed]
 
 ## Current Work
+
 - [precisely what was in progress at this checkpoint]
 
 ## Next Step
+
 - [the single next action, directly in line with the most recent request, or "(none)"]
 
 ## Critical Context
+
 - [decisions and their rationale, constraints, user preferences, open questions, data needed to continue]
 
 Rules:
+
 - Write concise English engineering prose. Preserve exact file paths, commands, error strings, identifiers, numeric values, function signatures, and syntax fragments.
 - Capture user feedback and explicit instructions faithfully, especially corrections.
 - Do NOT mention this summarization request or that the context was compacted.

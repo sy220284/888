@@ -4,18 +4,18 @@ English | [中文](README.zh.md)
 
 The **shared core** of the Claude Code / Codex hook wire protocol. NOT a cordis plugin — it registers nothing and injects nothing. It is a **library** of dialect-neutral primitives the two bridge plugins (`@deepseek-ai/dsh-hooks-claude-code`, `@deepseek-ai/dsh-hooks-codex`) import so neither re-implements the identical halves of the protocol.
 
-Codex deliberately reimplements a *subset* of the Claude Code hook protocol — the same `hooks.json` matcher-group shape, the same exit-code/stdout output contract, the same command-hook execution model. The genuinely-shared parts live here; each bridge owns only what differs.
+Codex deliberately reimplements a _subset_ of the Claude Code hook protocol — the same `hooks.json` matcher-group shape, the same exit-code/stdout output contract, the same command-hook execution model. The genuinely-shared parts live here; each bridge owns only what differs.
 
 ## What's shared (here) vs. per-dialect (the bridges)
 
-| Concern | Here (`dsh-hook-protocol`) | The bridge (`dsh-hooks-claude-code` / `-codex`) |
-|---|---|---|
-| Matcher validation + test | `matcherDiagnostic(pattern, mode)` for parse-time diagnostics; `matchesMatcher(pattern, query, mode)` for contained runtime matching | picks its `mode` (`claude` = literal-or-regex, `codex` = always regex) and rejects a config group carrying a diagnostic |
-| Run a hook | `runHook(bash, hook, opts, now)` — stdin payload + env via `ctx.shell`, decode | builds the per-event stdin **payload** + the dialect's **env** |
-| Decode output | `parseHookOutput(exit, stdout, stderr)` → neutral `HookOutput` | maps the neutral `HookOutput` onto an extension-point-specific typed Decision |
-| Merge N hooks | `mergeHookOutputs(outputs)` → most-restrictive `MergedHookOutcome` | — |
-| Durable record | `appendHookInvoked` / `appendHookResult` (`hook/*` session events; the result's `decision`/`stderrSummary` derive from the `HookOutput` here) | calls them around each invocation |
-| Detached-run quiescence | `createDetachedRuns()` — track fire-and-forget run chains; `drain()` aborts, then awaits them | passes `signal` to each detached `runHook`, registers `drain` as its effect disposer |
+| Concern                   | Here (`dsh-hook-protocol`)                                                                                                                    | The bridge (`dsh-hooks-claude-code` / `-codex`)                                                                         |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Matcher validation + test | `matcherDiagnostic(pattern, mode)` for parse-time diagnostics; `matchesMatcher(pattern, query, mode)` for contained runtime matching          | picks its `mode` (`claude` = literal-or-regex, `codex` = always regex) and rejects a config group carrying a diagnostic |
+| Run a hook                | `runHook(bash, hook, opts, now)` — stdin payload + env via `ctx.shell`, decode                                                                | builds the per-event stdin **payload** + the dialect's **env**                                                          |
+| Decode output             | `parseHookOutput(exit, stdout, stderr)` → neutral `HookOutput`                                                                                | maps the neutral `HookOutput` onto an extension-point-specific typed Decision                                           |
+| Merge N hooks             | `mergeHookOutputs(outputs)` → most-restrictive `MergedHookOutcome`                                                                            | —                                                                                                                       |
+| Durable record            | `appendHookInvoked` / `appendHookResult` (`hook/*` session events; the result's `decision`/`stderrSummary` derive from the `HookOutput` here) | calls them around each invocation                                                                                       |
+| Detached-run quiescence   | `createDetachedRuns()` — track fire-and-forget run chains; `drain()` aborts, then awaits them                                                 | passes `signal` to each detached `runHook`, registers `drain` as its effect disposer                                    |
 
 ## Primitives
 

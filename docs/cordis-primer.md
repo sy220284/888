@@ -16,12 +16,12 @@ Cordis is the vendored plugin framework underneath DeepSeek Harness. This primer
 
 Every event can have one of the following dispatch mode and can only be dispatched by these methods accordingly.
 
-| Mode | Awaited? | Dispatch Order | Has Return Value? |
-|---|---|---|---|
-| `emit` | No | listeners observe in registration order | No |
-| `waterfall` | No | listeners observe in registration order | Yes |
-| `parallel` | Yes | all listeners observe the event in parallel | No |
-| `serial` | Yes | listeners observe in registration order | Yes |
+| Mode        | Awaited? | Dispatch Order                              | Has Return Value? |
+| ----------- | -------- | ------------------------------------------- | ----------------- |
+| `emit`      | No       | listeners observe in registration order     | No                |
+| `waterfall` | No       | listeners observe in registration order     | Yes               |
+| `parallel`  | Yes      | all listeners observe the event in parallel | No                |
+| `serial`    | Yes      | listeners observe in registration order     | Yes               |
 
 The dispatch mode is part of the event's public contract. New harness events document it with an `@mode` tag so the generated catalog can check declarations against dispatch sites.
 

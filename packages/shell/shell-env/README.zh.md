@@ -10,9 +10,9 @@
 
 ```yaml
 - id: shell-env
-  name: '@deepseek-ai/dsh-shell-env'
+  name: "@deepseek-ai/dsh-shell-env"
   config:
-    dshHome: C:\Users\me\.dsh   # default: $DSH_HOME, then ~/.dsh
+    dshHome: C:\Users\me\.dsh # default: $DSH_HOME, then ~/.dsh
 ```
 
 ## Managed environment
@@ -22,17 +22,17 @@
 `ctx.shellEnv` 负责收集。其他插件可以注册一个受 effect 作用域约束的 contributor，带有稳定名称、已声明的键/描述以及 `resolve(execution: ToolExecution)`；重复所有权与未声明的运行时键会响亮失败，而 `list()` 只枚举声明、不执行 provider。Harness 内置键保留 `DSH_HOME`、`DSH_SHELL` 与 `DSH_SESSION_ID`；本插件的持久化翻译器通过读取与后端无关的 `sessionPersistence.locate()` seam 拥有 `DSH_SESSION_JSONL`。
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-shell-env'
+import type { Context } from "@deepseek-ai/cordis";
+import type {} from "@deepseek-ai/dsh-shell-env";
 
-export const inject = ['shellEnv']
+export const inject = ["shellEnv"];
 
 export function apply(ctx: Context): void {
   ctx.shellEnv.register({
-    name: 'deployment-region',
-    variables: { DSH_DEPLOYMENT_REGION: { description: 'Current deployment region.' } },
-    resolve: execution => execution.agent === undefined ? {} : { DSH_DEPLOYMENT_REGION: 'cn-north' },
-  })
+    name: "deployment-region",
+    variables: { DSH_DEPLOYMENT_REGION: { description: "Current deployment region." } },
+    resolve: (execution) => (execution.agent === undefined ? {} : { DSH_DEPLOYMENT_REGION: "cn-north" }),
+  });
 }
 ```
 

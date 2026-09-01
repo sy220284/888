@@ -28,11 +28,11 @@ In-package relative imports use explicit `.ts` specifiers in source (for example
 
 ## 2. Register it in the root configs
 
-| File | Change |
-|---|---|
-| `tsconfig.base.json` | no edit for an existing group; for a new group, add a `./packages/<group>/*/src` candidate to the `@deepseek-ai/dsh-*` wildcard |
+| File                                                                           | Change                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tsconfig.base.json`                                                           | no edit for an existing group; for a new group, add a `./packages/<group>/*/src` candidate to the `@deepseek-ai/dsh-*` wildcard                                                                                                                                                                                                                        |
 | `tsconfig.host.json` (Host package) or `tsconfig.client.json` (Client package) | add `{ "path": "./packages/<group>/<pkg>" }` to `references` — an ordinary package belongs to exactly one aggregate, never both. `api/remotes` uses a repository-specific split because the Host generates a contract that the Client consumes in a later phase; new packages must not copy it ([layout](../development.md#typescript-project-layout)) |
-| `knip.json` | only if the package has entrypoints that repository discovery does not already cover |
+| `knip.json`                                                                    | only if the package has entrypoints that repository discovery does not already cover                                                                                                                                                                                                                                                                   |
 
 A `packages/client/*` package additionally extends `tsconfig.base.client.json` instead of `tsconfig.base.json`, and a client plugin package declares `dsh.client` in package.json, exports `./client`, and calls the shared tsdown preset (`packages/client/tsdown.client.ts`) — see [packages/client/AGENTS.md](../../packages/client/AGENTS.md) for the client-side contract.
 
@@ -48,25 +48,25 @@ Name the stable current responsibility. Do not name the first implementation, a 
 
 Use a singular `ctx` key for one engine, runtime, policy, controller, resolver, store, or current configuration. Use a plural key for a registry or a service that owns multiple named members. The class role and key number must agree. Do not reuse one Cordis `Context` key for incompatible host and client declarations. TypeScript declaration merging sees both faces even when they use separate runtime contexts. Add the role suffix when the natural plural already belongs to another face.
 
-| Word | Use it when | Do not use it when |
-|---|---|---|
-| `Controller` | It accepts commands or user intent and changes one existing domain or presentation state. | It executes arbitrary work, owns a provider fleet, or only converts values for display. |
-| `Store` | It owns one data set and mainly offers CRUD, snapshot, or subscription operations for that data. | It validates a state machine, arbitrates authority, dispatches work, or owns provider precedence. A map does not make a class a store. |
-| `Directory` | It exposes entries and metadata for discovery or selection. | Producers register arbitrary implementations into it, or callers execute work through it. |
-| `Presenter` | It is a pure conversion from domain values or tool arguments to render intent. | It performs I/O, subscribes, mutates state, or owns lifecycle. |
-| `Registry` | It owns a dynamic set of named registrations, including lookup, duplicate or precedence rules, lifetime, and disposal. | Its main contract is dispatch, execution, cancellation, policy, or orchestration. |
-| `Runtime` | It runs live work and owns dispatch, cancellation, provider coordination, or operation lifecycle across calls. | It only stores records, returns a catalog, resolves one value, or holds configuration. |
-| `Resolver` | It computes or locates one answer from supplied inputs without owning that answer's lifecycle. | It owns a mutable collection or long-running execution. |
-| `Binder` | It attaches one declared interface to a caller context or lifecycle and returns the bound value. | It owns the value as a collection, controls its domain state, or only converts data. |
-| `Engine` | It implements a domain algorithm or stateful execution model. | It only selects a provider or forwards across a protocol boundary. |
-| `Policy` | It decides what is allowed, selected, limited, or observed. | It performs the mechanism that the decision permits. |
-| `Executor` | It runs one explicit request or resolved specification in one capability. | It owns a broad application lifecycle or provider catalog. |
-| `Gateway` | It adapts a process, network, RPC, or API boundary. | It only registers same-process services or stores metadata. |
-| `Provider` | It supplies one implementation of a capability definition. Add a mechanism or vendor qualifier when several can exist. | It is the capability definition, provider registry, or consumer runtime. |
-| `Backend` | It implements replaceable lower-level persistence, transport, or execution behind a defined interface. | It is a user-facing service or one returned live-resource reference. |
-| `Handle` | It refers to one live resource and controls or observes that resource. | It creates and manages the complete resource pool. |
-| `Config` | It owns one resolved configuration value or one tightly bounded record and its update contract. | It stores a general collection, executes work, or exposes unrelated settings. |
-| `Service` | It owns a cohesive domain service that no sharper role above states honestly. | The name exists only because the class extends Cordis `Service`. |
+| Word         | Use it when                                                                                                            | Do not use it when                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `Controller` | It accepts commands or user intent and changes one existing domain or presentation state.                              | It executes arbitrary work, owns a provider fleet, or only converts values for display.                                                |
+| `Store`      | It owns one data set and mainly offers CRUD, snapshot, or subscription operations for that data.                       | It validates a state machine, arbitrates authority, dispatches work, or owns provider precedence. A map does not make a class a store. |
+| `Directory`  | It exposes entries and metadata for discovery or selection.                                                            | Producers register arbitrary implementations into it, or callers execute work through it.                                              |
+| `Presenter`  | It is a pure conversion from domain values or tool arguments to render intent.                                         | It performs I/O, subscribes, mutates state, or owns lifecycle.                                                                         |
+| `Registry`   | It owns a dynamic set of named registrations, including lookup, duplicate or precedence rules, lifetime, and disposal. | Its main contract is dispatch, execution, cancellation, policy, or orchestration.                                                      |
+| `Runtime`    | It runs live work and owns dispatch, cancellation, provider coordination, or operation lifecycle across calls.         | It only stores records, returns a catalog, resolves one value, or holds configuration.                                                 |
+| `Resolver`   | It computes or locates one answer from supplied inputs without owning that answer's lifecycle.                         | It owns a mutable collection or long-running execution.                                                                                |
+| `Binder`     | It attaches one declared interface to a caller context or lifecycle and returns the bound value.                       | It owns the value as a collection, controls its domain state, or only converts data.                                                   |
+| `Engine`     | It implements a domain algorithm or stateful execution model.                                                          | It only selects a provider or forwards across a protocol boundary.                                                                     |
+| `Policy`     | It decides what is allowed, selected, limited, or observed.                                                            | It performs the mechanism that the decision permits.                                                                                   |
+| `Executor`   | It runs one explicit request or resolved specification in one capability.                                              | It owns a broad application lifecycle or provider catalog.                                                                             |
+| `Gateway`    | It adapts a process, network, RPC, or API boundary.                                                                    | It only registers same-process services or stores metadata.                                                                            |
+| `Provider`   | It supplies one implementation of a capability definition. Add a mechanism or vendor qualifier when several can exist. | It is the capability definition, provider registry, or consumer runtime.                                                               |
+| `Backend`    | It implements replaceable lower-level persistence, transport, or execution behind a defined interface.                 | It is a user-facing service or one returned live-resource reference.                                                                   |
+| `Handle`     | It refers to one live resource and controls or observes that resource.                                                 | It creates and manages the complete resource pool.                                                                                     |
+| `Config`     | It owns one resolved configuration value or one tightly bounded record and its update contract.                        | It stores a general collection, executes work, or exposes unrelated settings.                                                          |
+| `Service`    | It owns a cohesive domain service that no sharper role above states honestly.                                          | The name exists only because the class extends Cordis `Service`.                                                                       |
 
 Use `SDK` only for the JSON-RPC client/server protocol used by the supported Python and TypeScript SDKs. DeepSeek Harness itself is an agent harness, not an SDK project. Use the canonical product spelling `Typert`, never `TypeRT` or `typeRT`.
 

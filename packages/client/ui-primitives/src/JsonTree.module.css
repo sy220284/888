@@ -83,7 +83,7 @@
   left: 0;
   height: 16px;
   background: var(--json-tree-hover);
-  content: '';
+  content: "";
   pointer-events: none;
 }
 
@@ -167,7 +167,7 @@
   outline-offset: -1px;
 }
 
-.copyButton[data-state='failed'] {
+.copyButton[data-state="failed"] {
   color: var(--dsw-alias-state-error-primary);
 }
 
@@ -194,7 +194,7 @@
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
   border-left: 6px solid currentColor;
-  content: '';
+  content: "";
   transform: scale(0.75);
   transform-origin: 33.333% center;
 }
@@ -218,5 +218,5 @@
 }
 
 .collapsedContent::after {
-  content: '…';
+  content: "…";
 }

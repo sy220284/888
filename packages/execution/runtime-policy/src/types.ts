@@ -43,6 +43,7 @@ export interface CapabilityPermissionSnapshot {
 
 /** Budget dimensions owned by one global ledger. All values are non-negative safe integers. */
 export type BudgetDimension = 'tokens' | 'costMicros' | 'wallTimeMs' | 'toolCalls' | 'agentStarts' | 'riskPoints'
+/** Sparse non-negative values indexed by global budget dimension. */
 export type BudgetVector = Partial<Record<BudgetDimension, number>>
 
 /** Canonical budget state at a model-dispatch boundary. */

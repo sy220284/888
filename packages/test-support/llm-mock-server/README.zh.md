@@ -32,21 +32,21 @@ pnpm dsh --profile headless "test provider recovery"
 
 `--sequence` 是逗号分隔的 FIFO。耗尽时返回结构化 HTTP 500；`--repeat-last` 显式重用最后一项。
 
-| 行为 | 协议结果 |
-|---|---|
-| `connection_reset` | 在发送 HTTP 标头前销毁 socket |
-| `stream_disconnect` | 发送 SSE 标头，然后在第一个事件前重置连接 |
-| `partial_disconnect` | 发送文本增量，然后重置 socket |
-| `stall` | 发送 SSE header，并保持空闲，直到客户端／服务器取消 |
-| `empty` | 发送有效的无内容 stop 和 `[DONE]` |
-| `empty_body` / `stream_eof` / `partial_eof` | 正常结束，但缺少必需的 `[DONE]` 边界 |
-| `malformed_json` / `malformed_event` | 发送无效 SSE JSON 或无效提供方分片形态 |
-| `rate_limit` / `server_error` / `service_unavailable` | 返回面向重试的 429/500/503 JSON 错误 |
-| `auth_error` / `invalid_request` / `context_overflow` / `quota_exceeded` | 返回终止性错误或需要单独恢复的提供方错误 |
-| `success` / `slow_success` / `reasoning_success` | 流式发送完整文本响应，可选延迟或先发送 reasoning |
-| `tool_call_success` / `max_tokens` | 以工具调用或结束原因 `length` 完成 |
-| `wrong_content_type` | 以 `application/json` 内容类型发送有效 SSE 正文 |
-| `random` | 按带权重的种子随机选择具体请求行为 |
+| 行为                                                                     | 协议结果                                            |
+| ------------------------------------------------------------------------ | --------------------------------------------------- |
+| `connection_reset`                                                       | 在发送 HTTP 标头前销毁 socket                       |
+| `stream_disconnect`                                                      | 发送 SSE 标头，然后在第一个事件前重置连接           |
+| `partial_disconnect`                                                     | 发送文本增量，然后重置 socket                       |
+| `stall`                                                                  | 发送 SSE header，并保持空闲，直到客户端／服务器取消 |
+| `empty`                                                                  | 发送有效的无内容 stop 和 `[DONE]`                   |
+| `empty_body` / `stream_eof` / `partial_eof`                              | 正常结束，但缺少必需的 `[DONE]` 边界                |
+| `malformed_json` / `malformed_event`                                     | 发送无效 SSE JSON 或无效提供方分片形态              |
+| `rate_limit` / `server_error` / `service_unavailable`                    | 返回面向重试的 429/500/503 JSON 错误                |
+| `auth_error` / `invalid_request` / `context_overflow` / `quota_exceeded` | 返回终止性错误或需要单独恢复的提供方错误            |
+| `success` / `slow_success` / `reasoning_success`                         | 流式发送完整文本响应，可选延迟或先发送 reasoning    |
+| `tool_call_success` / `max_tokens`                                       | 以工具调用或结束原因 `length` 完成                  |
+| `wrong_content_type`                                                     | 以 `application/json` 内容类型发送有效 SSE 正文     |
+| `random`                                                                 | 按带权重的种子随机选择具体请求行为                  |
 
 `connection_refused` 只能在 CLI 中使用，且必须是第一个条目。它会延迟绑定调用方指定的非零端口，因此 `--listen-delay-ms` 期间的请求会收到真实 TCP 拒绝；其余条目在 listener 启动后开始。
 

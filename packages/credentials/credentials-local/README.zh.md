@@ -4,12 +4,12 @@
 
 文件型[凭据](../credentials/README.zh.md)提供方：四层来源，一套明确的优先级。
 
-| 层 | 来源 id | 可写 | 优先 |
-|---|---|---|---|
-| 继承的进程环境 | `env` | 否 | 始终优先 |
-| `$DSH_HOME/.credentials.yaml` 文档 | `file` | 是（`set`/`unset`） | 高于两个 `.env` 层 |
-| `<invocation cwd>/.env` | `project-env` | 不在此处 | 高于用户 `.env` |
-| `$DSH_HOME/.env` | `user-env` | 不在此处 | 其余情况 |
+| 层                                 | 来源 id       | 可写                | 优先               |
+| ---------------------------------- | ------------- | ------------------- | ------------------ |
+| 继承的进程环境                     | `env`         | 否                  | 始终优先           |
+| `$DSH_HOME/.credentials.yaml` 文档 | `file`        | 是（`set`/`unset`） | 高于两个 `.env` 层 |
+| `<invocation cwd>/.env`            | `project-env` | 不在此处            | 高于用户 `.env`    |
+| `$DSH_HOME/.env`                   | `user-env`    | 不在此处            | 其余情况           |
 
 启动环境优先，因为按次覆盖（`DEEPSEEK_API_KEY=… dsh`、CI 机密、容器 `-e`）代表本次运行的操作者意图——而它无法从进程内部修改，就必须*可见地*只读：`describe()` 报告 `source: 'env', writable: false`，`set`/`unset` 直接拒绝，而不是写下一个读取方永远看不到的变更。
 
@@ -19,12 +19,12 @@
 
 ## 配置
 
-| 字段 | 默认值 | 含义 |
-|---|---|---|
-| `path` | `<harness home>/.credentials.yaml` | 凭据文档位置。 |
-| `dshHome` | `$DSH_HOME` 或 `~/.dsh` | `path` 缺省时使用的 harness home。 |
-| `watch` | `true` | 热发布外部编辑。 |
-| `debounceMs` | `100` | watcher 写入稳定窗口。 |
+| 字段         | 默认值                             | 含义                               |
+| ------------ | ---------------------------------- | ---------------------------------- |
+| `path`       | `<harness home>/.credentials.yaml` | 凭据文档位置。                     |
+| `dshHome`    | `$DSH_HOME` 或 `~/.dsh`            | `path` 缺省时使用的 harness home。 |
+| `watch`      | `true`                             | 热发布外部编辑。                   |
+| `debounceMs` | `100`                              | watcher 写入稳定窗口。             |
 
 ## 文档本身
 
@@ -40,17 +40,17 @@ refs:
 records:
   llm-pi-ai/openai-codex:
     kind: grant
-    payload:                    # written verbatim; this provider does not interpret it
+    payload: # written verbatim; this provider does not interpret it
       type: oauth
       access: eyJhbGciOi…
       refresh: rft_9f8e7d…
       expires: 1786000000000
   llm-pi-ai/amazon-bedrock:
-    kind: api-key               # environment values, no key: this route uses an AWS profile
+    kind: api-key # environment values, no key: this route uses an AWS profile
     env:
       AWS_PROFILE: prod
   llm-pi-ai/amazon-bedrock-dev:
-    kind: api-key               # neither: the owner confirmed the ambient credential chain
+    kind: api-key # neither: the owner confirmed the ambient credential chain
 ```
 
 该文档只存放凭据，因此任何偏离都是拒绝，而不是跳过某个条目——被静默忽略的键读起来就是「我存进去的凭据没有生效」。非 mapping 的根、未知的顶层键、在其空间中不可寻址的键、类型不符的值、空字符串、未知的记录标签或字段、重复键以及格式错误的 YAML 全部失败：启动时明确报错，运行期热重载则告警并保留最后可用快照。

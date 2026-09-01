@@ -178,9 +178,9 @@ Options accepted by `ctx.on()` and `ctx.once()`.
 /** Options accepted by `ctx.on()` and `ctx.once()`. */
 interface EventOptions {
   /** Add the listener before existing listeners for the same event. */
-  prepend?: boolean
+  prepend?: boolean;
   /** Receive the event regardless of context filter checks. */
-  global?: boolean
+  global?: boolean;
 }
 ```
 
@@ -201,7 +201,7 @@ Event dispatch strategy used by the event service.
  * `bail` stops on the first synchronous bail value, and `waterfall` composes
  * listeners around a final `next` callback.
  */
-type DispatchMode = 'emit' | 'parallel' | 'serial' | 'bail' | 'waterfall'
+type DispatchMode = "emit" | "parallel" | "serial" | "bail" | "waterfall";
 ```
 
 [Source](../../vendor/cordis/src/events.ts#L32)

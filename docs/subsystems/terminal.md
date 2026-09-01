@@ -12,14 +12,13 @@ Types shared by PTY backends, `ctx.terminals`, and the model-facing consumer. Th
 
 ```ts type-equiv
 /** Why one interactive send returned control to its caller. */
-type TerminalWaitReason = 'stdin_read' | 'inferred_idle' | 'timeout' | 'session_exit'
+type TerminalWaitReason = "stdin_read" | "inferred_idle" | "timeout" | "session_exit";
 ```
 
 ```ts type-equiv
 /** Top-level PTY process status, independent of a send's wait reason. */
 type TerminalSessionStatus =
-  | { kind: 'running' }
-  | { kind: 'exited'; exitCode: number | null; signal: NodeJS.Signals | null }
+  { kind: "running" } | { kind: "exited"; exitCode: number | null; signal: NodeJS.Signals | null };
 ```
 
 ## Backend and live session
@@ -30,9 +29,9 @@ A backend owns how one registered type starts and detects readiness. `TerminalSe
 /** Replaceable provider for one PTY session type. */
 interface TerminalBackend {
   /** Stable type selected by {@link TerminalSpawnRequest.type}. */
-  readonly type: string
+  readonly type: string;
   /** Create an unpublished session or reject after cleaning partial resources; cleanup failure uses {@link TerminalBackendCleanupError}. */
-  spawn(spec: TerminalBackendSpawnSpec): Promise<TerminalBackendSession>
+  spawn(spec: TerminalBackendSpawnSpec): Promise<TerminalBackendSession>;
 }
 ```
 
@@ -40,19 +39,19 @@ interface TerminalBackend {
 /** Backend-owned live session retained by {@link TerminalSessionService}. */
 interface TerminalBackendSession {
   /** Initial bounded terminal output returned from `terminal_open`. */
-  readonly motd: string
+  readonly motd: string;
   /** Top-level process id when one exists. */
-  readonly pid?: number
+  readonly pid?: number;
   /** Start one exclusive send operation. */
-  startSend(request: TerminalSendRequest): TerminalSendOperation
+  startSend(request: TerminalSendRequest): TerminalSendOperation;
   /** Read one bounded page from retained scrollback. */
-  read(request: TerminalReadRequest): TerminalReadResult
+  read(request: TerminalReadRequest): TerminalReadResult;
   /** Signal the verified foreground process group. */
-  signal(signal: TerminalSignal): Promise<TerminalSignalResult>
+  signal(signal: TerminalSignal): Promise<TerminalSignalResult>;
   /** Observe top-level process status. */
-  status(): TerminalSessionStatus
+  status(): TerminalSessionStatus;
   /** Idempotently close the captured owned process tree and await quiescence. */
-  close(reason: string): Promise<void>
+  close(reason: string): Promise<void>;
 }
 ```
 
@@ -64,11 +63,11 @@ One live session accepts one active send. Its operation exposes a consuming outp
 /** Live backend-owned send; exactly one may be active per PTY session. */
 interface TerminalSendOperation {
   /** Resolves after readiness, timeout, cancellation, or top-level process exit. */
-  done: Promise<TerminalSendResult>
+  done: Promise<TerminalSendResult>;
   /** Consume output produced since the prior call. */
-  readOutput(): TerminalSendRead
+  readOutput(): TerminalSendRead;
   /** Request `SIGINT`; returns false after the operation settled. */
-  cancel(): boolean
+  cancel(): boolean;
 }
 ```
 
@@ -76,13 +75,13 @@ interface TerminalSendOperation {
 /** Settled result for one foreground or background send. */
 interface TerminalSendResult {
   /** Bounded rendered terminal delta remaining at settlement. */
-  viewport: string
+  viewport: string;
   /** Why the wait returned; this does not imply arbitrary child-process exit. */
-  waitReason: TerminalWaitReason
+  waitReason: TerminalWaitReason;
   /** Top-level session status observed at settlement. */
-  sessionStatus: TerminalSessionStatus
+  sessionStatus: TerminalSessionStatus;
   /** Whether output was dropped from the operation or retained scrollback. */
-  truncated: boolean
+  truncated: boolean;
 }
 ```
 

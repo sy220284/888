@@ -12,8 +12,8 @@ JSON backend for the [storage hub](../storage/README.md): one human-readable `<u
 
 ## Config
 
-| Key | Type | Default | Meaning |
-| --- | --- | --- | --- |
+| Key    | Type   | Default                                                    | Meaning                                                 |
+| ------ | ------ | ---------------------------------------------------------- | ------------------------------------------------------- |
 | `root` | string | required — no default (a cwd fallback would scatter files) | Directory holding unit files; created `0o700` on demand |
 
 ## Model Experience

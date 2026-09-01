@@ -11,13 +11,13 @@ Types shared by the experimental implicit-root Team domain, model tools, and hos
 ```ts type-equiv
 /** Whole durable value written on every teammate lifecycle change. */
 interface TeamMemberSnapshot {
-  readonly id: SessionId
-  readonly name: string
-  readonly description: string
-  readonly provider: string
-  readonly context: 'fresh' | 'fork'
-  readonly phase: TeamMemberPhase
-  readonly error?: string
+  readonly id: SessionId;
+  readonly name: string;
+  readonly description: string;
+  readonly provider: string;
+  readonly context: "fresh" | "fork";
+  readonly phase: TeamMemberPhase;
+  readonly error?: string;
 }
 ```
 
@@ -30,12 +30,12 @@ The Lead Session first stores the complete queued message. A target receipt is a
 ```ts type-equiv
 /** One peer message retained until its target Session records it. */
 interface TeamMessageSnapshot {
-  readonly id: TeamMessageId
-  readonly senderId: SessionId
-  readonly senderName: string
-  readonly targetId: SessionId
-  readonly delivery: 'quiet' | 'wakeup'
-  readonly content: ContentBlock[]
+  readonly id: TeamMessageId;
+  readonly senderId: SessionId;
+  readonly senderName: string;
+  readonly targetId: SessionId;
+  readonly delivery: "quiet" | "wakeup";
+  readonly content: ContentBlock[];
 }
 ```
 
@@ -44,11 +44,11 @@ The target Session keeps message identity and sender attribution on both the pen
 ```ts type-equiv
 /** Source retained by the target Session for durable mailbox de-duplication. */
 interface TeamMessageSource {
-  readonly kind: 'team-message'
-  readonly teamId: TeamId
-  readonly messageId: TeamMessageId
-  readonly senderId: SessionId
-  readonly senderName: string
+  readonly kind: "team-message";
+  readonly teamId: TeamId;
+  readonly messageId: TeamMessageId;
+  readonly senderId: SessionId;
+  readonly senderName: string;
 }
 ```
 
@@ -59,14 +59,14 @@ Every task event stores a complete snapshot. `revision` is the compare-and-set v
 ```ts type-equiv
 /** Whole durable task snapshot; every mutation increments {@link revision}. */
 interface TeamTaskSnapshot {
-  readonly id: TeamTaskId
-  readonly revision: number
-  readonly subject: string
-  readonly description: string
-  readonly status: TeamTaskStatus
-  readonly ownerId?: SessionId
-  readonly blockedBy: TeamTaskId[]
-  readonly writeScopes: string[]
+  readonly id: TeamTaskId;
+  readonly revision: number;
+  readonly subject: string;
+  readonly description: string;
+  readonly status: TeamTaskStatus;
+  readonly ownerId?: SessionId;
+  readonly blockedBy: TeamTaskId[];
+  readonly writeScopes: string[];
 }
 ```
 

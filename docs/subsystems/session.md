@@ -2,7 +2,7 @@
 
 English | [中文](session.zh.md)
 
-The in-memory, event-sourced model of [dsh-session](../../packages/core/session). A `Session` is an **append-only log** of typed `SessionEvent`s — the single source of truth for an agent's whole interaction history. The LLM message history is *derived* from the log, never stored separately; replay is re-derivation from the same events. How the log is made **durable** (the persistence seam, backends, crash recovery) is the sibling concern on [persistence.md](persistence.md).
+The in-memory, event-sourced model of [dsh-session](../../packages/core/session). A `Session` is an **append-only log** of typed `SessionEvent`s — the single source of truth for an agent's whole interaction history. The LLM message history is _derived_ from the log, never stored separately; replay is re-derivation from the same events. How the log is made **durable** (the persistence seam, backends, crash recovery) is the sibling concern on [persistence.md](persistence.md).
 
 Source: [`packages/core/session/src/types.ts`](../../packages/core/session/src/types.ts)
 
@@ -13,7 +13,7 @@ The append-only event types. Merge-extensible: a plugin declares extra event typ
 ```ts type-equiv
 /** A user-role specialization of the one shared message representation. */
 interface UserMessage extends Message {
-  readonly role: 'user'
+  readonly role: "user";
 }
 ```
 
@@ -31,7 +31,7 @@ interface SessionEventMap {
    * step; otherwise the following identified `user/message` event or batch
    * records the messages entering the step.
    */
-  'turn/start': { turn: number }
+  "turn/start": { turn: number };
   /**
    * Closes turn `turn` with the {@link TurnEndReason} that ended it. A turn
    * with no entered step has no `step/start` or `step/end`. The loop does not await a
@@ -40,11 +40,11 @@ interface SessionEventMap {
    * `whenIdle()` flush themselves. Success commits the turn; rejection is
    * reported live and does not prevent later work.
    */
-  'turn/end': { turn: number; reason: TurnEndReason }
+  "turn/end": { turn: number; reason: TurnEndReason };
   /** Opens step `step` of turn `turn` — one model call plus the tool executions it requested. */
-  'step/start': { turn: number; step: number }
+  "step/start": { turn: number; step: number };
   /** Closes step `step` of turn `turn`. */
-  'step/end': { turn: number; step: number }
+  "step/end": { turn: number; step: number };
   /**
    * A user-role message on the model-visible surface: a direct human prompt
    * (the queued message claimed for this turn), a synthetic `agent.inject()`
@@ -52,9 +52,9 @@ interface SessionEventMap {
    * notifications, …), or an entered goal continuation round. All three
    * project their `content` verbatim; `source` tells them apart.
    */
-  'user/message': UserMessage
+  "user/message": UserMessage;
   /** Raw stream chunk — token-level replay fidelity. */
-  'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
+  "assistant/chunk": { turn: number; step: number; chunk: StreamChunk };
   /**
    * Assembled assistant message for one step (derived history uses this).
    * Carries the step's `usage` when the adapter reported token accounting, so
@@ -65,13 +65,19 @@ interface SessionEventMap {
    * marker distinguishes that prefix without re-deriving interruption from turn
    * boundaries. An aborted turn with no such event streamed no visible content.
    */
-  'assistant/message': { turn: number; step: number; message: AssistantMessage; usage?: TokenUsage; interrupted?: true }
+  "assistant/message": {
+    turn: number;
+    step: number;
+    message: AssistantMessage;
+    usage?: TokenUsage;
+    interrupted?: true;
+  };
   /**
    * The model requested one tool invocation: `name` with the raw `arguments`
    * JSON string exactly as the model produced it (unparsed). `callId` pairs the
    * call with its `tool/result`.
    */
-  'tool/call': { turn: number; step: number; callId: CallId; name: string; arguments: string }
+  "tool/call": { turn: number; step: number; callId: CallId; name: string; arguments: string };
   /**
    * A completed tool call's model-facing result, optional internal failure
    * identity, and optional tool-private `meta` presentation payload. `meta` is
@@ -83,25 +89,25 @@ interface SessionEventMap {
    * unless the tool attaches one (e.g. `dsh-tool-fs` carries its result-time
    * contextual diff here).
    */
-  'tool/result': {
-    turn: number
-    step: number
-    message: ToolResultMessage
-    error?: { name: string; code: string }
-    meta?: JsonValue
-  }
+  "tool/result": {
+    turn: number;
+    step: number;
+    message: ToolResultMessage;
+    error?: { name: string; code: string };
+    meta?: JsonValue;
+  };
   /** Whole-list snapshot; latest write wins on replay. Log-only UI state; never derived history. */
-  'todo/write': { todos: TodoItem[] }
+  "todo/write": { todos: TodoItem[] };
   /**
    * Full header for the next request, appended inside its step before dispatch.
    * It is log-only; the latest snapshot reconstructs the request header.
    */
-  'request/header': { header: EpochHeader; reason: RequestHeaderReason }
+  "request/header": { header: EpochHeader; reason: RequestHeaderReason };
   /**
    * Route metadata for the next request, logged only when the route or capacity
    * changes. It does not participate in request reconstruction or header equality.
    */
-  'request/context': RequestContext
+  "request/context": RequestContext;
   /**
    * Marks the end of a constructor seed. Events before it have smaller seq
    * values and came from the seed (resume, fork, or replay); this lifecycle
@@ -124,7 +130,7 @@ interface SessionEventMap {
    * writers — a concurrently live session holds its own boundary elsewhere,
    * so tolerating concurrent writers needs a signal beyond the log.
    */
-  'session/end-seed': Record<string, never>
+  "session/end-seed": Record<string, never>;
 }
 ```
 
@@ -147,9 +153,9 @@ The unit of the `todo/write` event's whole-list snapshot. Deliberately minimal �
  */
 interface TodoItem {
   /** What this task is — a short imperative line shown in the UI. */
-  content: string
+  content: string;
   /** Lifecycle state. `in_progress` marks a task being worked now; parallel work may mark several. */
-  status: 'pending' | 'in_progress' | 'completed'
+  status: "pending" | "in_progress" | "completed";
 }
 ```
 
@@ -167,13 +173,13 @@ The request envelope — the `EpochHeader` (call config + markers for adapter-su
  */
 interface EpochHeader {
   /** The conversation's call configuration (provider, model, reasoning effort, and sampling scalars). */
-  config: LlmCallConfig
+  config: LlmCallConfig;
   /** Effective config fields materialized from the exact adapter rather than proposed by a caller. */
-  adapterDefaults?: LlmCallConfigAdapterDefaults
+  adapterDefaults?: LlmCallConfigAdapterDefaults;
   /** Rendered system prompt text; absent for a system-less request. */
-  system?: string
+  system?: string;
   /** Assembled tool schemas; absent for a tool-less request. */
-  tools?: ToolSchema[]
+  tools?: ToolSchema[];
 }
 ```
 
@@ -187,11 +193,11 @@ The context metadata of the route a request resolved to is separate logged state
 /** Registration-bound metadata for one resolved model route. */
 interface RequestContext {
   /** Registered provider route the metadata belongs to. */
-  provider: string
+  provider: string;
   /** Provider-owned model id the metadata belongs to. */
-  model: string
+  model: string;
   /** Maximum combined request and response context in tokens, when advertised. */
-  contextWindow?: number
+  contextWindow?: number;
 }
 ```
 
@@ -215,12 +221,12 @@ A proper discriminated union over `type` (not independent `type`/`data` unions),
  */
 type SessionEvent<T extends SessionEventType = SessionEventType> = {
   [K in SessionEventType]: {
-    type: K
+    type: K;
     /** Monotonic sequence number within the session. */
-    seq: number
+    seq: number;
     /** Unix epoch milliseconds. */
-    time: number
-    data: SessionEventMap[K]
+    time: number;
+    data: SessionEventMap[K];
     /**
      * Marks an event a reader may safely skip when it does not recognize
      * `type`. Absent means required: a reader meeting an unrecognized type
@@ -231,21 +237,23 @@ type SessionEvent<T extends SessionEventType = SessionEventType> = {
      * defaulting to required means a forgotten marker over-refuses (an
      * inconvenience) rather than silently resuming a gutted session.
      */
-    ignorable?: true
-  } & (K extends SurfaceEventType ? {
-    /**
-     * Seq numbers of earlier events that this event cites as sources
-     * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
-     * or the surface nodes shadowed by a compaction replace node). An
-     * `assistant/message` may carry a present empty array for a known empty
-     * provider stream; when the field is absent, the event does not record which
-     * earlier events produced the message.
-     */
-    sourceEventSeqs?: number[]
-    /** How this event entered the surface; absent for non-surface events. */
-    surfaceOp?: SurfaceOp
-  } : object)
-}[T]
+    ignorable?: true;
+  } & (K extends SurfaceEventType
+    ? {
+        /**
+         * Seq numbers of earlier events that this event cites as sources
+         * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
+         * or the surface nodes shadowed by a compaction replace node). An
+         * `assistant/message` may carry a present empty array for a known empty
+         * provider stream; when the field is absent, the event does not record which
+         * earlier events produced the message.
+         */
+        sourceEventSeqs?: number[];
+        /** How this event entered the surface; absent for non-surface events. */
+        surfaceOp?: SurfaceOp;
+      }
+    : object);
+}[T];
 ```
 
 `SessionEventType = keyof SessionEventMap`. Because `SessionEventMap` is merge-extensible, switches over `SessionEvent` must NOT use `assertNever` — a plugin-added variant is a valid unknown value; handle the known cases and fall through `default`.
@@ -264,10 +272,7 @@ The three message-producing types (`SurfaceEventType` — `user/message`, `assis
  * messages and are eligible to appear on the ordered surface. Only these
  * event types may carry {@link SurfaceOp} and {@link SessionEvent.sourceEventSeqs}.
  */
-type SurfaceEventType =
-  | 'user/message'
-  | 'assistant/message'
-  | 'tool/result'
+type SurfaceEventType = "user/message" | "assistant/message" | "tool/result";
 ```
 
 ### `SurfaceOp` — how an event entered the surface
@@ -286,9 +291,7 @@ type SurfaceEventType =
  *   shadowed surface node. Used by compaction; any surface-replacing producer
  *   may use it.
  */
-type SurfaceOp =
-  | 'append'
-  | { op: 'replace'; start: number; end: number }
+type SurfaceOp = "append" | { op: "replace"; start: number; end: number };
 ```
 
 `'append'` is the normal tail-append path. `replace` shadows surface entries from `start` through `end` inclusive (both must be valid surface seqs; `start === end` replaces a single entry) and inserts the new event in their place.
@@ -301,14 +304,14 @@ type SurfaceOp =
  * message-producing events and forbidden on log-only events.
  */
 interface SurfaceIntent {
-  surfaceOp: SurfaceOp
+  surfaceOp: SurfaceOp;
   /**
    * Complete set of known source-event seqs. `assistant/message` may use a
    * present empty array for a known empty provider stream; when the field is
    * absent, the event does not record which earlier events produced the message.
    * Other surface events require a non-empty set when this field is present.
    */
-  sourceEventSeqs?: number[]
+  sourceEventSeqs?: number[];
 }
 ```
 
@@ -326,9 +329,9 @@ Only `assistant/message` may carry a present empty `sourceEventSeqs`; when the f
 /** Readonly live projection of the message-producing session events. */
 interface SessionSurface {
   /** Current surface event sequences in model-visible order. */
-  readonly nodes: readonly number[]
+  readonly nodes: readonly number[];
   /** Monotonic count of committed positional replacements. */
-  readonly replaceGeneration: number
+  readonly replaceGeneration: number;
 }
 ```
 
@@ -340,13 +343,13 @@ interface SessionSurface {
 /** One replacement operation observed while folding a session surface. */
 interface SurfaceFoldReplacement {
   /** Seq of the event that replaced the prior surface range. */
-  seq: number
+  seq: number;
   /** Declared inclusive start seq of the replaced surface range. */
-  start: number
+  start: number;
   /** Declared inclusive end seq of the replaced surface range. */
-  end: number
+  end: number;
   /** Actual surface entries removed by the operation, in surface order. */
-  shadowedSeqs: number[]
+  shadowedSeqs: number[];
 }
 ```
 
@@ -354,9 +357,9 @@ interface SurfaceFoldReplacement {
 /** Complete result of replaying the surface operations in a session log. */
 interface SurfaceFoldResult {
   /** Current surface event sequences in model-visible order. */
-  nodes: number[]
+  nodes: number[];
   /** Replacement operations in event order. */
-  replacements: SurfaceFoldReplacement[]
+  replacements: SurfaceFoldReplacement[];
 }
 ```
 
@@ -547,7 +550,7 @@ An explicit `boundary` lets callers fork from any stable between-turn position, 
 
 ```ts type-equiv
 /** Durable cancellation cause, including imports whose original coarse record carried no cause. */
-type TurnEndCancelCause = AgentCancelCause | { readonly kind: 'legacy' }
+type TurnEndCancelCause = AgentCancelCause | { readonly kind: "legacy" };
 ```
 
 ```ts type-equiv
@@ -555,24 +558,24 @@ type TurnEndCancelCause = AgentCancelCause | { readonly kind: 'legacy' }
  * Why a turn ended. Merge-extensible sum type.
  */
 interface TurnEndReasonMap {
-  completed: { kind: 'completed' }
+  completed: { kind: "completed" };
   /** A cancellation request interrupted the live turn. */
-  aborted: { kind: 'aborted'; reason: TurnEndCancelCause }
+  aborted: { kind: "aborted"; reason: TurnEndCancelCause };
 
-  blocked: { kind: 'blocked' }
+  blocked: { kind: "blocked" };
   /**
    * The turn failed. `error` is always a structured failure: the `LlmError`
    * facts verbatim, or `{ message: errorChain(error), code: 'UNKNOWN' }`
    * flattened from any other error.
    */
-  error: { kind: 'error'; error: LlmFailure }
+  error: { kind: "error"; error: LlmFailure };
   /** At least one step reached its output-token ceiling, even if a plugin continued the turn. */
-  'max-tokens': { kind: 'max-tokens' }
+  "max-tokens": { kind: "max-tokens" };
   /**
    * A persistence backend closed a crash-orphaned turn on reload. The loop never
    * emits this marker, and the events recorded before the crash remain intact.
    */
-  interrupted: { kind: 'interrupted' }
+  interrupted: { kind: "interrupted" };
 }
 ```
 
@@ -590,7 +593,7 @@ A seeded session — resume, fork, or replay — appends this log-only event imm
 
 An explicitly supplied empty seed writes `session/end-seed` at seq 0, which distinguishes an empty resumed session from a fresh one. A seed already ending in `session/end-seed` is not re-marked, so reopening an untouched session does not grow its log per pickup. Locate the LAST `session/end-seed` in stored history rather than assuming one exists at `firstLiveSeq`: after a pickup with no work, the event has a smaller seq than the next lifecycle's `firstLiveSeq`.
 
-It exists because seed history and live work are otherwise byte-identical, which defeats any plugin owning a standalone open/close bracket: an unmatched `compaction/start` reads the same whether the writer crashed mid-compaction or is compacting right now. An opening marker before `session/end-seed` came from the constructor seed and belongs to an ended lifecycle, whatever ended it (a crash, a succeeding process, or a fork out of a still-running parent), so its owner may treat it as dead. That covers only brackets *this* session inherited: a concurrently live session holding an open bracket over the same history has its own boundary elsewhere, so tolerating concurrent writers needs a liveness signal beyond the log. Core writes the boundary and reads nothing from it — a bracket's vocabulary stays with its owning plugin, which is why crash repair closes turn/step/tool boundaries and never `compaction/*`.
+It exists because seed history and live work are otherwise byte-identical, which defeats any plugin owning a standalone open/close bracket: an unmatched `compaction/start` reads the same whether the writer crashed mid-compaction or is compacting right now. An opening marker before `session/end-seed` came from the constructor seed and belongs to an ended lifecycle, whatever ended it (a crash, a succeeding process, or a fork out of a still-running parent), so its owner may treat it as dead. That covers only brackets _this_ session inherited: a concurrently live session holding an open bracket over the same history has its own boundary elsewhere, so tolerating concurrent writers needs a liveness signal beyond the log. Core writes the boundary and reads nothing from it — a bracket's vocabulary stays with its owning plugin, which is why crash repair closes turn/step/tool boundaries and never `compaction/*`.
 
 Consumers that order Sessions by human activity exclude this boundary: picking a Session up is not work, so ordering by the log tail would float every opened Session to the top.
 

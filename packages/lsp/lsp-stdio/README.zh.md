@@ -20,19 +20,19 @@ Namespace 插件（`name`／`inject`／`Config`／`apply`，无默认导出）�
 
 `servers` 记录的 key 是在 `ctx.lsp` 上保留的稳定提供方 id；每个值具有以下形状：
 
-| 服务器 key | 默认值 | 含义 |
-|---|---|---|
-| `command` | （必填） | 要 spawn 的可执行文件：绝对路径，或在加载时从子进程 PATH 解析。不使用 shell 启动。 |
-| `args` | `[]` | 传给可执行文件的参数。 |
-| `env` | `{}` | 合并到已清理 credential 的环境之上的额外 env（匹配 `KEY`／`PASSWORD`／`SECRET`／`TOKEN` 的变量不会转发）；显式 `DSH_*` 条目在 seam 清除环境中同名值之后合并。 |
-| `extensionToLanguage` | （必填） | 小写、以点开头的扩展名 → LSP language id（例如 `{ '.ts': 'typescript' }`）。 |
-| `initializationOptions` | `null` | 转发给服务器的静态 `initialize` 选项。 |
-| `configuration` | `null` | 每个 `workspace/configuration` 配置项的静态答案。 |
-| `maxMessageBytes` | `16000000` | 从服务器接受的单条 framed 消息最大大小。 |
-| `maxStderrBytes` | `1000000` | 为诊断保留的 stderr 尾部最大大小。 |
-| `maxDocumentBytes` | `4000000` | 该主机可打开的源文件大小上限。 |
-| `shutdownTimeoutMs` | `5000` | 升级前用于优雅 `shutdown`／`exit` 的预算。 |
-| `killGraceMs` | `2000` | 请求取消及 SIGTERM→SIGKILL 升级的宽限期。 |
+| 服务器 key              | 默认值     | 含义                                                                                                                                                          |
+| ----------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `command`               | （必填）   | 要 spawn 的可执行文件：绝对路径，或在加载时从子进程 PATH 解析。不使用 shell 启动。                                                                            |
+| `args`                  | `[]`       | 传给可执行文件的参数。                                                                                                                                        |
+| `env`                   | `{}`       | 合并到已清理 credential 的环境之上的额外 env（匹配 `KEY`／`PASSWORD`／`SECRET`／`TOKEN` 的变量不会转发）；显式 `DSH_*` 条目在 seam 清除环境中同名值之后合并。 |
+| `extensionToLanguage`   | （必填）   | 小写、以点开头的扩展名 → LSP language id（例如 `{ '.ts': 'typescript' }`）。                                                                                  |
+| `initializationOptions` | `null`     | 转发给服务器的静态 `initialize` 选项。                                                                                                                        |
+| `configuration`         | `null`     | 每个 `workspace/configuration` 配置项的静态答案。                                                                                                             |
+| `maxMessageBytes`       | `16000000` | 从服务器接受的单条 framed 消息最大大小。                                                                                                                      |
+| `maxStderrBytes`        | `1000000`  | 为诊断保留的 stderr 尾部最大大小。                                                                                                                            |
+| `maxDocumentBytes`      | `4000000`  | 该主机可打开的源文件大小上限。                                                                                                                                |
+| `shutdownTimeoutMs`     | `5000`     | 升级前用于优雅 `shutdown`／`exit` 的预算。                                                                                                                    |
+| `killGraceMs`           | `2000`     | 请求取消及 SIGTERM→SIGKILL 升级的宽限期。                                                                                                                     |
 
 `servers` 必须至少包含一个配置项，每个 id 都必须非空。定时器预算必须是正整数，且不超过 Node 的 `2_147_483_647` ms 定时器上限。所有可执行文件都会在清理 credential 后于加载时解析；后面的坏配置项会阻止所有提供方注册。进程在第一次匹配查询时惰性启动。
 

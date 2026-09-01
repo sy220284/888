@@ -2,7 +2,7 @@
 
 English | [中文](credentials.zh.md)
 
-The credential seam of [dsh-credentials](../../packages/credentials/credentials) keeps secrets out of configuration: settings sections and `cordis.yml` entries carry *references* (environment-variable names), providers such as [dsh-credentials-local](../../packages/credentials/credentials-local) own the values, and consumers resolve a reference once per operation — the LLM adapters resolve once per model request, so a rotated credential reaches the very next request without any restart. One seam-wide rule binds every provider: an empty stored value is absent everywhere.
+The credential seam of [dsh-credentials](../../packages/credentials/credentials) keeps secrets out of configuration: settings sections and `cordis.yml` entries carry _references_ (environment-variable names), providers such as [dsh-credentials-local](../../packages/credentials/credentials-local) own the values, and consumers resolve a reference once per operation — the LLM adapters resolve once per model request, so a rotated credential reaches the very next request without any restart. One seam-wide rule binds every provider: an empty stored value is absent everywhere.
 
 Source: [`packages/credentials/credentials/src/index.ts`](../../packages/credentials/credentials/src/index.ts)
 
@@ -12,7 +12,7 @@ A reference names one credential as a POSIX-style environment-variable name. The
 
 ```ts type-equiv
 /** Nominal reference to one credential: a POSIX-style environment-variable name. */
-type CredentialRef = Branded<'CredentialRef'>
+type CredentialRef = Branded<"CredentialRef">;
 ```
 
 ## Resolution
@@ -23,9 +23,9 @@ type CredentialRef = Branded<'CredentialRef'>
 /** One resolved credential value and the source layer that supplied it. */
 interface ResolvedCredential {
   /** The non-empty secret value. */
-  value: string
+  value: string;
   /** Provider-defined source layer id (the local provider uses `env`, `file`, `project-env`, and `user-env`). */
-  source: string
+  source: string;
 }
 ```
 
@@ -37,11 +37,11 @@ interface ResolvedCredential {
 /** Source and writability facts for one reference, safe for configuration UIs — never the value. */
 interface CredentialInfo {
   /** Whether {@link CredentialProvider.resolve} would currently return a value. */
-  configured: boolean
+  configured: boolean;
   /** Source layer currently supplying the value; absent while unconfigured. */
-  source?: string
+  source?: string;
   /** Whether {@link CredentialProvider.set} would currently succeed for this reference. */
-  writable: boolean
+  writable: boolean;
 }
 ```
 

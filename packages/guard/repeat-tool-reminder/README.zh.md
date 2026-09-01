@@ -8,12 +8,12 @@
 
 ```yaml
 - id: repeat-tool-reminder
-  name: '@deepseek-ai/dsh-repeat-tool-reminder'
+  name: "@deepseek-ai/dsh-repeat-tool-reminder"
   config:
-    thresholds: [3, 5, 8]        # default; consecutive counts that trigger a reminder
-    include: []                  # tool-name patterns to track; empty ⇒ all tools
-    exclude: [todo_write]        # tool-name patterns transparent to the chain
-    argumentsPreviewChars: 500   # default; cap on arguments quoted in the detailed reminder
+    thresholds: [3, 5, 8] # default; consecutive counts that trigger a reminder
+    include: [] # tool-name patterns to track; empty ⇒ all tools
+    exclude: [todo_write] # tool-name patterns transparent to the chain
+    argumentsPreviewChars: 500 # default; cap on arguments quoted in the detailed reminder
 ```
 
 插件加载时，`thresholds` 会对错误配置快速失败：空列表、非整数、小于 2 的值或重复值都会抛出错误，绝不静默回退到默认值；`argumentsPreviewChars` 同样只接受大于等于 1 的整数。系统会将列表按升序规范化；第一个阈值只发送简短的通用提醒，后续每个阈值都会发送详细版本，列出工具、连续次数和规范参数。参数内容截取前 `argumentsPreviewChars` 个字符，并附带省略字符数标记，避免循环中的 `write`／`edit` 载荷无限制进入下一次请求（链键始终比较完整的规范字符串；此上限只约束提醒，不影响检测）。
@@ -66,10 +66,11 @@ You are repeating the exact same tool call with identical arguments. Carefully a
 
 ```markdown
 Repeated tool call detected:
+
 - tool: <toolName>
 - consecutive_calls: <count>
 - arguments: <canonicalArguments>
-The repeated calls are not making progress. Do not call this tool with these exact arguments again. Inspect the latest result and choose a different action, different arguments, or finish the task if enough evidence has been gathered.
+  The repeated calls are not making progress. Do not call this tool with these exact arguments again. Inspect the latest result and choose a different action, different arguments, or finish the task if enough evidence has been gathered.
 ```
 
 #### Token 影响

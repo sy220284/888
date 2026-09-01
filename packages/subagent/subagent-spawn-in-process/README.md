@@ -16,8 +16,8 @@ Spawn advertises `{ outputSchema: true, depthLimit: true, toolFilter: true, pers
 
 ## Config
 
-| Key | Meaning |
-|---|---|
+| Key            | Meaning                                             |
+| -------------- | --------------------------------------------------- |
 | `providerName` | Registry name on `ctx.subagents` (default `spawn`). |
 
 ## Model Experience

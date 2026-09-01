@@ -17,9 +17,9 @@ mkdir -p scratch-plugin/src
 In Harness, a plugin is a TypeScript module that exports an `apply` function. The framework calls `apply` when loading the plugin and passes a `ctx` context object through which the plugin registers capabilities:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'my-plugin'
+export const name = "my-plugin";
 
 export function apply(ctx: Context) {
   // Register capabilities here.
@@ -33,13 +33,13 @@ That is the complete configuration.
 Create `scratch-plugin/src/my-plugin.ts`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'hello-plugin'
+export const name = "hello-plugin";
 
 export function apply(ctx: Context) {
   // Required dependencies are ready before apply runs.
-  console.log('[hello-plugin] plugin loaded!')
+  console.log("[hello-plugin] plugin loaded!");
 }
 ```
 
@@ -50,7 +50,7 @@ Run `pwd` from the repository root, then create `scratch-plugin/cordis.yml` as a
 ```yaml
 - insert:
     - id: hello
-      name: '/absolute/path/to/deepseek-harness/scratch-plugin/src/my-plugin.ts'
+      name: "/absolute/path/to/deepseek-harness/scratch-plugin/src/my-plugin.ts"
 ```
 
 The plugin path must be absolute. A patch file contributes configuration but does not change the profile directory from which the loader resolves module paths.
@@ -70,17 +70,17 @@ Anything registered through `ctx`—event listeners, tools, or timers—is clean
 For a resource that needs explicit cleanup, such as a network connection, use `ctx.effect()` to provide its disposer:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
 export function apply(ctx: Context) {
   ctx.effect(() => {
     const timer = setInterval(() => {
-      console.log('heartbeat')
-    }, 5000)
+      console.log("heartbeat");
+    }, 5000);
 
     // The returned function runs when the plugin unloads.
-    return () => clearInterval(timer)
-  })
+    return () => clearInterval(timer);
+  });
 }
 ```
 
@@ -89,14 +89,14 @@ export function apply(ctx: Context) {
 If the plugin consumes another service such as `tools` or `llm`, declare it in `inject`:
 
 ```ts ignore-check
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'my-tool-plugin'
-export const inject = ['tools']
+export const name = "my-tool-plugin";
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
   // ctx.tools is ready here.
-  ctx.tools.register(/* ... */)
+  ctx.tools.register(/* ... */);
 }
 ```
 
@@ -109,27 +109,27 @@ In addition to a function module, a plugin can use object or class form.
 ### Object form
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
 export default {
-  name: 'my-plugin',
-  inject: ['tools'],
+  name: "my-plugin",
+  inject: ["tools"],
   apply(ctx: Context) {
     // ...
   },
-}
+};
 ```
 
 ### Class form
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
 export default class MyService extends Service {
-  static inject = ['tools']
+  static inject = ["tools"];
 
   constructor(ctx: Context) {
-    super(ctx, 'myService')
+    super(ctx, "myService");
     // Perform synchronous initialization in the constructor.
   }
 }

@@ -2,9 +2,9 @@
 # holding the parent in maintenance until settlement follows the default
 # next-step report. The resumed parent claims both notices in causal order.
 - id: base
-  name: '@deepseek-ai/cordis-plugin-include'
+  name: "@deepseek-ai/cordis-plugin-include"
   config:
     path: ./cordis.yml
 
 - id: report-fence
-  name: './tests/fixtures/subagent-report-fence.ts'
+  name: "./tests/fixtures/subagent-report-fence.ts"

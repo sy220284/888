@@ -20,9 +20,9 @@ An array returned by `SkillProvider.list()` is complete-discovery shorthand. `Sk
 /** Provider candidates plus whether the current discovery is authoritative. */
 interface SkillProviderObservation {
   /** Candidates available from the current provider discovery. */
-  readonly candidates: readonly SkillCandidate[]
+  readonly candidates: readonly SkillCandidate[];
   /** Whether discovery completed and these candidates may be cached. */
-  readonly complete: boolean
+  readonly complete: boolean;
 }
 ```
 
@@ -30,7 +30,7 @@ interface SkillProviderObservation {
 /** Provider interface for one source of skills, such as local directories or a remote registry. */
 interface SkillProvider {
   /** Unique provider name in the `ctx.skills` registry. */
-  readonly name: string
+  readonly name: string;
   /**
    * List available skill candidates for the current lookup context. Provider
    * plugins register synchronously during `apply()`; remote initialization,
@@ -40,14 +40,14 @@ interface SkillProvider {
    * @returns provider candidates as a complete-array shorthand, or an explicit
    *   observation when usable candidates came from incomplete discovery.
    */
-  readonly list: (options: SkillLookupOptions) => Promise<readonly SkillCandidate[] | SkillProviderObservation>
+  readonly list: (options: SkillLookupOptions) => Promise<readonly SkillCandidate[] | SkillProviderObservation>;
   /**
    * Load a complete skill body for a previously listed candidate.
    * @param candidate - the winning candidate originally returned by this provider.
    * @param options - lookup options; `cwd` selects workspace-sensitive skills and `signal` cancels work.
    * @returns the full skill body, or `undefined` if it is no longer loadable.
    */
-  readonly get: (candidate: SkillCandidate, options: SkillLookupOptions) => Promise<SkillDefinition | undefined>
+  readonly get: (candidate: SkillCandidate, options: SkillLookupOptions) => Promise<SkillDefinition | undefined>;
 }
 ```
 
@@ -55,9 +55,9 @@ interface SkillProvider {
 /** Registration-scoped lifecycle and invalidation capability borrowed by one provider. */
 interface SkillProviderControl {
   /** Aborts if registration fails or when the exact provider registration is disposed. */
-  readonly signal: AbortSignal
+  readonly signal: AbortSignal;
   /** Invalidate completed catalogs and notify consumers only while the exact registration remains active. */
-  readonly invalidate: () => void
+  readonly invalidate: () => void;
 }
 ```
 
@@ -65,14 +65,14 @@ interface SkillProviderControl {
 
 The shipped local provider scans roots in rank order:
 
-| Rank | Source | Root |
-|---|---|---|
-| 100 | `project-dsh` | `<projectRoot>/.dsh/skills` |
-| 200 | `project-agents` | `<projectRoot>/.agents/skills` |
-| 300 | `custom` | `Config.customSkillDirs` |
-| 400 | `user-dsh` | `<dshHome>/skills` |
-| 500 | `user-agents` | `<agentsHome>/skills` |
-| 600 | `bundled` | `Config.bundledSkillDir` when configured |
+| Rank | Source           | Root                                     |
+| ---- | ---------------- | ---------------------------------------- |
+| 100  | `project-dsh`    | `<projectRoot>/.dsh/skills`              |
+| 200  | `project-agents` | `<projectRoot>/.agents/skills`           |
+| 300  | `custom`         | `Config.customSkillDirs`                 |
+| 400  | `user-dsh`       | `<dshHome>/skills`                       |
+| 500  | `user-agents`    | `<agentsHome>/skills`                    |
+| 600  | `bundled`        | `Config.bundledSkillDir` when configured |
 
 The project root is the nearest ancestor containing `.git`; without one, the current cwd is used. When `ctx.fs` is available, the git-root walk probes `.git` through the filesystem service so remote or sandboxed workspaces do not fall back to the host filesystem boundary. The user DSH root skips its `.system` child. The local provider does not synthesize built-in system skills; deployments supply packaged skills through configured bundled roots or dedicated providers.
 
@@ -86,7 +86,8 @@ Skill names are kebab-case (`^[a-z0-9]+(?:-[a-z0-9]+)*$`). The local provider ac
 
 ```ts type-equiv
 /** Origin bucket for a skill contribution. The value is prompt-visible metadata, not precedence by itself. */
-type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | 'user-agents' | 'custom' | 'bundled' | (string & {})
+type SkillSource =
+  "project-dsh" | "project-agents" | "runtime" | "user-dsh" | "user-agents" | "custom" | "bundled" | (string & {});
 ```
 
 ## Summaries, candidates, and complete definitions
@@ -97,9 +98,9 @@ type SkillSource = 'project-dsh' | 'project-agents' | 'runtime' | 'user-dsh' | '
 /** Invocation controls shared by skill discovery consumers. */
 interface SkillInvocationPolicy {
   /** Whether model-facing catalogs and loaders include this skill. */
-  readonly modelInvocable: boolean
+  readonly modelInvocable: boolean;
   /** Whether human-facing command catalogs and loaders include this skill. */
-  readonly userInvocable: boolean
+  readonly userInvocable: boolean;
 }
 ```
 
@@ -107,19 +108,19 @@ interface SkillInvocationPolicy {
 /** Invocation-neutral skill metadata returned by `ctx.skills.list()`. */
 interface SkillSummary {
   /** Kebab-case identifier used to address the skill. */
-  readonly name: string
+  readonly name: string;
   /** Short routing description shown by discovery consumers. */
-  readonly description: string
+  readonly description: string;
   /** Optional extra routing guidance. */
-  readonly whenToUse?: string
+  readonly whenToUse?: string;
   /** Resolved model and user invocation controls. */
-  readonly invocation: SkillInvocationPolicy
+  readonly invocation: SkillInvocationPolicy;
   /** Discovery source that produced this winning skill. */
-  readonly source: SkillSource
+  readonly source: SkillSource;
   /** Provider that owns this skill body. */
-  readonly provider: string
+  readonly provider: string;
   /** Provider-specific base for relative resources. */
-  readonly resourceBase?: SkillResourceBase
+  readonly resourceBase?: SkillResourceBase;
 }
 ```
 
@@ -131,9 +132,9 @@ interface SkillSummary {
 /** One catalog observation plus whether discovery completed within a stable catalog revision. */
 interface SkillCatalogSnapshot {
   /** Sorted invocation-neutral summaries collected in this observation. */
-  readonly skills: SkillSummary[]
+  readonly skills: SkillSummary[];
   /** Whether every registered provider completed without a concurrent catalog revision. */
-  readonly complete: boolean
+  readonly complete: boolean;
 }
 ```
 
@@ -143,13 +144,13 @@ interface SkillCatalogSnapshot {
 /** Provider catalog entry used by the registry to merge and later load skills. */
 interface SkillCandidate extends SkillSummary {
   /** Lower ranks win duplicate skill names before provider registration order is considered. */
-  readonly rank: number
+  readonly rank: number;
   /** Opaque provider-owned handle passed back to `provider.get()`. */
-  readonly locator: unknown
+  readonly locator: unknown;
   /** Absolute file path when the provider has one. */
-  readonly path?: string
+  readonly path?: string;
   /** Parsed optional metadata object from provider-specific skill frontmatter. */
-  readonly metadata?: Readonly<Record<string, unknown>>
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 ```
 
@@ -158,20 +159,20 @@ interface SkillCandidate extends SkillSummary {
 ```ts type-equiv
 /** Optional provider-specific base used by loaded skill bodies to resolve relative resources. */
 type SkillResourceBase =
-  | { readonly kind: 'directory'; readonly path: string }
-  | { readonly kind: 'url'; readonly url: string }
-  | { readonly kind: 'opaque'; readonly description: string }
+  | { readonly kind: "directory"; readonly path: string }
+  | { readonly kind: "url"; readonly url: string }
+  | { readonly kind: "opaque"; readonly description: string };
 ```
 
 ```ts type-equiv
 /** Complete parsed skill definition, including the body loaded by `ctx.skills.get()`. */
 interface SkillDefinition extends SkillSummary {
   /** Markdown instruction body after any provider-specific metadata removal. */
-  readonly content: string
+  readonly content: string;
   /** Absolute file path when the skill came from disk. */
-  readonly path?: string
+  readonly path?: string;
   /** Parsed optional metadata object from frontmatter. */
-  readonly metadata?: Readonly<Record<string, unknown>>
+  readonly metadata?: Readonly<Record<string, unknown>>;
 }
 ```
 
@@ -179,12 +180,12 @@ Runtime skill inputs may omit invocation controls and the provider label. The re
 
 ```ts type-equiv
 /** Runtime skill contribution accepted by `ctx.skills.register()`. */
-type SkillRegistration = Omit<SkillDefinition, 'invocation' | 'provider'> & {
+type SkillRegistration = Omit<SkillDefinition, "invocation" | "provider"> & {
   /** Invocation controls; omission permits both model and user surfaces. */
-  readonly invocation?: SkillInvocationPolicy
+  readonly invocation?: SkillInvocationPolicy;
   /** Provider label; omission uses the registry-owned runtime provider. */
-  readonly provider?: string
-}
+  readonly provider?: string;
+};
 ```
 
 ## Lookup and configuration
@@ -197,9 +198,9 @@ Full definitions are not cached by the registry. Each `get()` calls the winning 
 /** Caller context used for cwd-sensitive and abortable provider work. */
 interface SkillLookupOptions {
   /** Workspace selector for the current lookup. */
-  readonly cwd?: string | undefined
+  readonly cwd?: string | undefined;
   /** Abort discovery or loading work for the current caller. */
-  readonly signal?: AbortSignal | undefined
+  readonly signal?: AbortSignal | undefined;
 }
 ```
 
@@ -212,7 +213,7 @@ interface SkillLookupOptions {
  */
 interface SkillViewOptions extends SkillLookupOptions {
   /** Viewing scope (the calling agent); omitted reads the global layer alone. */
-  readonly scope?: ScopeKey | undefined
+  readonly scope?: ScopeKey | undefined;
 }
 ```
 
@@ -222,7 +223,7 @@ The registry owns only its discovery-cache bound. The local provider owns filesy
 /** Skill registry configuration. */
 interface Config {
   /** Maximum number of completed cwd/provider catalogs kept in memory. */
-  readonly collectCacheMaxEntries?: number
+  readonly collectCacheMaxEntries?: number;
 }
 ```
 

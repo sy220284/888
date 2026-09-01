@@ -102,11 +102,11 @@ llm-pi-ai:
 路由的 `compat` 是其模型的默认值，模型自身的则逐字段胜出，因此更正某一个模型无需重述整条路由：
 
 ```yaml
-      models:
-        - id: my-model
-        - id: my-reasoner
-          compat:
-            thinkingFormat: deepseek
+models:
+  - id: my-model
+  - id: my-reasoner
+    compat:
+      thinkingFormat: deepseek
 ```
 
 两者都未设置的字段，沿用已安装 catalog 为该模型记录的值；catalog 也未描述的，落到 pi-ai 的检测。凡是写下的开关都要给值：冒号后留空的键（`supportsDeveloperRole:`）会被拒绝而不是被忽略，因为空值会抹掉 catalog 已知的信息，却又没有给出任何替代。任何协议都不接受的名字同样会被拒绝，报错会列出可用的那些。

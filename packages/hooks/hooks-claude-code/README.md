@@ -9,14 +9,14 @@ A native cordis plugin could do everything this bridge does — more powerfully,
 ## Config
 
 ```ts
-import type { Config } from '@deepseek-ai/dsh-hooks-claude-code'
+import type { Config } from "@deepseek-ai/dsh-hooks-claude-code";
 const config: Config = {
-  configPath: '/path/to/hooks.json', // required: a hooks.json or a settings file with a `hooks` key
-  pluginRoot: '/path/to/plugin',     // optional: replaces ${CLAUDE_PLUGIN_ROOT} in command strings
-  projectDir: '/path/to/project',    // optional: replaces ${CLAUDE_PROJECT_DIR} AND sets the hook env var; defaults to the session cwd when omitted
-  defaultTimeoutMs: 600_000,         // optional: per-hook timeout when a hook sets none (CC default)
-  stderrSummaryMaxChars: 500,        // optional: char cap on the hook/result event's persisted stderr summary
-}
+  configPath: "/path/to/hooks.json", // required: a hooks.json or a settings file with a `hooks` key
+  pluginRoot: "/path/to/plugin", // optional: replaces ${CLAUDE_PLUGIN_ROOT} in command strings
+  projectDir: "/path/to/project", // optional: replaces ${CLAUDE_PROJECT_DIR} AND sets the hook env var; defaults to the session cwd when omitted
+  defaultTimeoutMs: 600_000, // optional: per-hook timeout when a hook sets none (CC default)
+  stderrSummaryMaxChars: 500, // optional: char cap on the hook/result event's persisted stderr summary
+};
 ```
 
 In a `cordis.yml`:
@@ -34,15 +34,15 @@ The hooks **themselves** run in the agent's session workspace: for the agent-sco
 
 ## Hook points → typed Decisions
 
-| CC hook | Harness point | Mapping |
-|---|---|---|
-| `SessionStart` | `agent/session-start` (emit) | additionalContext → `agent.inject()` into the new session (cannot block) |
-| `UserPromptSubmit` | `agent/pre-step` (waterfall) | `deny` → `PreStepDecision.reject`; additionalContext-only → delegate via `next()` then append a separately sourced message to a downstream `enter` decision (a later outer listener can still reject/rewrite) |
-| `PreToolUse` | `tools/pre-execute` (waterfall) | `deny` → `PreToolDecision.deny`; `ask` → `PreToolDecision.ask` |
-| `PostToolUse` | `tools/post-execute` (waterfall) | `deny` → `block` with feedback; additionalContext-only → delegate via `next()` then prepend a separately sourced context to the downstream decision; Code Mode defers sub-call contexts until the outer `run_code` result |
-| `Stop` | `agent/turn-stopping` (serial) | a blocking Stop hook feeds its reason through `steer()`, forcing another step |
-| `SubagentStart` | `subagent/start` (emit) | additionalContext → `agent.inject()` into a live in-process child; a remote child has no local injection target |
-| `SubagentStop` | `subagent/end` (emit) | observe-only |
+| CC hook            | Harness point                    | Mapping                                                                                                                                                                                                                   |
+| ------------------ | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SessionStart`     | `agent/session-start` (emit)     | additionalContext → `agent.inject()` into the new session (cannot block)                                                                                                                                                  |
+| `UserPromptSubmit` | `agent/pre-step` (waterfall)     | `deny` → `PreStepDecision.reject`; additionalContext-only → delegate via `next()` then append a separately sourced message to a downstream `enter` decision (a later outer listener can still reject/rewrite)             |
+| `PreToolUse`       | `tools/pre-execute` (waterfall)  | `deny` → `PreToolDecision.deny`; `ask` → `PreToolDecision.ask`                                                                                                                                                            |
+| `PostToolUse`      | `tools/post-execute` (waterfall) | `deny` → `block` with feedback; additionalContext-only → delegate via `next()` then prepend a separately sourced context to the downstream decision; Code Mode defers sub-call contexts until the outer `run_code` result |
+| `Stop`             | `agent/turn-stopping` (serial)   | a blocking Stop hook feeds its reason through `steer()`, forcing another step                                                                                                                                             |
+| `SubagentStart`    | `subagent/start` (emit)          | additionalContext → `agent.inject()` into a live in-process child; a remote child has no local injection target                                                                                                           |
+| `SubagentStop`     | `subagent/end` (emit)            | observe-only                                                                                                                                                                                                              |
 
 The three emit points run detached — no extension point awaits a `SessionStart`/`SubagentStart`/`SubagentStop` hook. Each run chain is tracked, and disposing the bridge aborts still-running hook processes, then drains the continuations before the dispose resolves (`createDetachedRuns` in `dsh-hook-protocol`).
 

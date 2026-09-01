@@ -27,18 +27,18 @@ The protected `summarize()` method is the sole subclass hook. A template- or rem
 
 Every setting is optional. Top-level policy fields are defaults for every routed model; `modelPolicies` applies partial overrides to exact provider/model pairs. At pressure time, compaction-basic asks the owning LLM adapter for that route's context capacity and resolves absolute budgets. Unrecognized keys, duplicate targets, mutually exclusive retention forms, and a merged `retainRatio` that is not below `thresholdRatio` fail plugin load. An absolute `retainTokens` budget that is not below its scaled threshold fails on the first resolvable target because that comparison requires model capacity.
 
-| Key | Required | Meaning |
-|---|---|---|
-| `thresholdRatio` | no (default `0.8`) | Compact at `floor(routedContextWindow × ratio)`. |
-| `retainRatio` | no (default `0.16`) | Recent surface budget kept verbatim as a fraction of the routed context window; mutually exclusive with `retainTokens`. |
-| `retainTokens` | no | Absolute recent surface budget kept verbatim; mutually exclusive with `retainRatio` and must be below the resolved threshold. |
-| `summarizationProvider` | no (default `''`) | Set together with `summarizationModel`; an empty pair resolves the latest logged request target, then the `AgentOptions` pair. |
-| `summarizationModel` | no (default `''`) | Set together with `summarizationProvider`; an empty pair resolves the latest logged request target, then the `AgentOptions` pair. |
-| `maxTokens` | no (default `8192`) | Provider generation cap for the summarization call; may include reasoning tokens. |
-| `compactionRetries` | no (default `1`) | Extra attempts after the first when pressure remains above threshold. |
-| `maxOverflowRetries` | no (default `1`) | Maximum retries after canonical context-window overflow; `0` disables recovery only. |
-| `modelPolicies` | no (default `[]`) | Exact `{ provider, model, ...partialPolicy }` overrides; matching uses both fields and does not depend on `listModels()`. |
-| `auto` | no (default `true`) | Register step-boundary pressure and overflow-recovery listeners. Set `false` for manual-only. |
+| Key                     | Required            | Meaning                                                                                                                           |
+| ----------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `thresholdRatio`        | no (default `0.8`)  | Compact at `floor(routedContextWindow × ratio)`.                                                                                  |
+| `retainRatio`           | no (default `0.16`) | Recent surface budget kept verbatim as a fraction of the routed context window; mutually exclusive with `retainTokens`.           |
+| `retainTokens`          | no                  | Absolute recent surface budget kept verbatim; mutually exclusive with `retainRatio` and must be below the resolved threshold.     |
+| `summarizationProvider` | no (default `''`)   | Set together with `summarizationModel`; an empty pair resolves the latest logged request target, then the `AgentOptions` pair.    |
+| `summarizationModel`    | no (default `''`)   | Set together with `summarizationProvider`; an empty pair resolves the latest logged request target, then the `AgentOptions` pair. |
+| `maxTokens`             | no (default `8192`) | Provider generation cap for the summarization call; may include reasoning tokens.                                                 |
+| `compactionRetries`     | no (default `1`)    | Extra attempts after the first when pressure remains above threshold.                                                             |
+| `maxOverflowRetries`    | no (default `1`)    | Maximum retries after canonical context-window overflow; `0` disables recovery only.                                              |
+| `modelPolicies`         | no (default `[]`)   | Exact `{ provider, model, ...partialPolicy }` overrides; matching uses both fields and does not depend on `listModels()`.         |
+| `auto`                  | no (default `true`) | Register step-boundary pressure and overflow-recovery listeners. Set `false` for manual-only.                                     |
 
 Every `modelPolicies` entry accepts the policy fields above except `auto` and `modelPolicies` itself. If an entry supplies either retention field, it replaces the default policy's retention choice; otherwise retention is inherited. Summarization provider/model remain a pair inside each entry.
 
@@ -49,18 +49,18 @@ An adapter may return no capacity for a valid dynamic route, and resolved capaci
 `BasicCompactionEngine` requires `ctx.llm`, `ctx.tokenMeter`, and `ctx.sessions`. The composition below receives `ctx.llm` from its host and installs the other two services:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { BasicCompactionEngine } from '@deepseek-ai/dsh-compaction-basic'
-import SessionStore from '@deepseek-ai/dsh-session'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
+import type { Context } from "@deepseek-ai/cordis";
+import { BasicCompactionEngine } from "@deepseek-ai/dsh-compaction-basic";
+import SessionStore from "@deepseek-ai/dsh-session";
+import TokenMeter from "@deepseek-ai/dsh-token-meter";
 
-export const name = 'compaction-basic'
-export const inject = ['llm']
+export const name = "compaction-basic";
+export const inject = ["llm"];
 
 export function apply(ctx: Context): void {
-  ctx.plugin(SessionStore)
-  ctx.plugin(TokenMeter)
-  ctx.plugin(BasicCompactionEngine)
+  ctx.plugin(SessionStore);
+  ctx.plugin(TokenMeter);
+  ctx.plugin(BasicCompactionEngine);
 }
 ```
 
@@ -69,7 +69,7 @@ Loading the plugin registers `ctx.compaction`. Add [`dsh-compaction-tool-result-
 For example, the same compact plugin can safely serve models with different capacities and one target-specific policy:
 
 ```yaml
-- name: '@deepseek-ai/dsh-compaction-basic'
+- name: "@deepseek-ai/dsh-compaction-basic"
   config:
     thresholdRatio: 0.8
     retainRatio: 0.16
@@ -116,30 +116,39 @@ You are now acting as a compaction engine for this AI coding assistant. Condense
 Output EXACTLY the Markdown structure below: keep every section, in order. Use terse bullets, not prose paragraphs. Write "(none)" for an empty section — never drop a section.
 
 ## Primary Request and Intent
+
 - [the user's original and evolving goals; quote verbatim where the exact wording matters]
 
 ## Key Technical Concepts
+
 - [technologies, frameworks, patterns, and conventions in play]
 
 ## Files and Code
+
 - [exact path: why it matters, key changes or snippets]
 
 ## Errors and Fixes
+
 - [error: how it was resolved, plus any related user feedback]
 
 ## Pending Jobs
+
 - [explicitly requested work not yet completed]
 
 ## Current Work
+
 - [precisely what was in progress at this checkpoint]
 
 ## Next Step
+
 - [the single next action, directly in line with the most recent request, or "(none)"]
 
 ## Critical Context
+
 - [decisions and their rationale, constraints, user preferences, open questions, data needed to continue]
 
 Rules:
+
 - Write concise English engineering prose. Preserve exact file paths, commands, error strings, identifiers, numeric values, function signatures, and syntax fragments.
 - Capture user feedback and explicit instructions faithfully, especially corrections.
 - Do NOT mention this summarization request or that the context was compacted.

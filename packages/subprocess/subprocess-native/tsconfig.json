@@ -4,9 +4,7 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../../../vendor/cordis"
@@ -19,6 +17,9 @@
     },
     {
       "path": "../../util/timeout"
+    },
+    {
+      "path": "../../runtime-diagnostics/invariants"
     }
   ]
 }

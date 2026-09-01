@@ -11,13 +11,13 @@
 ```ts type-equiv
 /** Whole durable value written on every teammate lifecycle change. */
 interface TeamMemberSnapshot {
-  readonly id: SessionId
-  readonly name: string
-  readonly description: string
-  readonly provider: string
-  readonly context: 'fresh' | 'fork'
-  readonly phase: TeamMemberPhase
-  readonly error?: string
+  readonly id: SessionId;
+  readonly name: string;
+  readonly description: string;
+  readonly provider: string;
+  readonly context: "fresh" | "fork";
+  readonly phase: TeamMemberPhase;
+  readonly error?: string;
 }
 ```
 
@@ -30,12 +30,12 @@ Lead Session 首先存储完整 queued message。只有 target 的 pending inbox
 ```ts type-equiv
 /** One peer message retained until its target Session records it. */
 interface TeamMessageSnapshot {
-  readonly id: TeamMessageId
-  readonly senderId: SessionId
-  readonly senderName: string
-  readonly targetId: SessionId
-  readonly delivery: 'quiet' | 'wakeup'
-  readonly content: ContentBlock[]
+  readonly id: TeamMessageId;
+  readonly senderId: SessionId;
+  readonly senderName: string;
+  readonly targetId: SessionId;
+  readonly delivery: "quiet" | "wakeup";
+  readonly content: ContentBlock[];
 }
 ```
 
@@ -44,11 +44,11 @@ target Session 会在 pending inbox 条目和最终用户消息上保留消息�
 ```ts type-equiv
 /** Source retained by the target Session for durable mailbox de-duplication. */
 interface TeamMessageSource {
-  readonly kind: 'team-message'
-  readonly teamId: TeamId
-  readonly messageId: TeamMessageId
-  readonly senderId: SessionId
-  readonly senderName: string
+  readonly kind: "team-message";
+  readonly teamId: TeamId;
+  readonly messageId: TeamMessageId;
+  readonly senderId: SessionId;
+  readonly senderName: string;
 }
 ```
 
@@ -59,14 +59,14 @@ interface TeamMessageSource {
 ```ts type-equiv
 /** Whole durable task snapshot; every mutation increments {@link revision}. */
 interface TeamTaskSnapshot {
-  readonly id: TeamTaskId
-  readonly revision: number
-  readonly subject: string
-  readonly description: string
-  readonly status: TeamTaskStatus
-  readonly ownerId?: SessionId
-  readonly blockedBy: TeamTaskId[]
-  readonly writeScopes: string[]
+  readonly id: TeamTaskId;
+  readonly revision: number;
+  readonly subject: string;
+  readonly description: string;
+  readonly status: TeamTaskStatus;
+  readonly ownerId?: SessionId;
+  readonly blockedBy: TeamTaskId[];
+  readonly writeScopes: string[];
 }
 ```
 

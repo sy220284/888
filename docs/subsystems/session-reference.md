@@ -14,9 +14,9 @@ Sources: [`packages/context/file-reference/src/types.ts`](../../packages/context
 /** One path-only completion candidate inside the target session cwd. */
 interface FileReferenceCandidate {
   /** User-facing path accepted by normal prompts and filesystem tools. */
-  path: string
+  path: string;
   /** Directories keep completion open; files finish the mention. */
-  kind: 'file' | 'directory'
+  kind: "file" | "directory";
 }
 ```
 
@@ -28,9 +28,9 @@ interface FileReferenceCandidate {
 /** One source session selected by a host. */
 interface SessionReferenceInput {
   /** Opaque source session identity. */
-  sessionId: SessionId
+  sessionId: SessionId;
   /** Optional user-facing mention label. */
-  label?: string
+  label?: string;
 }
 ```
 
@@ -40,13 +40,13 @@ interface SessionReferenceInput {
 /** One host-facing candidate from exact session metadata. */
 interface SessionReferenceCandidate {
   /** Opaque source session identity. */
-  sessionId: SessionId
+  sessionId: SessionId;
   /** Latest log-backed title, falling back to the opaque session id. */
-  label: string
+  label: string;
   /** Source session working directory, when recorded. */
-  cwd?: string
+  cwd?: string;
   /** Source session creation time in Unix epoch milliseconds. */
-  createdAt: number
+  createdAt: number;
 }
 ```
 
@@ -56,7 +56,7 @@ The `sessionReferenceResolver/candidates` Remote method serves the same discover
 /** One discovery candidate carrying its canonical prompt mention. */
 interface SessionReferenceMentionCandidate extends SessionReferenceCandidate {
   /** Canonical `@[label](dsh-session:…)` mention serialized into the prompt draft. */
-  mention: string
+  mention: string;
 }
 ```
 
@@ -68,9 +68,9 @@ Preparation preserves readable current-message content and returns at most one a
 /** Direct message content and optional referenced-session context. */
 interface PreparedReferencedMessage {
   /** Readable message content after host mention tokens are removed. */
-  content: ContentBlock[]
+  content: ContentBlock[];
   /** Aggregated untrusted snapshot, absent when the message has no references. */
-  additionalContext?: UserMessage
+  additionalContext?: UserMessage;
 }
 ```
 
@@ -81,13 +81,13 @@ interface PreparedReferencedMessage {
 ```ts type-equiv
 /** Stable failure codes exposed to host adapters. */
 type SessionReferenceErrorCode =
-  | 'SESSION_REFERENCE_INVALID_CONFIG'
-  | 'SESSION_REFERENCE_INVALID_REFERENCE'
-  | 'SESSION_REFERENCE_SELF_REFERENCE'
-  | 'SESSION_REFERENCE_TOO_MANY'
-  | 'SESSION_REFERENCE_READ_FAILED'
-  | 'SESSION_REFERENCE_BUDGET_EXCEEDED'
-  | 'SESSION_REFERENCE_CANCELLED'
+  | "SESSION_REFERENCE_INVALID_CONFIG"
+  | "SESSION_REFERENCE_INVALID_REFERENCE"
+  | "SESSION_REFERENCE_SELF_REFERENCE"
+  | "SESSION_REFERENCE_TOO_MANY"
+  | "SESSION_REFERENCE_READ_FAILED"
+  | "SESSION_REFERENCE_BUDGET_EXCEEDED"
+  | "SESSION_REFERENCE_CANCELLED";
 ```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->

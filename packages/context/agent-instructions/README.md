@@ -58,12 +58,12 @@ The initial baseline event itself is not rewritten. Its typed changes remain aut
 
 ```ts
 export interface Config {
-  dshHome?: string
-  projectRootMarkers?: string[]
-  maxBytes: number
-  maxSourceBytes?: number
-  instructionFileCandidates?: string[]
-  localInstructionFileCandidates?: string[]
+  dshHome?: string;
+  projectRootMarkers?: string[];
+  maxBytes: number;
+  maxSourceBytes?: number;
+  instructionFileCandidates?: string[];
+  localInstructionFileCandidates?: string[];
 }
 ```
 

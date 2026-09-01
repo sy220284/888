@@ -14,45 +14,45 @@
 
 ```ts type-equiv
 /** Raster image formats accepted by the version-one attachment path. */
-type ImageMediaType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif'
+type ImageMediaType = "image/png" | "image/jpeg" | "image/webp" | "image/gif";
 ```
 
 ```ts type-equiv
 /** Durable, serializable reference to one immutable normalized image. */
 interface ImageAttachmentRef {
   /** Opaque storage identifier; never a filesystem path or bearer URL. */
-  attachmentId: AttachmentId
+  attachmentId: AttachmentId;
   /** Media type verified from the stored bytes. */
-  mediaType: ImageMediaType
+  mediaType: ImageMediaType;
   /** Exact encoded byte length. */
-  bytes: number
+  bytes: number;
   /** Intrinsic encoded width in pixels. */
-  width: number
+  width: number;
   /** Intrinsic encoded height in pixels. */
-  height: number
+  height: number;
   /** Optional display name stripped of local path information. */
-  name?: string
+  name?: string;
   /**
    * Input dimensions after applying EXIF orientation and before normalization
    * scaling. Present only when normalization reduced the image.
    */
   originalDimensions?: {
-    width: number
-    height: number
-  }
+    width: number;
+    height: number;
+  };
 }
 ```
 
 ```ts type-equiv
 /** Deployment-resolved limits used by upload admission and request buffering. */
 interface ImageAttachmentLimits {
-  maxImageBytes: number
-  maxImagesPerMessage: number
-  maxMessageImageBytes: number
-  maxImagePixels: number
+  maxImageBytes: number;
+  maxImagesPerMessage: number;
+  maxMessageImageBytes: number;
+  maxImagePixels: number;
   /** Maximum intrinsic width and maximum intrinsic height in pixels for one image. */
-  maxImageDimension: number
-  mediaTypes: readonly ImageMediaType[]
+  maxImageDimension: number;
+  mediaTypes: readonly ImageMediaType[];
 }
 ```
 
@@ -66,30 +66,30 @@ interface ImageAttachmentLimits {
 /** Base64-encoded image upload accompanying one wire request. */
 interface EncodedImageAttachment {
   /** Declared media type, verified against the decoded bytes during admission. */
-  mediaType: ImageMediaType
+  mediaType: ImageMediaType;
   /** Canonical base64 encoding of the image bytes. */
-  data: string
+  data: string;
   /** Optional display name; it is never interpreted as a path. */
-  name?: string
+  name?: string;
 }
 ```
 
 ```ts type-equiv
 /** Request to validate and durably commit one image. */
 interface SaveImageAttachment {
-  data: Uint8Array
+  data: Uint8Array;
   /** Caller-declared media type, checked against fully decoded bytes. */
-  mediaType: ImageMediaType
+  mediaType: ImageMediaType;
   /** Optional browser/provider display name; it is never interpreted as a path. */
-  name?: string
+  name?: string;
 }
 ```
 
 ```ts type-equiv
 /** Stored image bytes returned after reference and digest verification. */
 interface StoredImageAttachment {
-  ref: ImageAttachmentRef
-  data: Uint8Array
+  ref: ImageAttachmentRef;
+  data: Uint8Array;
 }
 ```
 
@@ -97,9 +97,9 @@ interface StoredImageAttachment {
 /** Deterministic request-image policy selected by one exact model route. */
 interface ImageRequestPolicy {
   /** Maximum width multiplied by height after aspect-preserving projection. */
-  maxPixels: number
+  maxPixels: number;
   /** Encoded-byte cap before base64 expansion or Files API upload. */
-  maxBytes: number
+  maxBytes: number;
 }
 ```
 
@@ -107,21 +107,21 @@ interface ImageRequestPolicy {
 /** Cached request version derived from one provider-independent normalized attachment. */
 interface RequestImageAttachment {
   /** Cache and upload-index key over the attachment id, policy, and fixed encoder parameters. */
-  variantId: ImageVariantId
+  variantId: ImageVariantId;
   /** Durable normalized attachment from which this request version was derived. */
-  attachment: ImageAttachmentRef
+  attachment: ImageAttachmentRef;
   /** Encoded request bytes. */
-  data: Uint8Array
-  mediaType: ImageMediaType
-  bytes: number
-  width: number
-  height: number
+  data: Uint8Array;
+  mediaType: ImageMediaType;
+  bytes: number;
+  width: number;
+  height: number;
   /** Provider-compatible sample depth proven after request encoding. */
-  depth: 'uchar'
+  depth: "uchar";
   /** Provider-compatible color space proven after request encoding. */
-  space: 'srgb'
+  space: "srgb";
   /** Whether the encoded request version retains an alpha channel. */
-  hasAlpha: boolean
+  hasAlpha: boolean;
 }
 ```
 

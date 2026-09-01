@@ -12,32 +12,32 @@ Credential Service Definition (`ctx.credentials`). One doctrine, three consequen
 
 ## Two key spaces, two questions
 
-A `CredentialRef` answers *what is behind this environment-variable name*, layered over the process environment, the managed store, and `.env` files. Everything above describes that half.
+A `CredentialRef` answers _what is behind this environment-variable name_, layered over the process environment, the managed store, and `.env` files. Everything above describes that half.
 
-A `CredentialKey` answers *what credential does this plugin hold for this id*. Nothing can layer here — an authorization grant has no environment to be read from — so presence of the record is the whole fact, and the empty-value rule does not apply: an `api-key` record carrying neither a key nor environment values states that its owner confirmed ambient authentication, which is configured.
+A `CredentialKey` answers _what credential does this plugin hold for this id_. Nothing can layer here — an authorization grant has no environment to be read from — so presence of the record is the whole fact, and the empty-value rule does not apply: an `api-key` record carrying neither a key nor environment values states that its owner confirmed ambient authentication, which is configured.
 
 The key is `<scope>/<id>`, where `scope` is the **owning plugin's registered name**. The scope is the owner rather than the domain because a `grant` payload is written in its owner's format: two plugins serving the same provider name would otherwise read each other's payload, and a record left behind by an uninstalled plugin could not be told apart from a live one. The `/` also keeps the two grammars disjoint, so the key spaces can never collide. A consumer whose id arrives from somewhere else — a settings dict key, a library's own provider id — asks `isCredentialKeySegment` before building a key, because an id outside the grammar can never have stored a record and should read as "nothing stored" rather than throw on the address.
 
 ## Surface
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { Context } from "@deepseek-ai/cordis";
+import { credentialKey, credentialRef } from "@deepseek-ai/dsh-credentials";
 
-declare const ctx: Context
+declare const ctx: Context;
 
-const ref = credentialRef('DEEPSEEK_API_KEY')            // POSIX shell identifier, branded
-const hit = await ctx.credentials.resolve(ref)           // { value, source } | undefined
-const info = await ctx.credentials.describe(ref)         // { configured, source?, writable } — never the value
-await ctx.credentials.set(ref, 'sk-…')                   // rejects while a read-only source shadows the ref
-await ctx.credentials.unset(ref)                         // no-op when absent; same shadowing rule
+const ref = credentialRef("DEEPSEEK_API_KEY"); // POSIX shell identifier, branded
+const hit = await ctx.credentials.resolve(ref); // { value, source } | undefined
+const info = await ctx.credentials.describe(ref); // { configured, source?, writable } — never the value
+await ctx.credentials.set(ref, "sk-…"); // rejects while a read-only source shadows the ref
+await ctx.credentials.unset(ref); // no-op when absent; same shadowing rule
 
-const key = credentialKey('llm-pi-ai', 'openai-codex')   // <owner>/<id>, branded
-await ctx.credentials.readRecord(key)                    // CredentialRecord | undefined
-await ctx.credentials.describeRecord(key)                // { configured, kind?, writable } — never the value
-await ctx.credentials.listRecords()                      // [{ key, kind }] — never values
-await ctx.credentials.modifyRecord(key, async () => ({ kind: 'grant', payload: { token: '…' } }))
-await ctx.credentials.deleteRecord(key)                  // no-op when absent
+const key = credentialKey("llm-pi-ai", "openai-codex"); // <owner>/<id>, branded
+await ctx.credentials.readRecord(key); // CredentialRecord | undefined
+await ctx.credentials.describeRecord(key); // { configured, kind?, writable } — never the value
+await ctx.credentials.listRecords(); // [{ key, kind }] — never values
+await ctx.credentials.modifyRecord(key, async () => ({ kind: "grant", payload: { token: "…" } }));
+await ctx.credentials.deleteRecord(key); // no-op when absent
 ```
 
 `modifyRecord` is the only write path because a correct write depends on the current value: a token refresh is read-decide-replace, and the mutation must see the record as it stands at the moment the write is exclusive. Exclusion holds across processes, which is what stops two of them rotating one refresh token and losing whichever wrote first. Returning `undefined` from the mutation leaves the entry untouched and announces nothing.

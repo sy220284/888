@@ -39,7 +39,9 @@ def load_platforms(path: Path = PLATFORM_MANIFEST) -> dict[str, tuple[str, str]]
             or not isinstance(raw["tag"], str)
             or not isinstance(raw["executable"], str)
         ):
-            raise ValueError(f"{path} platform entries must contain string tag and executable fields")
+            raise ValueError(
+                f"{path} platform entries must contain string tag and executable fields"
+            )
         platforms[name] = (raw["tag"], raw["executable"])
     return platforms
 
@@ -84,12 +86,25 @@ def main() -> None:
             platform_tag, executable_name = PLATFORMS[args.platform]
             stage_runtime(staging, wheel_version, args.runtime_exe.resolve(), executable_name)
             environment = {"DSH_RUNTIME_PLATFORM_TAG": platform_tag}
-            expected = output_dir / f"deepseek_harness_runtime_bin-{wheel_version}-py3-none-{platform_tag}.whl"
+            expected = (
+                output_dir
+                / f"deepseek_harness_runtime_bin-{wheel_version}-py3-none-{platform_tag}.whl"
+            )
         command = ["uv", "build", "--wheel", "--out-dir", str(output_dir), str(staging)]
-        subprocess.run(command, cwd=ROOT, env=None if environment is None else {**os.environ, **environment}, check=True)
+        subprocess.run(
+            command,
+            cwd=ROOT,
+            env=None if environment is None else {**os.environ, **environment},
+            check=True,
+        )
     if not expected.is_file():
         raise RuntimeError(f"build did not produce expected wheel: {expected}")
-    verify_wheel(expected, args.package, wheel_version, None if args.platform is None else PLATFORMS[args.platform])
+    verify_wheel(
+        expected,
+        args.package,
+        wheel_version,
+        None if args.platform is None else PLATFORMS[args.platform],
+    )
     print(expected)
 
 
@@ -100,7 +115,10 @@ def repository_version(root: Path = ROOT) -> str:
     except (OSError, json.JSONDecodeError) as error:
         raise ValueError(f"could not read repository version from {package_json}") from error
     version = payload.get("version") if isinstance(payload, dict) else None
-    if not isinstance(version, str) or re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?", version) is None:
+    if (
+        not isinstance(version, str)
+        or re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?", version) is None
+    ):
         raise ValueError(
             f"{package_json} version must be X.Y.Z with an optional prerelease segment, got {version!r}"
         )
@@ -222,8 +240,12 @@ def verify_wheel(
 ) -> None:
     expected_tag = "py3-none-any" if platform is None else f"py3-none-{platform[0]}"
     with zipfile.ZipFile(wheel) as archive:
-        wheel_metadata_path = next(name for name in archive.namelist() if name.endswith(".dist-info/WHEEL"))
-        metadata_path = next(name for name in archive.namelist() if name.endswith(".dist-info/METADATA"))
+        wheel_metadata_path = next(
+            name for name in archive.namelist() if name.endswith(".dist-info/WHEEL")
+        )
+        metadata_path = next(
+            name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
+        )
         wheel_metadata = email.message_from_bytes(archive.read(wheel_metadata_path))
         metadata = email.message_from_bytes(archive.read(metadata_path))
         if wheel_metadata.get_all("Tag") != [expected_tag]:
@@ -239,7 +261,9 @@ def verify_wheel(
             raise RuntimeError(
                 f"{wheel} has license expression {metadata.get('License-Expression')}, expected MIT"
             )
-        expected_license_files = ["LICENSE"] if package == "sdk" else ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+        expected_license_files = (
+            ["LICENSE"] if package == "sdk" else ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+        )
         license_files = [Path(name).name for name in metadata.get_all("License-File") or []]
         if license_files != expected_license_files:
             raise RuntimeError(
@@ -253,18 +277,26 @@ def verify_wheel(
             expected_files = [f"{platform[1]}{suffix}" for suffix in runtime_suffixes(platform[1])]
             found_files = sorted(Path(name).name for name in runtime_files)
             if found_files != expected_files:
-                raise RuntimeError(f"{wheel} runtime payload must be {expected_files}, found {found_files}")
+                raise RuntimeError(
+                    f"{wheel} runtime payload must be {expected_files}, found {found_files}"
+                )
             for runtime_file in runtime_files:
                 mode = archive.getinfo(runtime_file).external_attr >> 16
                 if mode & stat.S_IXUSR == 0:
-                    raise RuntimeError(f"{wheel} runtime executable lost its executable bit: {runtime_file}")
+                    raise RuntimeError(
+                        f"{wheel} runtime executable lost its executable bit: {runtime_file}"
+                    )
         elif runtime_files:
-            raise RuntimeError(f"SDK wheel unexpectedly contains runtime executables: {runtime_files}")
+            raise RuntimeError(
+                f"SDK wheel unexpectedly contains runtime executables: {runtime_files}"
+            )
         if package == "sdk":
             requirements = metadata.get_all("Requires-Dist") or []
             expected_requirement = f"{RUNTIME_DISTRIBUTION}=={version}"
             if expected_requirement not in requirements:
-                raise RuntimeError(f"{wheel} does not pin {expected_requirement}; found {requirements}")
+                raise RuntimeError(
+                    f"{wheel} does not pin {expected_requirement}; found {requirements}"
+                )
 
 
 if __name__ == "__main__":

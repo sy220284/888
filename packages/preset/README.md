@@ -4,10 +4,10 @@ English | [中文](README.zh.md)
 
 An **agent preset** is a directory holding one `agent.cordis.yml`. Mounting it under an agent's scope context gives that session its own tools and prompt sections while every other live session keeps its own, so one process can run several differently composed agents at once.
 
-| Package | Role | ctx key |
-|---|---|---|
+| Package          | Role                                                                                                          | ctx key            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- | ------------------ |
 | `agent-presets/` | Preset vocabulary, filesystem discovery over trusted and user-authored roots, and the guarded per-agent mount | `ctx.agentPresets` |
-| `persona/` | The agent persona as a composable row, so a preset can change identity and not only tools | — |
+| `persona/`       | The agent persona as a composable row, so a preset can change identity and not only tools                     | —                  |
 
 The presets the deployment ships live in [`apps/cli/config/agent-presets/`](../../apps/cli/config/agent-presets) — one directory each, and that directory listing is the roster. Naming them here too would be a second list to keep in step, and the first one to fall behind.
 

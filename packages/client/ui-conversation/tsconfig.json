@@ -4,9 +4,7 @@
     "rootDir": "src",
     "outDir": "lib/types"
   },
-  "include": [
-    "src"
-  ],
+  "include": ["src"],
   "references": [
     {
       "path": "../../attachment/attachment"
@@ -78,7 +76,5 @@
       "path": "../ui-settings"
     }
   ],
-  "exclude": [
-    "**/*.legacy.*"
-  ]
+  "exclude": ["**/*.legacy.*"]
 }

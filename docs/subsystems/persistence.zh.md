@@ -30,9 +30,9 @@
  */
 interface SessionLocation {
   /** Backend-specific artifact kind, for example `jsonl`. */
-  readonly kind: string
+  readonly kind: string;
   /** Absolute path to this session's backend-owned artifact. */
-  readonly path: string
+  readonly path: string;
 }
 ```
 
@@ -54,38 +54,38 @@ interface SessionHeader {
    * session is created. A persistence backend rejects any other version on load
    * (no migration — see the constant).
    */
-  readonly version: number
+  readonly version: number;
   /** The session's id (mirrors the {@link Session}'s id). */
-  readonly id: SessionId
+  readonly id: SessionId;
   /** Non-negative safe-integer Unix epoch milliseconds when the session was created. */
-  readonly createdAt: number
+  readonly createdAt: number;
   /** Absolute working directory the session was created in (if any). */
-  readonly cwd?: string
+  readonly cwd?: string;
   /** The session this one was forked from (seed lineage), if any. */
-  readonly parentSession?: SessionId
+  readonly parentSession?: SessionId;
   /**
    * How many leading events were inherited through a seed. Persisting this
    * boundary lets resume and replay distinguish parent history from child work.
    */
-  readonly seedLength?: number
+  readonly seedLength?: number;
   /**
    * Coarse product classification for a session created as a subagent child.
    * This is presentation metadata, not proof that the child is continuable.
    */
-  readonly origin?: 'subagent'
+  readonly origin?: "subagent";
   /**
    * Delegation depth: absent (zero) for a top-level session, parent depth + 1
    * for a subagent child. Persisted so a recursion budget survives restart and
    * resume — a runtime-only depth would reset a resumed child to top-level.
    */
-  readonly delegationDepth?: number
+  readonly delegationDepth?: number;
   /**
    * Id of the agent preset this session's agent was composed from, when the
    * deployment composes per session. Durable because the preset decides the
    * session's tools and prompt: a resume that restored a different composition
    * would replay history the model can no longer act on.
    */
-  readonly agentPreset?: string
+  readonly agentPreset?: string;
 }
 ```
 
@@ -105,20 +105,20 @@ interface SessionHeader {
  */
 interface CreateSessionOptions {
   /** Initial replay or fork history supplied at construction. */
-  readonly seed?: readonly SessionEvent[]
+  readonly seed?: readonly SessionEvent[];
   /**
    * Storage metadata read once before publication. `seedLength` is explicit
    * because a resumed seed contains the full stored log, not only its inherited prefix.
    */
   readonly meta?: {
-    readonly cwd?: string
-    readonly parentSession?: SessionId
-    readonly createdAt?: number
-    readonly seedLength?: number
-    readonly origin?: 'subagent'
-    readonly delegationDepth?: number
-    readonly agentPreset?: string
-  }
+    readonly cwd?: string;
+    readonly parentSession?: SessionId;
+    readonly createdAt?: number;
+    readonly seedLength?: number;
+    readonly origin?: "subagent";
+    readonly delegationDepth?: number;
+    readonly agentPreset?: string;
+  };
 }
 ```
 
@@ -132,11 +132,11 @@ interface CreateSessionOptions {
 /** A backend's own raw artifact text for one session, verbatim. */
 interface SessionRawArtifact {
   /** The session header parsed from the artifact's own first line. */
-  readonly meta: SessionHeader
+  readonly meta: SessionHeader;
   /** The artifact's base filename on disk, without any physical encoding suffix. */
-  readonly filename: string
+  readonly filename: string;
   /** The artifact's full text content, decoded from the backend's physical encoding. */
-  readonly content: string
+  readonly content: string;
 }
 ```
 
@@ -151,26 +151,24 @@ interface SessionRawArtifact {
  */
 interface RestoredSessionOptions {
   /** Fresh detached storage events to validate and freeze in place. */
-  readonly seed: SessionEvent[]
+  readonly seed: SessionEvent[];
   /** Fresh detached storage metadata to validate and freeze in place. */
-  readonly meta: SessionHeader
+  readonly meta: SessionHeader;
   /** Select the persistence ownership-transfer path. */
-  readonly seedSource: 'persistence'
+  readonly seedSource: "persistence";
 }
 ```
 
 ```ts type-equiv
 /** Inputs accepted while constructing an unpublished Session. */
-type PrepareSessionOptions =
-  | (CreateSessionOptions & { readonly seedSource?: undefined })
-  | RestoredSessionOptions
+type PrepareSessionOptions = (CreateSessionOptions & { readonly seedSource?: undefined }) | RestoredSessionOptions;
 ```
 
 ```ts type-equiv
 /** Options for a preparation whose provider retains unpublished state. */
 interface SessionPreparationOptions {
   /** Release provider-owned state when the Session was not published. */
-  readonly release?: () => void
+  readonly release?: () => void;
 }
 ```
 
@@ -200,9 +198,9 @@ declare class SessionPreparation implements Disposable {
 /** Immutable logical session prepared from persistence or a live owner. */
 interface SessionInspection {
   /** Validated immutable session metadata. */
-  readonly meta: SessionHeader
+  readonly meta: SessionHeader;
   /** Validated contiguous logical event log. */
-  readonly events: readonly SessionEvent[]
+  readonly events: readonly SessionEvent[];
 }
 ```
 
@@ -215,16 +213,16 @@ interface SessionInspection {
  * Backend-owned token that identifies both one storage source and one revision
  * of a persisted session log.
  */
-type SessionPersistenceRevision = Branded<'SessionPersistenceRevision'>
+type SessionPersistenceRevision = Branded<"SessionPersistenceRevision">;
 ```
 
 ```ts type-equiv
 /** Lightweight immutable source identity returned without loading a full log. */
 interface SessionPersistenceSnapshot {
   /** Detached metadata for one materialized session. */
-  header: SessionHeader
+  header: SessionHeader;
   /** Opaque source-qualified token that changes whenever this stored log changes. */
-  revision: SessionPersistenceRevision
+  revision: SessionPersistenceRevision;
 }
 ```
 

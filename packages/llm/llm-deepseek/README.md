@@ -12,32 +12,32 @@ The package root exposes the Cordis plugin contract and `DeepSeekAdapter`; wire 
 
 ```yaml
 - id: llm-deepseek
-  name: '@deepseek-ai/dsh-llm-deepseek'
+  name: "@deepseek-ai/dsh-llm-deepseek"
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY  # default; resolved per request via ctx.credentials, then the environment
+    apiKeyEnv: DEEPSEEK_API_KEY # default; resolved per request via ctx.credentials, then the environment
     baseURL: https://api.deepseek.com # optional; $DEEPSEEK_BASE_URL then the public API when omitted
-    thinking: enabled        # optional; provider default is enabled
-    reasoningEffort: high    # optional; off | low | high | max — omitted ⇒ high
-    maxTokens: 256000        # optional positive per-request output cap; this is the default
+    thinking: enabled # optional; provider default is enabled
+    reasoningEffort: high # optional; off | low | high | max — omitted ⇒ high
+    maxTokens: 256000 # optional positive per-request output cap; this is the default
     streamIdleTimeoutMs: 300000 # optional; positive finite Node timer delay; five-minute default
     maxRequestFilesBytes: 134217728 # optional positive integer; 128 MiB raw request-image default
     maxInlineRequestImageBytes: 20971520 # base64 fallback high watermark; 20 MiB default
-    maxImagesPerRequest: 600       # provider request image-count limit
+    maxImagesPerRequest: 600 # provider request image-count limit
     imageOffloadByteQuantum: 67108864 # oldest-image removal advances in 64 MiB steps
     inlineImageOffloadByteQuantum: 10485760 # fallback removal advances in 10 MiB steps
-    imageOffloadCountQuantum: 20      # count overflow advances in 20-image steps
-    filesApiTimeoutMs: 60000           # per-image Files resolution deadline; one-minute default
-    fileExpiresAfterSeconds: 604800   # uploaded image lifetime; 1 hour to 30 days
-    fileRefreshMarginSeconds: 3600    # replace ids with less lifetime remaining
-    fileQuotaCleanupBatch: 100        # oldest harness-owned files deleted before one quota retry
-    retryPolicy:             # optional; omission uses normal mode with five retries
-      mode: always           # normal | always
+    imageOffloadCountQuantum: 20 # count overflow advances in 20-image steps
+    filesApiTimeoutMs: 60000 # per-image Files resolution deadline; one-minute default
+    fileExpiresAfterSeconds: 604800 # uploaded image lifetime; 1 hour to 30 days
+    fileRefreshMarginSeconds: 3600 # replace ids with less lifetime remaining
+    fileQuotaCleanupBatch: 100 # oldest harness-owned files deleted before one quota retry
+    retryPolicy: # optional; omission uses normal mode with five retries
+      mode: always # normal | always
       backoff:
         initialDelayMs: 500
         maxDelayMs: 10000
         jitterRatio: 0.1
     defaultContextWindow: 1000000 # optional positive-integer fallback; this is the default
-    models:                  # optional; defaults to V4 Flash, V4 Pro, and V4 Flash Vision Exp
+    models: # optional; defaults to V4 Flash, V4 Pro, and V4 Flash Vision Exp
       - id: deepseek-v4-flash
         name: DeepSeek-V4-Flash
       - id: deepseek-v4-flash-vision-exp
@@ -77,7 +77,7 @@ The same exact-model result exposes ordered `off`, `low`, `high`, and `max` effo
 Connection facts are not frozen at load. `resolveAdapterOptions` is the one explicit resolve step from raw config to validated facts, and the adapter re-reads them through a thunk **once per operation**: base URL, catalog, request defaults, image and Files policies, and idle budget all take effect on the next request, while an in-flight stream keeps the facts it started with. Three optional seams feed that thunk:
 
 - **`ctx.settings`** — the plugin registers the `llm-deepseek` namespace with this same `Config` schema and its `cordis.yml` entry as the composition `base`, so a `llm-deepseek:` section in the user settings document overrides any field without a restart. Without a mounted settings service the entry config alone drives the adapter, unchanged. A live settings snapshot that passes the schema but fails a beyond-schema bound (a duplicate catalog id, a broken thinking/effort pair) keeps the last good facts and logs the failure; the entry config itself still fails plugin load.
-- **`ctx.credentials`** — the API key resolves per stream call, from the *same* resolved snapshot that supplies the endpoint. Configuration carries only `apiKeyEnv`, never a literal key: the reference resolves through the credential seam, and without a mounted seam through the trusted environment layers. Because credential facts travel with the connection facts, a settings snapshot the resolver rejects contributes neither its endpoint nor its key: the whole previous generation keeps serving. Every resolved key is format-checked before use, so a value no HTTP header can carry is refused with `LlmError('INVALID_CREDENTIAL')` naming the failing entry point — never any part of the key — instead of surfacing as an opaque `fetch` `TypeError`. A request with no key anywhere fails with `MISSING_CREDENTIAL` naming every configuration entry point, while the route stays registered and the catalog stays browsable — first-run onboarding is "browse models, store the key, prompt again", with no restart between.
+- **`ctx.credentials`** — the API key resolves per stream call, from the _same_ resolved snapshot that supplies the endpoint. Configuration carries only `apiKeyEnv`, never a literal key: the reference resolves through the credential seam, and without a mounted seam through the trusted environment layers. Because credential facts travel with the connection facts, a settings snapshot the resolver rejects contributes neither its endpoint nor its key: the whole previous generation keeps serving. Every resolved key is format-checked before use, so a value no HTTP header can carry is refused with `LlmError('INVALID_CREDENTIAL')` naming the failing entry point — never any part of the key — instead of surfacing as an opaque `fetch` `TypeError`. A request with no key anywhere fails with `MISSING_CREDENTIAL` naming every configuration entry point, while the route stays registered and the catalog stays browsable — first-run onboarding is "browse models, store the key, prompt again", with no restart between.
 - **`ctx.attachments`** — image requests resolve this service at request time, so Cordis load order does not freeze optional image availability. Absence rejects image input with `UNSUPPORTED_CONTENT`; text-only calls do not require the service.
 
 The one registration-captured fact is the retry policy: when its resolved value changes, the plugin re-registers the route in place (same adapter instance, one synchronous section), so `ctx.llm.providerRetryPolicy('deepseek-official')` always reports the current policy.

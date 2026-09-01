@@ -18,13 +18,13 @@ dsh 启动器交给它所引导应用的那条命令行。启动器只解析属�
 任何应用插件都可以注入 `cmdlineArgs`、解析它，再发布一个普通的应用自有服务。`parseCmdline(ctx, program)` 只适配 commander；校验与发布的服务都归 program 自己的 action 持有：
 
 ```ts ignore
-export const name = 'web-startup'
-export const inject = ['cmdlineArgs']
+export const name = "web-startup";
+export const inject = ["cmdlineArgs"];
 
 export function apply(ctx: Context): void {
-  const program = webCommand()
-  program.action(() => ctx.provide('webStartup', webValuesFrom(program)))
-  parseCmdline(ctx, program)
+  const program = webCommand();
+  program.action(() => ctx.provide("webStartup", webValuesFrom(program)));
+  parseCmdline(ctx, program);
 }
 ```
 
@@ -32,14 +32,14 @@ export function apply(ctx: Context): void {
 
 ```yaml
 - id: web-startup
-  name: '@deepseek-ai/dsh-web-app/startup'
+  name: "@deepseek-ai/dsh-web-app/startup"
 ```
 
 所有由这些取值配置的行都使用普通服务注入，并在惰性配置中直接访问该服务：
 
 ```yaml
 - id: webserver
-  name: '@deepseek-ai/dsh-host-webserver'
+  name: "@deepseek-ai/dsh-host-webserver"
   inject: [webStartup]
   config:
     host: !!js ctx.webStartup.host ?? '127.0.0.1'

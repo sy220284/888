@@ -6,11 +6,11 @@
 
 本包承担压缩能力的 Service Definition 角色，因此各角色均可独立演进，也可独立替换：
 
-| 包 | 职责 |
-|---|---|
+| 包                                    | 职责                                                                                                                 |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `@deepseek-ai/dsh-compaction`（本包） | Service Definition：抽象服务 + `compaction/*` 事件 + `CompactionResult` + 关联检查点源构造函数 + 工具配对边界 helper |
-| `@deepseek-ai/dsh-compaction-basic` | Service Provider：`ctx.tokenMeter` 压力 + token 预算保留 + `llm.stream()` 摘要 |
-| `@deepseek-ai/dsh-command-compact` | Consumer：面向人类的 `/compact` 命令，基于 `ctx.compaction.compactNow()` 实现 |
+| `@deepseek-ai/dsh-compaction-basic`   | Service Provider：`ctx.tokenMeter` 压力 + token 预算保留 + `llm.stream()` 摘要                                       |
+| `@deepseek-ai/dsh-command-compact`    | Consumer：面向人类的 `/compact` 命令，基于 `ctx.compaction.compactNow()` 实现                                        |
 
 与 bash seam 不同，该 Service Definition 依赖 `@deepseek-ai/dsh-session` 和 `@deepseek-ai/dsh-llm`。约定的动词基于 `Session` 定义，其输出使用 `ContentBlock` 词汇，因此无法在不指名这些包的情况下表达。这项对「Service Definition 只依赖 cordis」指引的偏离是有意的，并记录在 [压缩能力 seam Agent Note](../../../.agents/notes/implemented/feature/2026-06-18-compaction-capability-seam.zh.md) 中。
 
@@ -18,10 +18,10 @@
 
 三个操作都是**抽象方法**：触发策略、保留、事件顺序与摘要均属于后端。可复用的请求测量是独立服务 [`ctx.tokenMeter`](../../llm/token-meter/README.zh.md)，而非本 Service Definition 的一部分。
 
-| 成员 | 语义 |
-|---|---|
-| `compactIfNeeded(agent, trigger, signal)` | 根据 `trigger: 'pressure' \| 'context-overflow'` 判断是否需要自动压缩。压力触发可应用后端的阈值与保留尾部策略；已确认溢出可强制进行有效的平衡缩减。返回 `CompactionResult`，无安全范围时则返回 `null`。后端摘要请求是直接的 `ctx.llm.stream()` 调用（不是 agent loop（智能体循环）步骤），因此每次调用都可在 `llm/stream` 处拦截。 |
-| `compactNow(agent, signal)` | 即使未达到自动压力，也显式压缩一段有效、平衡的较早范围。该操作会在让出控制权前同步预留空闲轮次接纳；没有有效范围时不写入任何内容；在摘要前记录独立的 `compaction/* { turn: null }` 尝试；释放预留前等待其持久性检查点。预期操作失败使用 `ManualCompactionError`；取消会原样重新抛出 abort 原因。 |
+| 成员                                        | 语义                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `compactIfNeeded(agent, trigger, signal)`   | 根据 `trigger: 'pressure' \| 'context-overflow'` 判断是否需要自动压缩。压力触发可应用后端的阈值与保留尾部策略；已确认溢出可强制进行有效的平衡缩减。返回 `CompactionResult`，无安全范围时则返回 `null`。后端摘要请求是直接的 `ctx.llm.stream()` 调用（不是 agent loop（智能体循环）步骤），因此每次调用都可在 `llm/stream` 处拦截。                                                   |
+| `compactNow(agent, signal)`                 | 即使未达到自动压力，也显式压缩一段有效、平衡的较早范围。该操作会在让出控制权前同步预留空闲轮次接纳；没有有效范围时不写入任何内容；在摘要前记录独立的 `compaction/* { turn: null }` 尝试；释放预留前等待其持久性检查点。预期操作失败使用 `ManualCompactionError`；取消会原样重新抛出 abort 原因。                                                                                     |
 | `compactRegion(start, end, agent, signal?)` | 强制将表层节点 `[start, end]`（包含两端 seq）从 `agent.session` 摘要为单个替换节点，其源由 `compactCheckpointSource(compactionId)` 创建。如果压缩已在进行、`start`／`end` 不是表层节点，或 `start` 在表层上位于 `end` 之后，则**抛出异常**。该范围是表层位置范围，不是数值 seq 区间：在之前的 replace 将新生成的高 seq 摘要节点放到已遮蔽范围的位置之后，表层顺序不再跟随 seq 顺序。 |
 
 `CompactionResult` 向调用方保留原始摘要与记录操作过程的事件 seq，同时保留已遮蔽范围与 token 计量；其结构由漂移检查保障，定义见 [压缩数据结构参考](../../../docs/subsystems/compaction.zh.md#compactionresult)。

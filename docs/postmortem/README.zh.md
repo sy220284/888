@@ -10,9 +10,9 @@
 
 每篇事故复盘以一段**执行摘要**开头：一个简短段落，让忙碌的读者在三十秒内吸收要点——什么坏了、用直白的话说根因是什么、为什么逃逸了、可长期沿用的教训是什么——然后才是后续的详细「概述、时间线、根因、防护措施」各节。
 
-| # | 标题 |
-|---|---|
-| [0001](0001-acp-default-export-drops-inject.zh.md) | ACP（Agent Client Protocol）服务器在连接时崩溃：`export default` 丢失了插件的 `inject` |
-| [0002](0002-js-expression-disabled-filesystem-tools.zh.md) | 文件系统快照工具被一个字面量 `!!js` 对象永久禁用 |
-| [0003](0003-web-agent-gui-feedback-loop.zh.md) | Web agent（智能体）验证了替代服务器，而非承载其会话的 GUI |
-| [0004](0004-landlock-partial-notice-misclassified-child-failures.zh.md) | Landlock 部分强制执行通知导致子进程失败被误归类 |
+| #                                                                       | 标题                                                                                   |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [0001](0001-acp-default-export-drops-inject.zh.md)                      | ACP（Agent Client Protocol）服务器在连接时崩溃：`export default` 丢失了插件的 `inject` |
+| [0002](0002-js-expression-disabled-filesystem-tools.zh.md)              | 文件系统快照工具被一个字面量 `!!js` 对象永久禁用                                       |
+| [0003](0003-web-agent-gui-feedback-loop.zh.md)                          | Web agent（智能体）验证了替代服务器，而非承载其会话的 GUI                              |
+| [0004](0004-landlock-partial-notice-misclassified-child-failures.zh.md) | Landlock 部分强制执行通知导致子进程失败被误归类                                        |

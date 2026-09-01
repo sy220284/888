@@ -12,32 +12,32 @@ harness LLM（大语言模型）seam 的 DeepSeek chat-completions 适配器：�
 
 ```yaml
 - id: llm-deepseek
-  name: '@deepseek-ai/dsh-llm-deepseek'
+  name: "@deepseek-ai/dsh-llm-deepseek"
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY  # default; resolved per request via ctx.credentials, then the environment
+    apiKeyEnv: DEEPSEEK_API_KEY # default; resolved per request via ctx.credentials, then the environment
     baseURL: https://api.deepseek.com # optional; $DEEPSEEK_BASE_URL then the public API when omitted
-    thinking: enabled        # optional; provider default is enabled
-    reasoningEffort: high    # optional; off | low | high | max — omitted ⇒ high
-    maxTokens: 256000        # optional positive per-request output cap; this is the default
+    thinking: enabled # optional; provider default is enabled
+    reasoningEffort: high # optional; off | low | high | max — omitted ⇒ high
+    maxTokens: 256000 # optional positive per-request output cap; this is the default
     streamIdleTimeoutMs: 300000 # optional; positive finite Node timer delay; five-minute default
     maxRequestFilesBytes: 134217728 # optional positive integer; 128 MiB raw request-image default
     maxInlineRequestImageBytes: 20971520 # base64 fallback high watermark; 20 MiB default
-    maxImagesPerRequest: 600       # provider request image-count limit
+    maxImagesPerRequest: 600 # provider request image-count limit
     imageOffloadByteQuantum: 67108864 # oldest-image removal advances in 64 MiB steps
     inlineImageOffloadByteQuantum: 10485760 # fallback removal advances in 10 MiB steps
-    imageOffloadCountQuantum: 20      # count overflow advances in 20-image steps
-    filesApiTimeoutMs: 60000           # per-image Files resolution deadline; one-minute default
-    fileExpiresAfterSeconds: 604800   # uploaded image lifetime; 1 hour to 30 days
-    fileRefreshMarginSeconds: 3600    # replace ids with less lifetime remaining
-    fileQuotaCleanupBatch: 100        # oldest harness-owned files deleted before one quota retry
-    retryPolicy:             # optional; omission uses normal mode with five retries
-      mode: always           # normal | always
+    imageOffloadCountQuantum: 20 # count overflow advances in 20-image steps
+    filesApiTimeoutMs: 60000 # per-image Files resolution deadline; one-minute default
+    fileExpiresAfterSeconds: 604800 # uploaded image lifetime; 1 hour to 30 days
+    fileRefreshMarginSeconds: 3600 # replace ids with less lifetime remaining
+    fileQuotaCleanupBatch: 100 # oldest harness-owned files deleted before one quota retry
+    retryPolicy: # optional; omission uses normal mode with five retries
+      mode: always # normal | always
       backoff:
         initialDelayMs: 500
         maxDelayMs: 10000
         jitterRatio: 0.1
     defaultContextWindow: 1000000 # optional positive-integer fallback; this is the default
-    models:                  # optional; defaults to V4 Flash, V4 Pro, and V4 Flash Vision Exp
+    models: # optional; defaults to V4 Flash, V4 Pro, and V4 Flash Vision Exp
       - id: deepseek-v4-flash
         name: DeepSeek-V4-Flash
       - id: deepseek-v4-flash-vision-exp

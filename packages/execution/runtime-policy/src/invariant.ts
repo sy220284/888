@@ -257,7 +257,10 @@ function validateRuntimeRefs(session: Session, event: SessionEvent<'step/snapsho
     fail('step/snapshot cannot cite runtime/delegation when no delegation event is active')
   }
 
-  const expectedRefs: RuntimeRefs = { ...trace.refs, delegation: expectedDelegation }
+  const expectedRefs: RuntimeRefs = {
+    ...trace.refs,
+    ...(expectedDelegation === undefined ? {} : { delegation: expectedDelegation }),
+  }
   for (const [key, expected] of Object.entries(expectedRefs) as [keyof RuntimeRefs, number | undefined][]) {
     const actual = refs[key]
     if (expected !== undefined && actual !== expected) {
@@ -354,7 +357,9 @@ function applyEvent(session: Session, trace: Trace, event: SessionEvent, fail: I
       if (!Array.isArray(data.requirements) || data.requirements.length === 0) {
         fail('world/effect-start requirements must be a non-empty array')
       }
-      data.requirements.forEach((requirement, index) => validateRequirement(requirement, `world/effect-start requirement ${index}`, fail))
+      data.requirements.forEach((requirement, index) => {
+        validateRequirement(requirement, `world/effect-start requirement ${index}`, fail)
+      })
       if (!trace.authoritativeCalls.has(callId)) fail(`world/effect-start ${receiptId} has no prior authoritative tool call ${callId}`)
       if (trace.effects.has(receiptId)) fail(`world/effect-start repeats receiptId ${receiptId}`)
       trace.effects.set(receiptId, { seq: event.seq, callId, toolName, startedAt, settled: false })
@@ -371,7 +376,8 @@ function applyEvent(session: Session, trace: Trace, event: SessionEvent, fail: I
       const callId = nonEmptyString(data.callId, 'world/effect-receipt callId', fail)
       const toolName = nonEmptyString(data.toolName, 'world/effect-receipt toolName', fail)
       const endedAt = nonNegativeSafeInteger(data.endedAt, 'world/effect-receipt endedAt', fail)
-      if (startSeq !== effect.seq || callId !== effect.callId || toolName !== effect.toolName) {
+      const identityMatches = startSeq === effect.seq && callId === effect.callId && toolName === effect.toolName
+      if (!identityMatches) {
         fail(`world/effect-receipt ${receiptId} identity diverges from its start`)
       }
       if (data.status !== 'succeeded' && data.status !== 'failed') fail(`world/effect-receipt ${receiptId} status is invalid`)
@@ -395,22 +401,25 @@ const install: InvariantInstaller = Object.assign((ctx: Context, fail: Invariant
     return trace
   }
 
-  ctx.sessions.list().forEach(seed)
-  ctx.on('session/created', (session) => { seed(session) }, { global: true })
-  ctx.on('internal/dispatch', (_mode, eventName, args) => {
+  const stageDispatch = (_mode: unknown, eventName: string, args: unknown[]): void => {
     if (eventName !== 'session/event') return
     const [session, event] = args as [Session, SessionEvent]
     const current = traces.get(session) ?? seed(session)
     const candidate = cloneTrace(current)
     applyEvent(session, candidate, event, fail)
     staged.set(event, { session, trace: candidate })
-  }, { global: true })
-  ctx.on('session/event', (session, event) => {
+  }
+  const publish = (session: Session, event: SessionEvent): void => {
     const candidate = staged.get(event)
     if (candidate === undefined || candidate.session !== session) return fail('session/event reached publication without runtime-policy validation')
     staged.delete(event)
     traces.set(session, candidate.trace)
-  }, { global: true })
+  }
+
+  for (const session of ctx.sessions.list()) seed(session)
+  ctx.on('session/created', seed, { global: true })
+  ctx.on('internal/dispatch', stageDispatch, { global: true })
+  ctx.on('session/event', publish, { global: true })
 }, { inject: ['sessions'] })
 
 export const apply = (ctx: Context): Promise<() => void> =>

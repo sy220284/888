@@ -2,6 +2,9 @@
   "steps": [
     { "op": "initialize" },
     { "op": "newSession" },
-    { "op": "prompt", "text": "Use the read tool twice in the same assistant message: read a.txt and b.txt. Then reply DONE." }
+    {
+      "op": "prompt",
+      "text": "Use the read tool twice in the same assistant message: read a.txt and b.txt. Then reply DONE."
+    }
   ]
 }

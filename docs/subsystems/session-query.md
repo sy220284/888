@@ -12,18 +12,18 @@ Source: [`packages/session-query/session-query/src/types.ts`](../../packages/ses
 
 ```ts type-equiv
 /** Whether an event is current model context, replaced context, or raw-log-only. */
-type SessionEventSurface = 'current' | 'shadowed' | 'log-only'
+type SessionEventSurface = "current" | "shadowed" | "log-only";
 ```
 
 ```ts type-equiv
 /** Lightweight identity and source availability for one logical session. */
 interface SessionRecord {
   /** Cloned session header selected from the live-preferred corpus. */
-  header: SessionHeader
+  header: SessionHeader;
   /** Whether the id currently exists in `ctx.sessions`. */
-  live: boolean
+  live: boolean;
   /** Whether the active persistence backend currently materializes the id. */
-  persisted: boolean
+  persisted: boolean;
 }
 ```
 
@@ -33,9 +33,9 @@ interface SessionRecord {
 /** One validated detached observation of a logical session's complete raw log. */
 interface SessionLogSnapshot {
   /** Cloned session header selected from the same observation as `events`. */
-  session: SessionHeader
+  session: SessionHeader;
   /** Cloned contiguous raw events after persistence repair and replay validation. */
-  events: SessionEvent[]
+  events: SessionEvent[];
 }
 ```
 
@@ -43,11 +43,11 @@ interface SessionLogSnapshot {
 /** One atomic live-preferred observation of a session's current model surface. */
 interface SessionSurfaceSnapshot {
   /** Cloned session header selected from the same corpus observation as `events`. */
-  session: SessionHeader
+  session: SessionHeader;
   /** Highest raw-log seq included in the observation, or `null` for an empty log. */
-  capturedThroughSeq: number | null
+  capturedThroughSeq: number | null;
   /** Cloned current surface events in model-history order. */
-  events: SurfaceEvent[]
+  events: SurfaceEvent[];
 }
 ```
 
@@ -57,9 +57,9 @@ interface SessionSurfaceSnapshot {
 /** Latest folded title bound to the same session-header observation. */
 interface SessionTitleObservation {
   /** Cloned header selected with the event log used for the title fold. */
-  session: SessionHeader
+  session: SessionHeader;
   /** Latest title snapshot, absent when the observed log has no title. */
-  title?: SessionTitleSnapshot
+  title?: SessionTitleSnapshot;
 }
 ```
 
@@ -67,36 +67,36 @@ interface SessionTitleObservation {
 /** One ordered result from a batch title observation. */
 type SessionTitleObservationResult =
   | {
-    /** Requested session id. */
-    sessionId: SessionId
-    /** Successful atomic header/title observation. */
-    status: 'fulfilled'
-    /** Header and optional latest title from one logical source. */
-    value: SessionTitleObservation
-  }
+      /** Requested session id. */
+      sessionId: SessionId;
+      /** Successful atomic header/title observation. */
+      status: "fulfilled";
+      /** Header and optional latest title from one logical source. */
+      value: SessionTitleObservation;
+    }
   | {
-    /** Requested session id. */
-    sessionId: SessionId
-    /** Operational failure isolated to this session. */
-    status: 'rejected'
-    /** Original failure from logical-source resolution or title folding. */
-    reason: unknown
-  }
+      /** Requested session id. */
+      sessionId: SessionId;
+      /** Operational failure isolated to this session. */
+      status: "rejected";
+      /** Original failure from logical-source resolution or title folding. */
+      reason: unknown;
+    };
 ```
 
 ```ts type-equiv
 /** Lightweight metadata for one event within a logical session. */
 interface SessionEventRecord {
   /** Session that owns the event. */
-  sessionId: SessionId
+  sessionId: SessionId;
   /** Monotonic event seq within the session. */
-  seq: number
+  seq: number;
   /** Discriminant of the session event. */
-  type: SessionEventType
+  type: SessionEventType;
   /** Event timestamp in Unix epoch milliseconds. */
-  time: number
+  time: number;
   /** Event placement in the folded session surface. */
-  surface: SessionEventSurface
+  surface: SessionEventSurface;
 }
 ```
 
@@ -110,11 +110,11 @@ Session and event filter arrays are ANDed; values inside one list clause are ORe
  * clause are ORed.
  */
 type SessionResultFilter =
-  | { kind: 'id'; values: readonly SessionId[] }
-  | { kind: 'cwd'; values: readonly (string | null)[] }
-  | ({ kind: 'created-at' } & SessionResultRange)
-  | { kind: 'parent'; values: readonly (SessionId | null)[] }
-  | { kind: 'availability'; values: readonly SessionAvailability[] }
+  | { kind: "id"; values: readonly SessionId[] }
+  | { kind: "cwd"; values: readonly (string | null)[] }
+  | ({ kind: "created-at" } & SessionResultRange)
+  | { kind: "parent"; values: readonly (SessionId | null)[] }
+  | { kind: "availability"; values: readonly SessionAvailability[] };
 ```
 
 ```ts type-equiv
@@ -123,18 +123,18 @@ type SessionResultFilter =
  * Text is a literal, case-insensitive, whitespace-flexible semantic-text scan.
  */
 type SessionEventResultFilter =
-  | ({ kind: 'seq' } & SessionResultRange)
-  | ({ kind: 'time' } & SessionResultRange)
-  | { kind: 'type'; values: readonly SessionEventType[] }
-  | { kind: 'surface'; values: readonly SessionEventSurface[] }
-  | { kind: 'text'; text: string }
+  | ({ kind: "seq" } & SessionResultRange)
+  | ({ kind: "time" } & SessionResultRange)
+  | { kind: "type"; values: readonly SessionEventType[] }
+  | { kind: "surface"; values: readonly SessionEventSurface[] }
+  | { kind: "text"; text: string };
 ```
 
 ```ts type-equiv
 /** Searchable semantic document derived from one session event. */
 interface SessionEventSearchDocument extends SessionEventRecord {
   /** First-party semantic text used by scan filters and full-text indexes. */
-  text: string
+  text: string;
 }
 ```
 
@@ -146,22 +146,22 @@ The combined `ctx.sessionQuery` seam has two full-text scopes. `searchSessions()
 
 ```ts type-equiv
 /** Provider-owned opaque continuation token returned by session search. */
-type SessionSearchCursor = Branded<'SessionSearchCursor'>
+type SessionSearchCursor = Branded<"SessionSearchCursor">;
 ```
 
 ```ts type-equiv
 /** Cross-session full-text search request. */
 interface SessionSearchRequest {
   /** Full-text query interpreted as data, never executable FTS syntax. */
-  query: string
+  query: string;
   /** Logical-session predicates applied before event ranking. */
-  sessionFilters?: readonly SessionResultFilter[]
+  sessionFilters?: readonly SessionResultFilter[];
   /** Event predicates applied before event ranking. */
-  eventFilters?: readonly SessionEventMetadataFilter[]
+  eventFilters?: readonly SessionEventMetadataFilter[];
   /** Maximum sessions in this page. */
-  limit?: number
+  limit?: number;
   /** Opaque cursor returned for the identical normalized request. */
-  cursor?: SessionSearchCursor
+  cursor?: SessionSearchCursor;
 }
 ```
 
@@ -169,15 +169,15 @@ interface SessionSearchRequest {
 /** Within-session full-text search request. */
 interface SessionEventSearchRequest {
   /** Session whose live-preferred logical log is searched. */
-  sessionId: SessionId
+  sessionId: SessionId;
   /** Full-text query interpreted as data, never executable FTS syntax. */
-  query: string
+  query: string;
   /** Event predicates applied before ranking. */
-  filters?: readonly SessionEventMetadataFilter[]
+  filters?: readonly SessionEventMetadataFilter[];
   /** Maximum events in this page. */
-  limit?: number
+  limit?: number;
   /** Opaque cursor returned for the identical normalized request. */
-  cursor?: SessionSearchCursor
+  cursor?: SessionSearchCursor;
 }
 ```
 
@@ -185,9 +185,9 @@ interface SessionEventSearchRequest {
 /** One cursor-paginated result page. */
 interface SessionSearchPage<T> {
   /** Results for this page in contract-defined order. */
-  items: readonly T[]
+  items: readonly T[];
   /** Opaque continuation cursor, absent on the final page. */
-  nextCursor?: SessionSearchCursor
+  nextCursor?: SessionSearchCursor;
 }
 ```
 
@@ -197,7 +197,7 @@ Unlike grouped cross-session hits, a within-session search must also expose its 
 /** Event-search results bound to the indexed target-session observation. */
 interface SessionEventSearchPage extends SessionSearchPage<SessionEventSearchHit> {
   /** Cloned target header from the same indexed generation as `items`. */
-  session: SessionHeader
+  session: SessionHeader;
 }
 ```
 
@@ -205,7 +205,7 @@ interface SessionEventSearchPage extends SessionSearchPage<SessionEventSearchHit
 /** One event full-text search hit with a bounded plain-text excerpt. */
 interface SessionEventSearchHit extends SessionEventRecord {
   /** Plain text excerpt selected around the match. */
-  snippet: string
+  snippet: string;
 }
 ```
 
@@ -213,7 +213,7 @@ interface SessionEventSearchHit extends SessionEventRecord {
 /** One grouped cross-session hit, ranked by its strongest matching event. */
 interface SessionSearchHit extends SessionRecord {
   /** Strongest matching event for this session. */
-  bestMatch: SessionEventSearchHit
+  bestMatch: SessionEventSearchHit;
 }
 ```
 
@@ -225,9 +225,9 @@ interface SessionSearchHit extends SessionRecord {
 /** Recursive descendant node in a session-lineage trace. */
 interface SessionLineageNode {
   /** Detached logical-corpus record for this descendant. */
-  session: SessionRecord
+  session: SessionRecord;
   /** Direct children, each carrying its own recursive descendants. */
-  descendants: SessionLineageNode[]
+  descendants: SessionLineageNode[];
 }
 ```
 
@@ -235,25 +235,25 @@ interface SessionLineageNode {
 /** Known ancestry and descendants for one logical session. */
 type SessionLineageTrace = {
   /** Detached record for the session that was traced. */
-  target: SessionRecord
+  target: SessionRecord;
   /** Known parents from the immediate parent outward. */
-  ancestors: SessionRecord[]
+  ancestors: SessionRecord[];
   /** Complete known descendant trees rooted at the target's direct children. */
-  descendants: SessionLineageNode[]
+  descendants: SessionLineageNode[];
 } & (
   | {
-    /** The complete parent chain is present in the logical corpus. */
-    complete: true
-    /** Detached record at the top of the complete lineage. */
-    root: SessionRecord
-  }
+      /** The complete parent chain is present in the logical corpus. */
+      complete: true;
+      /** Detached record at the top of the complete lineage. */
+      root: SessionRecord;
+    }
   | {
-    /** The parent chain leaves the visible logical corpus. */
-    complete: false
-    /** First parent id that is not present in the logical corpus. */
-    unresolvedParentId: SessionId
-  }
-)
+      /** The parent chain leaves the visible logical corpus. */
+      complete: false;
+      /** First parent id that is not present in the logical corpus. */
+      unresolvedParentId: SessionId;
+    }
+);
 ```
 
 ## Bounded event reads
@@ -264,13 +264,13 @@ The request addresses one raw seq and optional neighboring counts. The result ca
 /** Request for one event plus raw neighboring log context. */
 interface SessionEventReadRequest {
   /** Session that owns the target event. */
-  sessionId: SessionId
+  sessionId: SessionId;
   /** Target event seq. */
-  seq: number
+  seq: number;
   /** Number of preceding raw events to include. */
-  before?: number
+  before?: number;
   /** Number of following raw events to include. */
-  after?: number
+  after?: number;
 }
 ```
 
@@ -278,15 +278,15 @@ interface SessionEventReadRequest {
 /** Full target event and a bounded raw-log window. */
 interface SessionEventWindow {
   /** Cloned header for the live-preferred source read. */
-  session: SessionHeader
+  session: SessionHeader;
   /** Full cloned target event. */
-  target: SessionEvent
+  target: SessionEvent;
   /** Full cloned events from `startSeq` through `endSeq`. */
-  events: SessionEvent[]
+  events: SessionEvent[];
   /** First seq included in `events`. */
-  startSeq: number
+  startSeq: number;
   /** Last seq included in `events`. */
-  endSeq: number
+  endSeq: number;
 }
 ```
 
@@ -298,9 +298,9 @@ Event traces distinguish positional surface replacement from events cited as sou
 /** Request for direct surface replacements and relationships to cited source events around one event. */
 interface SessionEventTraceRequest {
   /** Session that owns the target event. */
-  sessionId: SessionId
+  sessionId: SessionId;
   /** Target event seq. */
-  seq: number
+  seq: number;
 }
 ```
 
@@ -308,17 +308,17 @@ interface SessionEventTraceRequest {
 /** Direct surface replacements and relationships to cited source events for one event. */
 interface SessionEventTrace {
   /** Lightweight target record. */
-  target: SessionEventRecord
+  target: SessionEventRecord;
   /** Immediate positional replacement event, when the target was shadowed. */
-  replacedBy?: number
+  replacedBy?: number;
   /** Positional replacers from the immediate replacement to the final replacement. */
-  replacementChain: number[]
+  replacementChain: number[];
   /** Surface nodes directly removed when the target itself performed a replacement. */
-  replacedEventSeqs: number[]
+  replacedEventSeqs: number[];
   /** Earlier events cited directly as sources, in their recorded order. */
-  sourceEventSeqs: number[]
+  sourceEventSeqs: number[];
   /** Later events that directly cite the target as a source, in log order. */
-  derivedEventSeqs: number[]
+  derivedEventSeqs: number[];
 }
 ```
 
@@ -326,7 +326,7 @@ interface SessionEventTrace {
 /** Event relationships bound to the same session-header observation. */
 interface SessionEventTraceObservation extends SessionEventTrace {
   /** Cloned header selected with the event log used for the trace. */
-  session: SessionHeader
+  session: SessionHeader;
 }
 ```
 
@@ -337,23 +337,23 @@ The closed code union distinguishes request validation, missing targets, malform
 ```ts type-equiv
 /** Stable machine-routable failure taxonomy for session reads, traces, and search. */
 type SessionQueryErrorCode =
-  | 'SESSION_QUERY_ABORTED'
-  | 'SESSION_QUERY_CORRUPT_SESSION'
-  | 'SESSION_QUERY_EVENT_NOT_FOUND'
-  | 'SESSION_QUERY_INDEX_FAILED'
-  | 'SESSION_QUERY_INVALID_CONFIG'
-  | 'SESSION_QUERY_INVALID_CURSOR'
-  | 'SESSION_QUERY_INVALID_FILTER'
-  | 'SESSION_QUERY_INVALID_LIMIT'
-  | 'SESSION_QUERY_INVALID_QUERY'
-  | 'SESSION_QUERY_INVALID_LINEAGE'
-  | 'SESSION_QUERY_INVALID_SURFACE'
-  | 'SESSION_QUERY_INVALID_WINDOW'
-  | 'SESSION_QUERY_PERSISTENCE_FAILED'
-  | 'SESSION_QUERY_SEARCH_DISABLED'
-  | 'SESSION_QUERY_SESSION_NOT_FOUND'
-  | 'SESSION_QUERY_STALE_CURSOR'
-  | 'SESSION_QUERY_SOURCE_CONFLICT'
+  | "SESSION_QUERY_ABORTED"
+  | "SESSION_QUERY_CORRUPT_SESSION"
+  | "SESSION_QUERY_EVENT_NOT_FOUND"
+  | "SESSION_QUERY_INDEX_FAILED"
+  | "SESSION_QUERY_INVALID_CONFIG"
+  | "SESSION_QUERY_INVALID_CURSOR"
+  | "SESSION_QUERY_INVALID_FILTER"
+  | "SESSION_QUERY_INVALID_LIMIT"
+  | "SESSION_QUERY_INVALID_QUERY"
+  | "SESSION_QUERY_INVALID_LINEAGE"
+  | "SESSION_QUERY_INVALID_SURFACE"
+  | "SESSION_QUERY_INVALID_WINDOW"
+  | "SESSION_QUERY_PERSISTENCE_FAILED"
+  | "SESSION_QUERY_SEARCH_DISABLED"
+  | "SESSION_QUERY_SESSION_NOT_FOUND"
+  | "SESSION_QUERY_STALE_CURSOR"
+  | "SESSION_QUERY_SOURCE_CONFLICT";
 ```
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->

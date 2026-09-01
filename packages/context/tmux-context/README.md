@@ -8,7 +8,7 @@ Opt-in durable context naming the tmux session, window, and pane this agent proc
 
 ```yaml
 - id: tmux-context
-  name: '@deepseek-ai/dsh-tmux-context'
+  name: "@deepseek-ai/dsh-tmux-context"
   config:
     refreshIntervalMs: 60000 # optional; omit or set to 0 to inject on every changed turn
 ```

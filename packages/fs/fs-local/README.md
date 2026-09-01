@@ -5,9 +5,9 @@ English | [中文](README.zh.md)
 The **local-filesystem implementation** of the `ctx.fs` provider contract ([`@deepseek-ai/dsh-fs`](../fs)). Backs the twelve `FileSystem` primitives with the host filesystem; loading it as a plugin populates `ctx.fs`.
 
 ```ts ignore-check
-import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
+import { LocalFileSystem } from "@deepseek-ai/dsh-fs-local";
 
-await ctx.plugin(LocalFileSystem, { cwd: process.cwd() })
+await ctx.plugin(LocalFileSystem, { cwd: process.cwd() });
 // ctx.fs uses the local backend; load @deepseek-ai/dsh-fs-observation-policy for the
 // freshness policy gate and @deepseek-ai/dsh-tool-fs to expose read/write/edit.
 ```

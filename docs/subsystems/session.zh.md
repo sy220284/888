@@ -13,7 +13,7 @@
 ```ts type-equiv
 /** A user-role specialization of the one shared message representation. */
 interface UserMessage extends Message {
-  readonly role: 'user'
+  readonly role: "user";
 }
 ```
 
@@ -31,7 +31,7 @@ interface SessionEventMap {
    * step; otherwise the following identified `user/message` event or batch
    * records the messages entering the step.
    */
-  'turn/start': { turn: number }
+  "turn/start": { turn: number };
   /**
    * Closes turn `turn` with the {@link TurnEndReason} that ended it. A turn
    * with no entered step has no `step/start` or `step/end`. The loop does not await a
@@ -40,11 +40,11 @@ interface SessionEventMap {
    * `whenIdle()` flush themselves. Success commits the turn; rejection is
    * reported live and does not prevent later work.
    */
-  'turn/end': { turn: number; reason: TurnEndReason }
+  "turn/end": { turn: number; reason: TurnEndReason };
   /** Opens step `step` of turn `turn` — one model call plus the tool executions it requested. */
-  'step/start': { turn: number; step: number }
+  "step/start": { turn: number; step: number };
   /** Closes step `step` of turn `turn`. */
-  'step/end': { turn: number; step: number }
+  "step/end": { turn: number; step: number };
   /**
    * A user-role message on the model-visible surface: a direct human prompt
    * (the queued message claimed for this turn), a synthetic `agent.inject()`
@@ -52,9 +52,9 @@ interface SessionEventMap {
    * notifications, …), or an entered goal continuation round. All three
    * project their `content` verbatim; `source` tells them apart.
    */
-  'user/message': UserMessage
+  "user/message": UserMessage;
   /** Raw stream chunk — token-level replay fidelity. */
-  'assistant/chunk': { turn: number; step: number; chunk: StreamChunk }
+  "assistant/chunk": { turn: number; step: number; chunk: StreamChunk };
   /**
    * Assembled assistant message for one step (derived history uses this).
    * Carries the step's `usage` when the adapter reported token accounting, so
@@ -65,13 +65,19 @@ interface SessionEventMap {
    * marker distinguishes that prefix without re-deriving interruption from turn
    * boundaries. An aborted turn with no such event streamed no visible content.
    */
-  'assistant/message': { turn: number; step: number; message: AssistantMessage; usage?: TokenUsage; interrupted?: true }
+  "assistant/message": {
+    turn: number;
+    step: number;
+    message: AssistantMessage;
+    usage?: TokenUsage;
+    interrupted?: true;
+  };
   /**
    * The model requested one tool invocation: `name` with the raw `arguments`
    * JSON string exactly as the model produced it (unparsed). `callId` pairs the
    * call with its `tool/result`.
    */
-  'tool/call': { turn: number; step: number; callId: CallId; name: string; arguments: string }
+  "tool/call": { turn: number; step: number; callId: CallId; name: string; arguments: string };
   /**
    * A completed tool call's model-facing result, optional internal failure
    * identity, and optional tool-private `meta` presentation payload. `meta` is
@@ -83,25 +89,25 @@ interface SessionEventMap {
    * unless the tool attaches one (e.g. `dsh-tool-fs` carries its result-time
    * contextual diff here).
    */
-  'tool/result': {
-    turn: number
-    step: number
-    message: ToolResultMessage
-    error?: { name: string; code: string }
-    meta?: JsonValue
-  }
+  "tool/result": {
+    turn: number;
+    step: number;
+    message: ToolResultMessage;
+    error?: { name: string; code: string };
+    meta?: JsonValue;
+  };
   /** Whole-list snapshot; latest write wins on replay. Log-only UI state; never derived history. */
-  'todo/write': { todos: TodoItem[] }
+  "todo/write": { todos: TodoItem[] };
   /**
    * Full header for the next request, appended inside its step before dispatch.
    * It is log-only; the latest snapshot reconstructs the request header.
    */
-  'request/header': { header: EpochHeader; reason: RequestHeaderReason }
+  "request/header": { header: EpochHeader; reason: RequestHeaderReason };
   /**
    * Route metadata for the next request, logged only when the route or capacity
    * changes. It does not participate in request reconstruction or header equality.
    */
-  'request/context': RequestContext
+  "request/context": RequestContext;
   /**
    * Marks the end of a constructor seed. Events before it have smaller seq
    * values and came from the seed (resume, fork, or replay); this lifecycle
@@ -124,7 +130,7 @@ interface SessionEventMap {
    * writers — a concurrently live session holds its own boundary elsewhere,
    * so tolerating concurrent writers needs a signal beyond the log.
    */
-  'session/end-seed': Record<string, never>
+  "session/end-seed": Record<string, never>;
 }
 ```
 
@@ -147,9 +153,9 @@ interface SessionEventMap {
  */
 interface TodoItem {
   /** What this task is — a short imperative line shown in the UI. */
-  content: string
+  content: string;
   /** Lifecycle state. `in_progress` marks a task being worked now; parallel work may mark several. */
-  status: 'pending' | 'in_progress' | 'completed'
+  status: "pending" | "in_progress" | "completed";
 }
 ```
 
@@ -167,13 +173,13 @@ interface TodoItem {
  */
 interface EpochHeader {
   /** The conversation's call configuration (provider, model, reasoning effort, and sampling scalars). */
-  config: LlmCallConfig
+  config: LlmCallConfig;
   /** Effective config fields materialized from the exact adapter rather than proposed by a caller. */
-  adapterDefaults?: LlmCallConfigAdapterDefaults
+  adapterDefaults?: LlmCallConfigAdapterDefaults;
   /** Rendered system prompt text; absent for a system-less request. */
-  system?: string
+  system?: string;
   /** Assembled tool schemas; absent for a tool-less request. */
-  tools?: ToolSchema[]
+  tools?: ToolSchema[];
 }
 ```
 
@@ -187,11 +193,11 @@ interface EpochHeader {
 /** Registration-bound metadata for one resolved model route. */
 interface RequestContext {
   /** Registered provider route the metadata belongs to. */
-  provider: string
+  provider: string;
   /** Provider-owned model id the metadata belongs to. */
-  model: string
+  model: string;
   /** Maximum combined request and response context in tokens, when advertised. */
-  contextWindow?: number
+  contextWindow?: number;
 }
 ```
 
@@ -215,12 +221,12 @@ interface RequestContext {
  */
 type SessionEvent<T extends SessionEventType = SessionEventType> = {
   [K in SessionEventType]: {
-    type: K
+    type: K;
     /** Monotonic sequence number within the session. */
-    seq: number
+    seq: number;
     /** Unix epoch milliseconds. */
-    time: number
-    data: SessionEventMap[K]
+    time: number;
+    data: SessionEventMap[K];
     /**
      * Marks an event a reader may safely skip when it does not recognize
      * `type`. Absent means required: a reader meeting an unrecognized type
@@ -231,21 +237,23 @@ type SessionEvent<T extends SessionEventType = SessionEventType> = {
      * defaulting to required means a forgotten marker over-refuses (an
      * inconvenience) rather than silently resuming a gutted session.
      */
-    ignorable?: true
-  } & (K extends SurfaceEventType ? {
-    /**
-     * Seq numbers of earlier events that this event cites as sources
-     * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
-     * or the surface nodes shadowed by a compaction replace node). An
-     * `assistant/message` may carry a present empty array for a known empty
-     * provider stream; when the field is absent, the event does not record which
-     * earlier events produced the message.
-     */
-    sourceEventSeqs?: number[]
-    /** How this event entered the surface; absent for non-surface events. */
-    surfaceOp?: SurfaceOp
-  } : object)
-}[T]
+    ignorable?: true;
+  } & (K extends SurfaceEventType
+    ? {
+        /**
+         * Seq numbers of earlier events that this event cites as sources
+         * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
+         * or the surface nodes shadowed by a compaction replace node). An
+         * `assistant/message` may carry a present empty array for a known empty
+         * provider stream; when the field is absent, the event does not record which
+         * earlier events produced the message.
+         */
+        sourceEventSeqs?: number[];
+        /** How this event entered the surface; absent for non-surface events. */
+        surfaceOp?: SurfaceOp;
+      }
+    : object);
+}[T];
 ```
 
 `SessionEventType = keyof SessionEventMap`。由于 `SessionEventMap` 可通过合并扩展，对 `SessionEvent` 的 switch 语句禁止使用 `assertNever`：插件添加的变体是合法的未知值；处理已知 case 后在 `default` 中放行。
@@ -266,10 +274,7 @@ type SessionEvent<T extends SessionEventType = SessionEventType> = {
  * messages and are eligible to appear on the ordered surface. Only these
  * event types may carry {@link SurfaceOp} and {@link SessionEvent.sourceEventSeqs}.
  */
-type SurfaceEventType =
-  | 'user/message'
-  | 'assistant/message'
-  | 'tool/result'
+type SurfaceEventType = "user/message" | "assistant/message" | "tool/result";
 ```
 
 ### `SurfaceOp`：事件如何进入 surface
@@ -288,9 +293,7 @@ type SurfaceEventType =
  *   shadowed surface node. Used by compaction; any surface-replacing producer
  *   may use it.
  */
-type SurfaceOp =
-  | 'append'
-  | { op: 'replace'; start: number; end: number }
+type SurfaceOp = "append" | { op: "replace"; start: number; end: number };
 ```
 
 `'append'` 是常规的尾部追加路径。`replace` 会遮蔽从 `start` 到 `end`（含两端）的 surface 条目（两者都必须是有效的 surface seq；`start === end` 时仅替换单个条目），并在原位置插入新事件。
@@ -303,14 +306,14 @@ type SurfaceOp =
  * message-producing events and forbidden on log-only events.
  */
 interface SurfaceIntent {
-  surfaceOp: SurfaceOp
+  surfaceOp: SurfaceOp;
   /**
    * Complete set of known source-event seqs. `assistant/message` may use a
    * present empty array for a known empty provider stream; when the field is
    * absent, the event does not record which earlier events produced the message.
    * Other surface events require a non-empty set when this field is present.
    */
-  sourceEventSeqs?: number[]
+  sourceEventSeqs?: number[];
 }
 ```
 
@@ -328,9 +331,9 @@ interface SurfaceIntent {
 /** Readonly live projection of the message-producing session events. */
 interface SessionSurface {
   /** Current surface event sequences in model-visible order. */
-  readonly nodes: readonly number[]
+  readonly nodes: readonly number[];
   /** Monotonic count of committed positional replacements. */
-  readonly replaceGeneration: number
+  readonly replaceGeneration: number;
 }
 ```
 
@@ -342,13 +345,13 @@ interface SessionSurface {
 /** One replacement operation observed while folding a session surface. */
 interface SurfaceFoldReplacement {
   /** Seq of the event that replaced the prior surface range. */
-  seq: number
+  seq: number;
   /** Declared inclusive start seq of the replaced surface range. */
-  start: number
+  start: number;
   /** Declared inclusive end seq of the replaced surface range. */
-  end: number
+  end: number;
   /** Actual surface entries removed by the operation, in surface order. */
-  shadowedSeqs: number[]
+  shadowedSeqs: number[];
 }
 ```
 
@@ -356,9 +359,9 @@ interface SurfaceFoldReplacement {
 /** Complete result of replaying the surface operations in a session log. */
 interface SurfaceFoldResult {
   /** Current surface event sequences in model-visible order. */
-  nodes: number[]
+  nodes: number[];
   /** Replacement operations in event order. */
-  replacements: SurfaceFoldReplacement[]
+  replacements: SurfaceFoldReplacement[];
 }
 ```
 
@@ -551,7 +554,7 @@ declare class Session {
 
 ```ts type-equiv
 /** Durable cancellation cause, including imports whose original coarse record carried no cause. */
-type TurnEndCancelCause = AgentCancelCause | { readonly kind: 'legacy' }
+type TurnEndCancelCause = AgentCancelCause | { readonly kind: "legacy" };
 ```
 
 ```ts type-equiv
@@ -559,24 +562,24 @@ type TurnEndCancelCause = AgentCancelCause | { readonly kind: 'legacy' }
  * Why a turn ended. Merge-extensible sum type.
  */
 interface TurnEndReasonMap {
-  completed: { kind: 'completed' }
+  completed: { kind: "completed" };
   /** A cancellation request interrupted the live turn. */
-  aborted: { kind: 'aborted'; reason: TurnEndCancelCause }
+  aborted: { kind: "aborted"; reason: TurnEndCancelCause };
 
-  blocked: { kind: 'blocked' }
+  blocked: { kind: "blocked" };
   /**
    * The turn failed. `error` is always a structured failure: the `LlmError`
    * facts verbatim, or `{ message: errorChain(error), code: 'UNKNOWN' }`
    * flattened from any other error.
    */
-  error: { kind: 'error'; error: LlmFailure }
+  error: { kind: "error"; error: LlmFailure };
   /** At least one step reached its output-token ceiling, even if a plugin continued the turn. */
-  'max-tokens': { kind: 'max-tokens' }
+  "max-tokens": { kind: "max-tokens" };
   /**
    * A persistence backend closed a crash-orphaned turn on reload. The loop never
    * emits this marker, and the events recorded before the crash remain intact.
    */
-  interrupted: { kind: 'interrupted' }
+  interrupted: { kind: "interrupted" };
 }
 ```
 

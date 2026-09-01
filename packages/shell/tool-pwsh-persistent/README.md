@@ -6,12 +6,12 @@ Model-facing `pwsh(command)` backed by one owner-scoped `ctx.terminals` shell. T
 
 ## Config
 
-| Key | Default | Meaning |
-|---|---:|---|
-| `backendType` | `shell` | Registered terminal backend used for each Agent shell. |
-| `timeoutMs` | `300000` | Wall-clock limit for one command; timeout closes the shell. |
-| `maxOutputChars` | `16000` | Maximum retained command-output characters; fixed diagnostics are added afterward. |
-| `description` | Persistent-shell description | Model-facing environment contract. |
+| Key              |                      Default | Meaning                                                                            |
+| ---------------- | ---------------------------: | ---------------------------------------------------------------------------------- |
+| `backendType`    |                      `shell` | Registered terminal backend used for each Agent shell.                             |
+| `timeoutMs`      |                     `300000` | Wall-clock limit for one command; timeout closes the shell.                        |
+| `maxOutputChars` |                      `16000` | Maximum retained command-output characters; fixed diagnostics are added afterward. |
+| `description`    | Persistent-shell description | Model-facing environment contract.                                                 |
 
 ## Model Experience
 
@@ -33,7 +33,7 @@ Prefix-stable while the configured description and schema remain unchanged.
 
 #### What the model sees
 
-Commands share one shell per Agent, so cwd, `$env:` variables, functions, and background jobs persist across calls. Results exclude private completion markers, the shell prompt, and the echoed input line (PSReadLine renders submitted input back into the stream; the marker-anchored extraction and the wrapper-source strip remove it). A nonzero wrapped command appends `[exit code: N]` — the exact native exit code when the command ran a native program, `1` for a terminating PowerShell error. A shell that exits before reporting that status instead appends `[shell exited: code N]`, `[shell killed by signal: SIG]`, or `[shell exited]` when the backend supplies neither (Windows forced termination reports exit 1 without a signal), then resets and tells the model that the next call starts fresh. Long output keeps the earliest retained prefix plus a clipping notice; if the terminal has already dropped that prefix, the result says so explicitly. Timeout returns bounded partial output, closes the uncertain shell, and reports the reset.
+Commands share one shell per Agent, so cwd, `$env:` variables, functions, and background jobs persist across calls. The tool reuses the prompt published by the selected terminal backend and never replaces that backend's readiness protocol. Results exclude private completion markers, the backend shell prompt, and the echoed input line (PSReadLine renders submitted input back into the stream; the marker-anchored extraction and the wrapper-source strip remove it). A nonzero wrapped command appends `[exit code: N]` — the exact native exit code when the command ran a native program, `1` for a terminating PowerShell error. A shell that exits before reporting that status instead appends `[shell exited: code N]`, `[shell killed by signal: SIG]`, or `[shell exited]` when the backend supplies neither (Windows forced termination reports exit 1 without a signal), then resets and tells the model that the next call starts fresh. Long output keeps the earliest retained prefix plus a clipping notice; if the terminal has already dropped that prefix, the result says so explicitly. Timeout returns bounded partial output, closes the uncertain shell, and reports the reset.
 
 #### Token effect
 

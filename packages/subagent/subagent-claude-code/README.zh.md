@@ -24,20 +24,20 @@ SDK 接收由文本块原样拼接成的任务。提供方会完整迭代 SDK �
 
 ## 配置
 
-| 配置键 | 默认值 | 含义 |
-|---|---|---|
-| `providerName` | `claude-code` | `ctx.subagents` 中的非空注册名称；每个已挂载实例都需要唯一值。 |
-| `env` | `{}` | 显式指定的 SDK/CLI 环境，叠加在由共享机制清除凭证后的父环境之上。 |
-| `permissionMode` | `dontAsk` | 为该提供方实例的每次运行固定原生非交互权限策略。 |
-| `disposeGraceMs` | `3000` | 共享进程树责任方各终止层级之间的宽限期，单位为毫秒且须为正有限值，并不得大于仓库共享的 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)；随后资源释放会等待整棵进程树退出。 |
+| 配置键           | 默认值        | 含义                                                                                                                                                                               |
+| ---------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `providerName`   | `claude-code` | `ctx.subagents` 中的非空注册名称；每个已挂载实例都需要唯一值。                                                                                                                     |
+| `env`            | `{}`          | 显式指定的 SDK/CLI 环境，叠加在由共享机制清除凭证后的父环境之上。                                                                                                                  |
+| `permissionMode` | `dontAsk`     | 为该提供方实例的每次运行固定原生非交互权限策略。                                                                                                                                   |
+| `disposeGraceMs` | `3000`        | 共享进程树责任方各终止层级之间的宽限期，单位为毫秒且须为正有限值，并不得大于仓库共享的 [`MAX_TIMER_DELAY_MS`](../../util/timeout/README.zh.md)；随后资源释放会等待整棵进程树退出。 |
 
-| `permissionMode` 值 | 原生行为 |
-|---|---|
-| `dontAsk` | 不弹出提示，直接拒绝尚未获授权的操作。 |
-| `acceptEdits` | 接受文件编辑；其余权限提示由无人值守回调拒绝。 |
-| `auto` | 由 Claude Code 原生分类器允许或拒绝权限请求。 |
-| `plan` | 使用原生规划模式，拒绝执行审批，并把完整计划作为最终答案返回。 |
-| `bypassPermissions` | 显式设置 SDK 的危险确认并跳过权限检查。 |
+| `permissionMode` 值 | 原生行为                                                       |
+| ------------------- | -------------------------------------------------------------- |
+| `dontAsk`           | 不弹出提示，直接拒绝尚未获授权的操作。                         |
+| `acceptEdits`       | 接受文件编辑；其余权限提示由无人值守回调拒绝。                 |
+| `auto`              | 由 Claude Code 原生分类器允许或拒绝权限请求。                  |
+| `plan`              | 使用原生规划模式，拒绝执行审批，并把完整计划作为最终答案返回。 |
+| `bypassPermissions` | 显式设置 SDK 的危险确认并跳过权限检查。                        |
 
 生产环境会省略 `pathToClaudeCodeExecutable`，因此 Agent SDK 0.3.220 会从自己的平台包中选择匹配的原生 `claude` 或 `claude.exe`，再通过 custom-spawn 钩子把该绝对命令交给 `dsh-subprocess`。提供方不会检查 `PATH`、重复实现平台选择，也不会回退到宿主 `claude`。原生设置与身份验证继续是权威来源，而 `permissionMode` 是唯一的 query 级策略覆盖。本插件不选择模型、不创建产品主目录、不执行登录，也不探测账户。具有凭证特征的环境变量会在显式 `env` 覆盖生效前被清除，因此供子进程使用的 API 密钥或 token 必须在该配置中显式提供。除非被覆盖，`ANTHROPIC_BASE_URL` 等非凭证端点变量以及 `PATH` 和 `HOME` 等普通环境变量仍会被继承；`PATH` 不参与选择 Claude 可执行文件。
 
@@ -55,7 +55,7 @@ dsh --profile <name>
 
 ```yaml
 - id: subagent-claude-safe
-  name: '@deepseek-ai/dsh-subagent-claude-code'
+  name: "@deepseek-ai/dsh-subagent-claude-code"
   config:
     providerName: claude-safe
     permissionMode: dontAsk
@@ -63,7 +63,7 @@ dsh --profile <name>
       ANTHROPIC_API_KEY: !!js process.env.ANTHROPIC_API_KEY
 
 - id: subagent-claude-bypass
-  name: '@deepseek-ai/dsh-subagent-claude-code'
+  name: "@deepseek-ai/dsh-subagent-claude-code"
   config:
     providerName: claude-bypass
     permissionMode: bypassPermissions
@@ -73,13 +73,13 @@ dsh --profile <name>
 
 ```yaml
 - id: jobs
-  name: '@deepseek-ai/dsh-jobs-local'
+  name: "@deepseek-ai/dsh-jobs-local"
 
 - id: tool-jobs
-  name: '@deepseek-ai/dsh-tool-jobs'
+  name: "@deepseek-ai/dsh-tool-jobs"
 
 - id: tool-subagent-claude-safe
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   disabled: true
   config:
     provider: claude-safe
@@ -88,7 +88,7 @@ dsh --profile <name>
     maxDepth: provider-managed
 
 - id: tool-subagent-claude-bypass
-  name: '@deepseek-ai/dsh-tool-subagent'
+  name: "@deepseek-ai/dsh-tool-subagent"
   config:
     provider: claude-bypass
     toolName: subagent_claude_bypass

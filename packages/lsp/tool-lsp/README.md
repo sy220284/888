@@ -14,11 +14,11 @@ The tool requires the workspace root from the session `header.cwd`, with no fall
 
 ## Configuration
 
-| Key | Default | Meaning |
-|---|---|---|
-| `maxLocations` | `100` | Largest number of rendered locations before an omission marker. |
-| `maxResultChars` | `16000` | Largest complete rendered result, including truncation metadata. |
-| `timeoutMs` | `60000` | Tool-call timeout budget, enforced by `dsh-tool-call-timeout-policy`; covers the complete queued open/query/close lifecycle and is not model-configurable. |
+| Key              | Default | Meaning                                                                                                                                                    |
+| ---------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `maxLocations`   | `100`   | Largest number of rendered locations before an omission marker.                                                                                            |
+| `maxResultChars` | `16000` | Largest complete rendered result, including truncation metadata.                                                                                           |
+| `timeoutMs`      | `60000` | Tool-call timeout budget, enforced by `dsh-tool-call-timeout-policy`; covers the complete queued open/query/close lifecycle and is not model-configurable. |
 
 ## Model Experience
 

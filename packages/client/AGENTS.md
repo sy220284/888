@@ -52,7 +52,7 @@ Non-negotiables across the layers:
 - **Business data lives in the object layer, never a store.** Entry-declared stores carry shared viewing/interaction state (selection, drafts, panel widths); sessions, frames, and connections stay in the object layer.
 - **rpcId is strictly bidirectional**: the initiator mints, the responder echoes; business signatures see only `RpcRequest<P>`, minting stays in the carrier layer ([layering and RPC protocol note](../../.agents/notes/implemented/architecture/2026-07-19-gui-layering-and-rpc-protocol.md)).
 - **Notifier publication discipline**: `notifyNow` is only the direct echo of a user gesture; structural updates use microtask-batched `markDirty`, while visible streaming chunks use cumulative `markFrameDirty`. See `runtime/src/client/sessions/notifier.ts`.
-- **The web layer is pure presentation.** Nothing that is "how to draw" (tool-card views, queue states) enters the session log; the host computes such data per frame or pushes it live, and replay recomputes it — falling back to the generic form when it can't. A new *model-visible* input still requires a session event (repo-wide rule).
+- **The web layer is pure presentation.** Nothing that is "how to draw" (tool-card views, queue states) enters the session log; the host computes such data per frame or pushes it live, and replay recomputes it — falling back to the generic form when it can't. A new _model-visible_ input still requires a session event (repo-wide rule).
 
 ## Dependency declaration
 
@@ -84,13 +84,13 @@ A dynamic browser half either carries a module privately or requests the shared 
 
 Three declarations read like dependency edges and none is interchangeable: Cordis service `inject`, module-graph `external`, and `dsh.client.inject` — the informational package-name edges of the [new-package checklist](#new-plugin-package-checklist).
 
-| | Cordis service `inject` | module graph `external` |
-|---|---|---|
-| Unit | service name | module specifier |
-| Timing | runtime; the fiber waits | materialization; the `require` handed to a factory is synchronous and cannot wait |
-| Unsatisfied | stays PENDING, with no timeout | throws on the spot |
-| Who may satisfy it | any plugin providing that service, replaceable | the single module identity, not replaceable |
-| Cycles | allowed | rejected |
+|                    | Cordis service `inject`                        | module graph `external`                                                           |
+| ------------------ | ---------------------------------------------- | --------------------------------------------------------------------------------- |
+| Unit               | service name                                   | module specifier                                                                  |
+| Timing             | runtime; the fiber waits                       | materialization; the `require` handed to a factory is synchronous and cannot wait |
+| Unsatisfied        | stays PENDING, with no timeout                 | throws on the spot                                                                |
+| Who may satisfy it | any plugin providing that service, replaceable | the single module identity, not replaceable                                       |
+| Cycles             | allowed                                        | rejected                                                                          |
 
 The seam is `loader.internal = modules`: cordis reaches plugin code through `EntryTree.import`, so every module request must be satisfiable before cordis can order activation above it. The modules node half emits rows in topological order, and `ClientModuleSystem.import`/`prefetch` recursively registers dynamic provider factories before their consumers materialize. This module order is independent from Cordis activation: a provider that injects services can register first and activate last.
 
@@ -135,7 +135,7 @@ Bringing up a new `packages/client/<name>` plugin package (ui-workspace is a com
 
 1. **Package skeleton**: `package.json` (`@deepseek-ai/dsh-client-<name>`, exports `.`/`./invariant`/`./client`/`./src/*`/`./package.json`, `dsh.client` manifest, `files` list), `tsconfig.json` (extends `tsconfig.base.client.json`, one `references` entry per workspace dependency plus `runtime-diagnostics/invariants`), `tsdown.config.ts` (`clientBundle(id, ['lib/types/index.js', 'lib/types/invariant.js'])`), `src/index.ts` (empty node-half apply), `src/invariant.ts` (companion with a real reason), `src/css-modules.d.ts` when using CSS Modules, `README.md` with the Model Experience section.
 2. **Three registration surfaces, all required** (missing any one fails at a different, later point): the `tsconfig.client.json` aggregate `references` entry; a `dsh.client` row in `packages/bundle/web-app/cordis.patch.yml`; a `packages/bundle/web-app/package.json` dependency (profile boots resolve bare row names through the healed `$DSH_HOME/profiles/node_modules` fallback, which mirrors the app's and each bundle's declared dependencies — a row whose package no manifest declares fails to import). `pnpm-workspace.yaml` already globs `packages/*/*`.
-3. **dsh.client manifest semantics**: `platform: 'web'` always, and the declaration requires a `./client` export (the scan throws without one); `immediately: true` only for stage-one-prefetch infrastructure rows. `inject` lists package-name dependency edges — they are **informational only** (preflight display, HMR diffing); they do not sequence entry activation or apply order. Activation order is Cordis fiber inject waiting on *services*, nothing else. A non-baseline `external` request sequences its dynamic supplier ahead of the consumer — see [shared modules](#shared-modules-and-the-module-graph).
+3. **dsh.client manifest semantics**: `platform: 'web'` always, and the declaration requires a `./client` export (the scan throws without one); `immediately: true` only for stage-one-prefetch infrastructure rows. `inject` lists package-name dependency edges — they are **informational only** (preflight display, HMR diffing); they do not sequence entry activation or apply order. Activation order is Cordis fiber inject waiting on _services_, nothing else. A non-baseline `external` request sequences its dynamic supplier ahead of the consumer — see [shared modules](#shared-modules-and-the-module-graph).
 4. **Registering into another package's slot**: apply order is unconstrained, and a business service is not a declaration barrier. Use `ctx.slots.inject(name, () => ctx.slots.register(...))`; it waits on the actual declaration, removes the contribution when that declaration collapses, reruns after redeclaration, and leaves with the caller's plugin fiber. Return a generator yielding each registration when several contributions must install and roll back atomically. A bare `slots.register` into an undeclared slot remains an error; keep service edges only for services the contribution actually reads.
 5. Rebuild the bundle (`pnpm --filter <pkg> bundle`) before probing a live `dsh web` server — the registry serves `lib/client.js`, not sources.
 6. **Declaration decisions**, each settled by [dependency declaration](#dependency-declaration) and [shared modules](#shared-modules-and-the-module-graph): does the package ship a `./client` export; which non-baseline value imports require `dsh.client.external`; which dynamic value dependencies are peer plus dev; which static compile inputs are dev-only; and whether `files` covers every relative runtime import and emitted asset.

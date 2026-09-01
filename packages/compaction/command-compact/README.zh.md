@@ -6,23 +6,23 @@
 
 ## 命令约定
 
-| 输入 | 结果 |
-|---|---|
-| `/compact` | 即使未达到自动压力，也摘要一段有效、平衡的较早范围；独立标记对 flush 后，报告被替换的历史项数量与估算 token 数。 |
-| `/compact`，但没有可压缩历史 | `No compactable history yet.`：不会写入标记，也不会变更 surface。 |
-| `/compact <anything>` | `Usage: /compact (no arguments)`：该命令不接受参数，也不会调用压缩后端。 |
+| 输入                         | 结果                                                                                                             |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `/compact`                   | 即使未达到自动压力，也摘要一段有效、平衡的较早范围；独立标记对 flush 后，报告被替换的历史项数量与估算 token 数。 |
+| `/compact`，但没有可压缩历史 | `No compactable history yet.`：不会写入标记，也不会变更 surface。                                                |
+| `/compact <anything>`        | `Usage: /compact (no arguments)`：该命令不接受参数，也不会调用压缩后端。                                         |
 
 该命令与后端无关，只依赖 `compactNow(agent, signal)`。调用该命令的 agent（智能体）就是操作的确切目标，发起分发的 UI 会通过 seam 转发取消信号。每次完成的调用都会记录执行器所属的纯日志事件对 `command/run` / `command/done`；两者都不进入模型历史。成功时，`command/done.sourceEventSeq` 会指明该事务的 `compaction/summary` 事件，让呈现层无须解析结果文本或假定两行相邻，即可将命令生命周期归并到对应检查点中。
 
 预期的 `ManualCompactionError` 代码会成为稳定的直接错误：
 
-| 代码 | 直接结果 |
-|---|---|
-| `busy` | `Compaction is unavailable because this process has an active compaction, or the agent is not idle.` |
-| `changed` | `The history selected for compaction changed before it could be replaced. The conversation is unchanged; the attempt is recorded in the session log.` |
-| `summary` | `Compaction could not produce a useful summary. The conversation is unchanged; the attempt is recorded in the session log.` |
-| `commit` | `Compaction did not finish cleanly; some session history may have changed. Inspect the current session state before retrying.` |
-| `persistence` | `Compaction finished, but the session could not be saved.` |
+| 代码          | 直接结果                                                                                                                                              |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `busy`        | `Compaction is unavailable because this process has an active compaction, or the agent is not idle.`                                                  |
+| `changed`     | `The history selected for compaction changed before it could be replaced. The conversation is unchanged; the attempt is recorded in the session log.` |
+| `summary`     | `Compaction could not produce a useful summary. The conversation is unchanged; the attempt is recorded in the session log.`                           |
+| `commit`      | `Compaction did not finish cleanly; some session history may have changed. Inspect the current session state before retrying.`                        |
+| `persistence` | `Compaction finished, but the session could not be saved.`                                                                                            |
 
 busy 结果有意限定在进程范围内：活动的未匹配标记会阻塞，而早于最新 `session/end-seed` 的标记已陈旧，不会阻塞。意外实现故障会拒绝分发。取消仍具有最终决定权；后端会完成必需的闭合／flush 清理，命令内部以 `Compaction cancelled.` 结算，而命令执行器会因取消错误停止等待。插件处置会先注销 `/compact`，再等待所有已开始的处理器结算，因此根级 teardown 不会越过已中止命令的闭合或 flush 边界。
 
@@ -34,11 +34,11 @@ busy 结果有意限定在进程范围内：活动的未匹配标记会阻塞，
 
 ```yaml
 - id: commands
-  name: '@deepseek-ai/dsh-commands'
+  name: "@deepseek-ai/dsh-commands"
 - id: compaction-basic
-  name: '@deepseek-ai/dsh-compaction-basic'
+  name: "@deepseek-ai/dsh-compaction-basic"
 - id: command-compact
-  name: '@deepseek-ai/dsh-command-compact'
+  name: "@deepseek-ai/dsh-command-compact"
 ```
 
 随附 `dsh` 基础配置将它挂载在 `compaction-basic` 旁，Web 客户端提供命令适配器。未组合命令适配器的自动化接口只保留自动压缩。

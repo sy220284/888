@@ -34,8 +34,7 @@
 
 ```yaml
 # Local execution
-- name: '@deepseek-ai/dsh-bash-local'
-
+- name: "@deepseek-ai/dsh-bash-local"
 # Replace this row with another package that provides the same service.
 ```
 
@@ -61,29 +60,29 @@
 
 ```ts ignore-check
 // packages/my-cap/my-cap/src/index.ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    myCap: MyCapService
+    myCap: MyCapService;
   }
 }
 
 export abstract class MyCapService extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'myCap')
+    super(ctx, "myCap");
   }
 
   /** Execute the capability. */
-  abstract execute(request: MyCapRequest): Promise<MyCapResult>
+  abstract execute(request: MyCapRequest): Promise<MyCapResult>;
 }
 
 export interface MyCapRequest {
-  input: string
+  input: string;
 }
 
 export interface MyCapResult {
-  output: string
+  output: string;
 }
 ```
 
@@ -91,20 +90,20 @@ export interface MyCapResult {
 
 ```ts ignore-check
 // packages/my-cap/my-cap-local/src/index.ts
-import type { Context } from '@deepseek-ai/cordis'
-import { MyCapService, type MyCapRequest, type MyCapResult } from '@deepseek-ai/dsh-my-cap'
+import type { Context } from "@deepseek-ai/cordis";
+import { MyCapService, type MyCapRequest, type MyCapResult } from "@deepseek-ai/dsh-my-cap";
 
 class MyCapLocal extends MyCapService {
   async execute(request: MyCapRequest): Promise<MyCapResult> {
     // Local provider behavior.
-    return { output: request.input.toUpperCase() }
+    return { output: request.input.toUpperCase() };
   }
 }
 
-export const name = 'my-cap-local'
+export const name = "my-cap-local";
 
 export function apply(ctx: Context) {
-  ctx.plugin(MyCapLocal)
+  ctx.plugin(MyCapLocal);
 }
 ```
 
@@ -112,36 +111,38 @@ export function apply(ctx: Context) {
 
 ```ts ignore-check
 // packages/my-cap/tool-my-cap/src/index.ts
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
+import type { Context } from "@deepseek-ai/cordis";
+import { defineTool } from "@deepseek-ai/dsh-tools";
 
-export const name = 'tool-my-cap'
-export const inject = ['tools', 'myCap']
+export const name = "tool-my-cap";
+export const inject = ["tools", "myCap"];
 
 export function apply(ctx: Context) {
-  ctx.tools.register(defineTool({
-    name: 'my_cap',
-    description: 'Execute my capability.',
-    parameters: {
-      input: { type: 'string', required: true },
-    },
-    output: {
-      schema: { type: 'string' },
-      render: (_args, value) => [{ type: 'text', text: value }],
-    },
-    async execute(args) {
-      const result = await ctx.myCap.execute({ input: args.input })
-      return result.output
-    },
-  }))
+  ctx.tools.register(
+    defineTool({
+      name: "my_cap",
+      description: "Execute my capability.",
+      parameters: {
+        input: { type: "string", required: true },
+      },
+      output: {
+        schema: { type: "string" },
+        render: (_args, value) => [{ type: "text", text: value }],
+      },
+      async execute(args) {
+        const result = await ctx.myCap.execute({ input: args.input });
+        return result.output;
+      },
+    }),
+  );
 }
 ```
 
 ### 在 cordis.yml 中组合
 
 ```yaml
-- name: '@deepseek-ai/dsh-my-cap-local'
-- name: '@deepseek-ai/dsh-tool-my-cap'
+- name: "@deepseek-ai/dsh-my-cap-local"
+- name: "@deepseek-ai/dsh-tool-my-cap"
 ```
 
 ## 设计要点

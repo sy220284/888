@@ -12,7 +12,7 @@
 
 ```yaml
 - id: llm
-  name: '@deepseek-ai/dsh-llm-pi-ai'
+  name: "@deepseek-ai/dsh-llm-pi-ai"
   config:
     providers:
       # Catalog route: endpoint, protocol, and models all come from pi-ai.
@@ -21,8 +21,8 @@
         baseURL: https://proxy.example.com:8443
         reasoning: high
         requestImagePixelBudget: 4194304 # total pixels; 2048 by 2048 default
-        requestImageMaxBytes: 1048576    # raw bytes before base64 expansion
-        maxRequestImageBytes: 20971520   # accumulated base64 payload
+        requestImageMaxBytes: 1048576 # raw bytes before base64 expansion
+        maxRequestImageBytes: 20971520 # accumulated base64 payload
         retryPolicy:
           mode: normal
           maxRetries: 3
@@ -106,7 +106,6 @@ pi-ai 依据提供方 id 与 baseURL 决定每个请求的形状：系统提示�
 `[text]` 是「尚未声明」，而不是对端点的猜测——这也是为什么这里的回退值取保守值，而两个容量回退值只是取一个说得过去的值。这里没有任何环节会去询问网关实际接受什么，而两种猜错的代价并不对等：模态中不含图片时，Harness 会在图片被附加之前就拒绝，因此少声明的代价是一次点名该模型的拒绝；而多声明会接纳一张图片、再由提供方在轮次中途拒绝——此时消息已经持久化，会话便会不断重复一个不可能成功的请求。
 
 路由完全无法服务时解析仍会失败得响亮，并点名出问题的路由与模型：catalog 未提供的路由需要 `api`、`baseURL`，以及一个由唯一标识的模型组成的非空 `models` 列表。该解析在分节 schema 内部运行，因此无法服务的 profile 会在**写入之处**被拒绝——`settings.mutate` 以 `settings-rejected` 点名路由与模型——而不是先存下来、再悄悄让该 namespace 下每条路由失效。对于已经存下的、在此失败的分节，settings seam 会保留该 namespace 上一份可用值，因此这不会把部署卡死。`api` 接受 `supportedProtocols()` 中的协议，且仅在 catalog 无法提供协议时才需要：catalog 中不存在的模型会继承其同门模型一致同意的协议，因此向单协议 catalog 路由添加模型无需重述任何内容。
-
 
 `baseURL` 设定该路由下每个模型的端点，因此仍支持 `https://proxy.example.com:8443` 等私有 proxy；省略它的 catalog 路由会保留每个 catalog 模型自己的端点。在 catalog 路由上点名 `api` 会把整条路由改指到该协议，这正是部署把某个提供方在 Responses 与 Chat Completions 之间迁移的方式。
 

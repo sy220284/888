@@ -37,6 +37,7 @@
      ```sh
      rm ~/dsh-code-review-outputs/2026-07-16T02-00-00Z.{diff,SKILL.md,manifest.json}
      ```
+
    - **留待成批处理。** 如果更新很小，可以把候选版本留待与后续版本合并。源 skill 检查仍然适用；如果 `master` 先发生变化，请重新运行分析，或手动 rebase 并重新评审 diff。
    - **提升。** 在仓库的干净 `master` checkout 中运行提升辅助工具。它会刷新 `master`、验证当前 skill 与记录的源 blob 一致、应用保存的 diff，并创建一份 draft PR，其正文列出原始反馈的 URL 或 ID、已落地的 commit 范围、发起这次更改的运行、检查以及操作员编辑。如果 skill 已发生漂移，它会停止而不是覆盖更新后的指导；操作员仍需在 GitHub 上评审 PR，并选择合并或关闭。
 

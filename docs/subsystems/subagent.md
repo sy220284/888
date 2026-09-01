@@ -25,10 +25,10 @@ A provider advertises its **start-time** features on a static descriptor the ser
  * to `maxDepth`; the other names match.
  */
 interface SubagentCapabilities {
-  readonly outputSchema: boolean
-  readonly depthLimit: boolean
-  readonly toolFilter: boolean
-  readonly persona: boolean
+  readonly outputSchema: boolean;
+  readonly depthLimit: boolean;
+  readonly toolFilter: boolean;
+  readonly persona: boolean;
 }
 ```
 
@@ -46,15 +46,15 @@ The tool layer builds this request from the model input and its own config; the 
  */
 interface SubagentStartRequest {
   /** Optional short display label persisted with a session-backed child. */
-  readonly label?: string
+  readonly label?: string;
   /** Content delivered as the child's user message. */
-  readonly prompt: ContentBlock[]
+  readonly prompt: ContentBlock[];
   /**
    * The spawning agent. In-process providers derive workspace, lineage, and
    * delegation depth from its durable session state. ACP reads only its cwd,
    * and only when no deployment `cwd` override is configured.
    */
-  readonly parent: Agent
+  readonly parent: Agent;
   /**
    * Cancellation signal from the spawning context (the tool's `exec.signal`).
    * This is the canonical cancellation channel both before and after startup:
@@ -62,21 +62,21 @@ interface SubagentStartRequest {
    * fires before the run is published, and cancels the published run's
    * remaining turn work when it fires afterward.
    */
-  readonly signal: AbortSignal
-  readonly agentOptions?: AgentOptions
+  readonly signal: AbortSignal;
+  readonly agentOptions?: AgentOptions;
   /**
    * Object-rooted JSON Schema within `assertObjectJsonSchema`'s enforced subset. Start rejects
    * unsupported schemas or providers without the capability. Data must be plain host-realm JSON;
    * a successful child returns the matching value as {@link SubagentResult.structured}.
    */
-  readonly outputSchema?: ObjectJsonSchema
+  readonly outputSchema?: ObjectJsonSchema;
   /**
    * Optional absolute delegation-depth cap for the child being started: its
    * computed depth must be less than or equal to this non-negative safe
    * integer. Requires {@link SubagentCapabilities.depthLimit}; rejected at
    * start otherwise.
    */
-  readonly maxDepth?: number
+  readonly maxDepth?: number;
   /**
    * Optional child tool scoping. Requires {@link SubagentCapabilities.toolFilter};
    * rejected at start otherwise. In-process backends apply it as a scoped
@@ -84,7 +84,7 @@ interface SubagentStartRequest {
    * from the child's prompt AND refuse to execute (one visibility), with loud
    * unknown-name validation.
    */
-  readonly toolFilter?: ToolRestriction
+  readonly toolFilter?: ToolRestriction;
   /**
    * Optional per-child persona. Requires {@link SubagentCapabilities.persona};
    * rejected at start otherwise. In-process backends register it as a scoped
@@ -92,7 +92,7 @@ interface SubagentStartRequest {
    * persona for this child alone — same template semantics as the deployment
    * persona (strict `{{…}}` interpolation against the registered variables).
    */
-  readonly persona?: string
+  readonly persona?: string;
 }
 ```
 
@@ -107,7 +107,7 @@ The caller-facing request does not carry catalog format details or continuation 
  */
 interface ResolvedSubagentStartRequest extends SubagentStartRequest {
   /** Detached descriptor a session-backed provider persists in the child log. */
-  readonly descriptor: SubagentDescriptorData
+  readonly descriptor: SubagentDescriptorData;
 }
 ```
 
@@ -127,11 +127,11 @@ persisted Session
 
 `SubagentRuntime.followup()` is the sole continuation-message operation, and routing depends only on Activation residency:
 
-| Activation state | `followup` |
-|---|---|
-| `running` | enqueue in the same Activation |
-| `waiting` | wake the same Activation |
-| no Activation | cold-resume a new Activation |
+| Activation state | `followup`                     |
+| ---------------- | ------------------------------ |
+| `running`        | enqueue in the same Activation |
+| `waiting`        | wake the same Activation       |
+| no Activation    | cold-resume a new Activation   |
 
 `running` means the Agent has an active admission or turn, or waking inbox work; `waiting` means it is quiescent but still owns at least one child Activation that has not completed disposal; `settled` means quiescent with every owned child disposed, at which point the manager disposes the [`AgentHandle`](core.md#creation-and-ownership) and removes the Activation. The manager derives these internal conditions from Agent quiescence and the owned-child set rather than maintaining a second execution state machine.
 
@@ -150,8 +150,7 @@ For both operations the caller signal owns lookup, materialization, and admissio
  * the exact live Agent object whose recorded lineage must contain the caller.
  */
 type SubagentInterruptAuthority =
-  | { readonly kind: 'user'; readonly parentSessionId: SessionId }
-  | { readonly kind: 'ancestor'; readonly agent: Agent }
+  { readonly kind: "user"; readonly parentSessionId: SessionId } | { readonly kind: "ancestor"; readonly agent: Agent };
 ```
 
 Every Activation owns its `AgentHandle` and an `ownedChildren: Set<SessionId>`; because one Session has at most one live Activation, the child Session id identifies the live child without another runtime-incarnation reference. Starting a child or submitting parent-originated work registers the child in a continuation-managed parent's set before the child can run, and that parent cannot settle while the set is non-empty. A top-level or other non-continuation Agent has no Activation and stays outside the waiting graph. Child release happens only after the child Agent is quiescent, every child of that child is disposed, the best-effort final session flush settles, and the child's `AgentHandle` completes disposal.
@@ -161,11 +160,11 @@ Final settlement awaits `ctx.sessions.flush(session)` but ignores its participat
 ```ts type-equiv
 /** Attribution for a model coordinator's follow-up to one of its children. */
 interface CoordinatorMessageSource {
-  readonly kind: 'coordinator'
+  readonly kind: "coordinator";
   /** A message another agent addressed to this one (`relay` context form). */
-  readonly form: 'relay'
+  readonly form: "relay";
   /** Session id of the agent whose tool call produced the follow-up. */
-  readonly senderSessionId: SessionId
+  readonly senderSessionId: SessionId;
 }
 ```
 
@@ -173,9 +172,9 @@ interface CoordinatorMessageSource {
 /** Options for following up with one continuable child. */
 interface SubagentFollowupOptions {
   /** Durable attribution retained on the delivered message; it grants no authority. */
-  readonly source: MessageSource
+  readonly source: MessageSource;
   /** Caller cancellation, owning the operation only until inbox acceptance. */
-  readonly signal: AbortSignal
+  readonly signal: AbortSignal;
 }
 ```
 
@@ -183,9 +182,9 @@ interface SubagentFollowupOptions {
 /** Identities returned once a continuable child accepted its initial prompt. */
 interface ContinuableStart {
   /** The durable child session id, stable across activations. */
-  readonly childId: SessionId
+  readonly childId: SessionId;
   /** The accepted initial prompt's inbox message id. */
-  readonly messageId: MessageId
+  readonly messageId: MessageId;
 }
 ```
 
@@ -196,17 +195,17 @@ An optional continuable-child setup contribution can install scope-local capabil
 ```ts type-equiv
 /** Durable attribution for a continuable child's explicit parent report. */
 interface SubagentReportMessageSource {
-  readonly kind: 'subagent-report'
+  readonly kind: "subagent-report";
   /** A message another agent addressed to this one (`relay` context form). */
-  readonly form: 'relay'
+  readonly form: "relay";
   /** Session id of the reporting child. */
-  readonly senderSessionId: SessionId
+  readonly senderSessionId: SessionId;
 }
 ```
 
 ```ts type-equiv
 /** Deployment scheduling policy for accepted child reports. */
-type SubagentReportDelivery = 'quiet' | 'next-step'
+type SubagentReportDelivery = "quiet" | "next-step";
 ```
 
 Reporting is the child's own choice, so the manager keeps a separate account of its own: when a resident Activation settles, it delivers one notice to the child's durable direct parent describing how that epoch ended and carrying its final assistant content. That delivery is unconditional for every child whose id a caller received, happens before the ownership release that would let the parent be judged settled, and reaches a resident parent through the same waking-admission accounting as a report. A parent whose own lineage is already tearing down receives it without a wake, because waking a quiescent Agent starts a turn rather than queueing work. Its provenance is a distinct kind so a transcript never presents a runtime account as something the child wrote.
@@ -220,13 +219,13 @@ Reporting is the child's own choice, so the manager keeps a separate account of 
  * transcript that merged them would credit the child with words it never wrote.
  */
 interface SubagentSettledMessageSource {
-  readonly kind: 'subagent-settled'
+  readonly kind: "subagent-settled";
   /** A runtime account shown without expanding the row (`notice` context form). */
-  readonly form: 'notice'
+  readonly form: "notice";
   /** One-line account of how the child ended. */
-  readonly summary: string
+  readonly summary: string;
   /** Session id of the child that settled. */
-  readonly senderSessionId: SessionId
+  readonly senderSessionId: SessionId;
 }
 ```
 
@@ -234,9 +233,9 @@ interface SubagentSettledMessageSource {
 /** Options for one continuable child's report to its direct parent. */
 interface SubagentReportOptions {
   /** Already-resolved parent scheduling policy. */
-  readonly delivery: SubagentReportDelivery
+  readonly delivery: SubagentReportDelivery;
   /** Caller cancellation, owning authorization and admission until acceptance. */
-  readonly signal: AbortSignal
+  readonly signal: AbortSignal;
 }
 ```
 
@@ -252,14 +251,14 @@ The provider participates only in preparing the initial creation spec, where `sp
  */
 interface ContinuableCreateRequest {
   /** The reserved durable child session id, for provider diagnostics. */
-  readonly sessionId: SessionId
+  readonly sessionId: SessionId;
   /** The delegating parent agent whose history a seeding provider reads. */
-  readonly parent: Agent
+  readonly parent: Agent;
   /**
    * Caller cancellation, which owns preparation only until the manager accepts
    * the initial prompt into the child's inbox.
    */
-  readonly signal: AbortSignal
+  readonly signal: AbortSignal;
 }
 ```
 
@@ -276,7 +275,7 @@ interface ContinuableCreateSpec {
    * or absent for a fresh child. Same durable contract as
    * `CreateAgentOptions.seed`: contiguous from seq 0, lossless JSON, balanced.
    */
-  readonly seed?: readonly SessionEvent[]
+  readonly seed?: readonly SessionEvent[];
 }
 ```
 
@@ -298,12 +297,11 @@ A local one-shot provider appends the descriptor inside the child's initial turn
  */
 type SubagentDescendantListEntry = SubagentListEntry & {
   /** Durable direct parent of this candidate in the enumerated tree. */
-  readonly parentId: SessionId
+  readonly parentId: SessionId;
   /** Edge distance from the requested root; direct children are `1`. */
-  readonly depth: number
-}
+  readonly depth: number;
+};
 ```
-
 
 ## The terminal result: `SubagentResult`
 
@@ -320,7 +318,7 @@ interface SubagentResult {
    * are skipped. Without a non-empty message, the output is its accumulated
    * assistant text stream, or `[]` when the child produced neither.
    */
-  readonly output: ContentBlock[]
+  readonly output: ContentBlock[];
   /**
    * The structured result after a requested `outputSchema` was successfully
    * satisfied. Requesting a schema does not guarantee presence: a provider can
@@ -329,16 +327,16 @@ interface SubagentResult {
    * output schema by the provider; `unknown` here because the seam is
    * schema-agnostic.
    */
-  readonly structured?: unknown
+  readonly structured?: unknown;
   /**
    * Provider-authored, non-assistant failure detail for a non-`completed`
    * result. Providers keep this text free of tool inputs, file contents,
    * environment values, credentials, and raw protocol payloads, and limit it
    * to 4096 UTF-8 bytes. Consumers present it separately from {@link output}.
    */
-  readonly diagnostic?: string
+  readonly diagnostic?: string;
   /** Why the run ended. A non-`completed` reason means `output` may be partial. */
-  readonly stopReason: SubagentStopReason
+  readonly stopReason: SubagentStopReason;
 }
 ```
 
@@ -353,15 +351,15 @@ interface SubagentResult {
  */
 interface SubagentStopReasonMap {
   /** The child finished its turn normally. */
-  completed: 'completed'
+  completed: "completed";
   /** Cancelled through the request signal or disposal. */
-  aborted: 'aborted'
+  aborted: "aborted";
   /** Model or transport failure. */
-  error: 'error'
+  error: "error";
   /** The child hit its token ceiling before finishing. */
-  'max-tokens': 'max-tokens'
+  "max-tokens": "max-tokens";
   /** The child declined the task. */
-  refusal: 'refusal'
+  refusal: "refusal";
 }
 ```
 
@@ -385,13 +383,13 @@ interface SubagentRun {
    * session id, whose `parentSession` records `request.parent.session.id`; a
    * remote provider mints an id unique in the parent namespace.
    */
-  readonly id: SessionId
+  readonly id: SessionId;
   /**
    * The exact published in-process child, or `undefined` for a remote run.
    * When present, its id is {@link id}; the provider retains no ownership
    * implication beyond the run's ordinary {@link dispose} contract.
    */
-  readonly localAgent: Agent | undefined
+  readonly localAgent: Agent | undefined;
   /**
    * Resolves with the child's terminal {@link SubagentResult} when the run
    * settles. Does NOT reject on a child-level failure — a model/transport
@@ -399,12 +397,12 @@ interface SubagentRun {
    * `isError` tool result. Rejects on an infrastructure fault the seam cannot
    * represent as a stop reason.
    */
-  readonly result: Promise<SubagentResult>
+  readonly result: Promise<SubagentResult>;
   /**
    * Cancel remaining work, reach child quiescence, and release resources.
    * Idempotent.
    */
-  dispose(): Promise<void>
+  dispose(): Promise<void>;
 }
 ```
 
@@ -425,15 +423,15 @@ Each provider is a named child-agent transport, and multiple providers may coexi
  */
 interface SubagentProvider {
   /** Unique registry name (e.g. `spawn`, `fork`, `acp`). */
-  readonly name: string
+  readonly name: string;
   /** The start-time features this provider supports (see {@link SubagentCapabilities}). */
-  readonly capabilities: SubagentCapabilities
+  readonly capabilities: SubagentCapabilities;
   /**
    * Whether the child sees the parent's completed-turn prefix. This is descriptive, not a
    * service-validated start capability: the model-facing tool derives truthful wording from it.
    * It says nothing about tool registration, injected services, or authority inheritance.
    */
-  readonly inheritsParentContext: boolean
+  readonly inheritsParentContext: boolean;
   /**
    * Establish a ONE-SHOT child and return its handle after publication.
    * The service has already validated that every requested start-time
@@ -445,7 +443,7 @@ interface SubagentProvider {
    * the returned run. Distinct starts may overlap; cancellation, failure,
    * result settlement, and disposal remain independent for each run.
    */
-  start(request: ResolvedSubagentStartRequest): Promise<SubagentRun>
+  start(request: ResolvedSubagentStartRequest): Promise<SubagentRun>;
   /**
    * OPTIONAL (continuable-creation capability): contribute the detached
    * creation inputs that distinguish this provider's continuable children —
@@ -461,7 +459,7 @@ interface SubagentProvider {
    * Distinct preparations may overlap; each follows its own signal and returns
    * data belonging only to `request.sessionId`.
    */
-  prepareContinuable?(request: ContinuableCreateRequest): Promise<ContinuableCreateSpec>
+  prepareContinuable?(request: ContinuableCreateRequest): Promise<ContinuableCreateSpec>;
 }
 ```
 
@@ -472,7 +470,7 @@ Provider `start()` fulfills with a published run. The service mints a unique `ru
 The spawn and fork backends create an ordinary one-shot agent through `parent.ctx`, pass cancellation into core creation, and dispose through `AgentHandle`; a continuable child is instead created by the continuation manager through its own activation-owner scope. Provider removal blocks new starts without revoking accepted runs. Each child gets a new flat scope rather than inheriting parent registrations. Depth and fork seeding reuse existing agent and session vocabulary:
 
 - **Delegation depth** is durable `SessionHeader.delegationDepth` plus the merge-extensible runtime field `AgentOptions.subagentDepth`; absence means top-level depth zero, and the greater present value is authoritative. The seam owns both fields — the loop neither sets nor reads them — so an in-process child persists parent depth + 1, cold resume cannot lower it, and every start rejects a derived depth outside the safe-integer domain or above a defined absolute `request.maxDepth` cap.
-- **Fork seeding** uses [`CreateAgentOptions.seed`](core.md#creation-and-ownership) (a `SessionEvent[]` prefix threaded through `AgentLoop.createAgent` → `ctx.sessions.prepare({ seed })`, the same primitive `ctx.agents.resume()` uses). The fork backend passes a *balanced completed-turn prefix* of the parent's log — the parent's events up to and including its last `turn/end` — so the seed is contiguous-from-0 and the [invariants](../../packages/runtime-diagnostics/invariants) replay accepts it (the in-flight, unbalanced turn is excluded).
+- **Fork seeding** uses [`CreateAgentOptions.seed`](core.md#creation-and-ownership) (a `SessionEvent[]` prefix threaded through `AgentLoop.createAgent` → `ctx.sessions.prepare({ seed })`, the same primitive `ctx.agents.resume()` uses). The fork backend passes a _balanced completed-turn prefix_ of the parent's log — the parent's events up to and including its last `turn/end` — so the seed is contiguous-from-0 and the [invariants](../../packages/runtime-diagnostics/invariants) replay accepts it (the in-flight, unbalanced turn is excluded).
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

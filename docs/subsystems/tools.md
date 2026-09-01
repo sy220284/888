@@ -14,11 +14,11 @@ A `ToolSchema` (the model-facing fields) plus a mandatory canonical output decla
 /** Tool-owned canonical output contract used after the body returns a JSON value. */
 interface ToolOutputDefinition {
   /** Raw supported JSON Schema enforced against every successful canonical value. */
-  readonly schema: JsonSchemaNode
+  readonly schema: JsonSchemaNode;
   /** Pure projection from validated arguments and value to Native/model content. */
-  render(args: unknown, value: JsonValue): ContentBlock[]
+  render(args: unknown, value: JsonValue): ContentBlock[];
   /** Pure replayable presentation projection, computed only for top-level calls. */
-  presentationMeta?(args: unknown, value: JsonValue): JsonValue
+  presentationMeta?(args: unknown, value: JsonValue): JsonValue;
 }
 ```
 
@@ -26,7 +26,7 @@ interface ToolOutputDefinition {
 /** A registered tool: its schema plus the execution function. */
 interface ToolDefinition extends ToolSchema {
   /** Mandatory canonical output declaration. */
-  readonly output: ToolOutputDefinition
+  readonly output: ToolOutputDefinition;
   /**
    * Run one accepted call and return only its canonical lossless-JSON value.
    * Async work must observe or forward `exec.signal` and settle only after its
@@ -37,7 +37,7 @@ interface ToolDefinition extends ToolSchema {
    * @param exec - execution identity, cancellation signal, and context deferral.
    * @returns the canonical value declared by `output.schema`.
    */
-  execute(args: unknown, exec: ToolRunContext): Promise<unknown>
+  execute(args: unknown, exec: ToolRunContext): Promise<unknown>;
   /**
    * Synchronous last-mile transform for model-facing content. The registry
    * snapshots this callback when execution starts and invokes it exactly once
@@ -49,7 +49,7 @@ interface ToolDefinition extends ToolSchema {
    * @param result - complete normalized outcome before materialization.
    * @returns replacement content, or `undefined` to preserve it.
    */
-  finalizeContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined
+  finalizeContent?(exec: Readonly<ToolExecution>, result: Readonly<ToolExecutionResult>): ContentBlock[] | undefined;
   /**
    * Cooperative tool-call timeout budget in milliseconds. Omit for no deadline.
    * Enforced by `@deepseek-ai/dsh-tool-call-timeout-policy` (a `tools/execute` wrapper); it
@@ -57,7 +57,7 @@ interface ToolDefinition extends ToolSchema {
    * parameters. Declaring it asserts this tool forwards `exec.signal` to a
    * cooperative implementation that can reach quiescence when the signal aborts.
    */
-  timeoutMs?: number
+  timeoutMs?: number;
   /**
    * Pure synchronous classifier for overlap with sibling tool calls. Only
    * `true` opts in; omission, exceptions, non-`true` returns, and invalid
@@ -71,7 +71,7 @@ interface ToolDefinition extends ToolSchema {
    * @param args - parsed arguments; `defineTool` validates before calling.
    * @returns Whether this call may join a parallel group.
    */
-  isConcurrencySafe?(args: unknown): boolean
+  isConcurrencySafe?(args: unknown): boolean;
   /**
    * Optional: how to present the PENDING state of one call in a UI, derived from
    * the call's `args` (parsed arguments, `unknown` — the tool validates/narrows
@@ -81,7 +81,7 @@ interface ToolDefinition extends ToolSchema {
    * call it during live streaming AND a session-log replay, so it must depend
    * only on `args`.
    */
-  presentCall?(args: unknown): ToolCallView | undefined
+  presentCall?(args: unknown): ToolCallView | undefined;
   /**
    * Optional: how to present the COMPLETED state, given the same `args` and the
    * durable result projection (`content`, failure state, and optional `meta`). Returns a
@@ -89,7 +89,7 @@ interface ToolDefinition extends ToolSchema {
    * pending title and render the raw result content. Pure and side-effect-free
    * for the same replay reason.
    */
-  presentResult?(args: unknown, result: ToolResult): ToolResultView | undefined
+  presentResult?(args: unknown, result: ToolResult): ToolResultView | undefined;
 }
 ```
 
@@ -112,12 +112,12 @@ type ValueSchemaSpec =
   | ArrayValueSchemaSpec
   | ObjectValueSchemaSpec
   | JsonValueSchemaSpec
-  | OneOfValueSchemaSpec
+  | OneOfValueSchemaSpec;
 ```
 
 ```ts type-equiv
 /** One implicit parameter-root property, optionally required. */
-type ParameterPropertySpec = ValueSchemaSpec & { required?: true }
+type ParameterPropertySpec = ValueSchemaSpec & { required?: true };
 ```
 
 ```ts type-equiv
@@ -126,9 +126,9 @@ type ParameterPropertySpec = ValueSchemaSpec & { required?: true }
  * requiredness remains a per-property `required: true` annotation.
  */
 type ParameterSchemaSpec = {
-  [key: string]: ParameterPropertySpec
-  [key: symbol]: never
-}
+  [key: string]: ParameterPropertySpec;
+  [key: symbol]: never;
+};
 ```
 
 `{ type: 'json' }` infers `JsonValue` and compiles to an annotation-only unconstrained raw schema. Output roots can be objects, arrays, scalars, or null. `InferValue<S>` honors literal constraints and object openness through 16 container levels, then falls back to `JsonValue` instead of exhausting TypeScript's type-instantiation stack. `InferArgs<P>` turns per-property requiredness into required and optional string keys:
@@ -138,12 +138,12 @@ type ParameterSchemaSpec = {
  * Infer the TypeScript value accepted by an author-facing value schema. Exact
  * inference is bounded to 16 container levels, then falls back to `JsonValue`.
  */
-type InferValue<S> = InferValueAt<S, []>
+type InferValue<S> = InferValueAt<S, []>;
 ```
 
 ```ts type-equiv
 /** Infer the TypeScript argument object for an implicit parameter schema. */
-type InferArgs<S> = InferProperties<S, []>
+type InferArgs<S> = InferProperties<S, []>;
 ```
 
 `defineTool({ name, description, parameters, output, execute, … })` ties parameter inference to `parameterSchemaSpecToJsonSchema()` and `validateArgs()`, and ties `execute`/`render`/`presentationMeta` to `InferValue<OutputSchema>`. Schema records contain only own enumerable string keys, and schema arrays are dense intrinsic arrays, so inference, compilation, and validation observe the same declaration. Inference stays exact through 16 container levels and then widens to `JsonValue`; runtime validation keeps walking the complete schema. `valueSchemaSpecToJsonSchema()` compiles output declarations through the same enforced raw subset. A parameter mismatch throws `ToolArgsError` (`INVALID_ARGS`); an invalid body or post-policy value throws `ToolOutputError` (`INVALID_TOOL_OUTPUT`). Both use the normal tool-error path. Raw JSON Schema remains open by default; unsupported keywords reject instead of being accepted without enforcement.
@@ -161,9 +161,9 @@ Registration is a trusted same-process contract. The registry borrows the typed 
  */
 interface ToolRestriction {
   /** Global tool names that stay visible; everything else is removed. */
-  readonly allow?: readonly string[]
+  readonly allow?: readonly string[];
   /** Global tool names removed from visibility. */
-  readonly deny?: readonly string[]
+  readonly deny?: readonly string[];
 }
 ```
 
@@ -173,7 +173,7 @@ interface ToolRestriction {
 
 ```ts type-equiv
 /** Opaque call identity that permits correlation without exposing mutable execution state. */
-type ToolExecutionToken = symbol & { readonly [toolExecutionTokenBrand]: true }
+type ToolExecutionToken = symbol & { readonly [toolExecutionTokenBrand]: true };
 ```
 
 ```ts type-equiv
@@ -183,17 +183,17 @@ type ToolExecutionToken = symbol & { readonly [toolExecutionTokenBrand]: true }
  * callers do not choose that token.
  */
 interface ToolExecutionInput {
-  readonly callId: CallId
+  readonly callId: CallId;
   /**
    * Root model-requested call owning this execution tree. Callers omit it for
    * a root execution; nested dispatchers propagate the enclosing value.
    */
-  readonly rootCallId?: CallId
-  readonly name: string
+  readonly rootCallId?: CallId;
+  readonly name: string;
   /** Losslessly JSON-serializable parsed arguments (tools validate their own schema). */
-  readonly arguments: unknown
+  readonly arguments: unknown;
   /** The agent on whose behalf the call runs (set by the agent loop). */
-  readonly agent?: Agent
+  readonly agent?: Agent;
   /**
    * Opaque token of the enclosing transport execution, when one exists. Code
    * Mode sets this on SDK sub-dispatches so commit-style observers can wait for
@@ -203,9 +203,9 @@ interface ToolExecutionInput {
    * execute a native tool name — a model-direct call (no parent) is denied as
    * `UNKNOWN_TOOL` before the policy pipeline. See {@link ToolRuntime.execute}.
    */
-  readonly parent?: ToolExecutionToken
+  readonly parent?: ToolExecutionToken;
   /** Required caller-owned cancellation for this invocation. */
-  readonly signal: AbortSignal
+  readonly signal: AbortSignal;
 }
 ```
 
@@ -227,7 +227,7 @@ interface ToolRunContext extends ToolExecution {
    * final result reaches the agent loop. Contexts retain their individual
    * source and metadata and are emitted in call order.
    */
-  deferContext(context: UserMessage): void
+  deferContext(context: UserMessage): void;
   /**
    * Mark a successful final result as terminal for the current agent turn.
    * The marker rides this execution's own result (`concludesTurn` exists only
@@ -236,7 +236,7 @@ interface ToolRunContext extends ToolExecution {
    * `additionalContexts`, so only an authoritative nested success can
    * conclude the enclosing run.
    */
-  concludeTurn(): void
+  concludeTurn(): void;
 }
 ```
 
@@ -247,9 +247,7 @@ The agent loop asks the registry for each pending call's execution mode and uses
  * Scheduling mode for one pending call. `parallel` may overlap with siblings;
  * `exclusive` runs alone and forms an ordering barrier.
  */
-type ToolExecutionMode =
-  | { kind: 'parallel' }
-  | { kind: 'exclusive' }
+type ToolExecutionMode = { kind: "parallel" } | { kind: "exclusive" };
 ```
 
 Code Mode's bridge additionally exposes each settled sub-dispatch to the `tools/code-dispatch-log` waterfall, which may change the durable event's copy of the content (the program's value and model-visible result remain untouched):
@@ -266,17 +264,17 @@ Code Mode's bridge additionally exposes each settled sub-dispatch to the `tools/
  */
 interface CodeDispatchLog {
   /** The outer `run_code` execution. */
-  readonly exec: ToolExecution
+  readonly exec: ToolExecution;
   /** The calling agent (the scope routing key and the spill owner), when the outer call has one. */
-  readonly agent?: Agent
+  readonly agent?: Agent;
   /** Deterministic sub-call id (`<parent>:code:<n>`). */
-  readonly subCallId: CallId
+  readonly subCallId: CallId;
   /** The dispatched sub-tool name. */
-  readonly name: string
+  readonly name: string;
   /** Whether the sub-call settled as an error. */
-  readonly isError: boolean
+  readonly isError: boolean;
   /** The sub-call's complete model-facing content (the settle event's default payload). */
-  readonly content: ContentBlock[]
+  readonly content: ContentBlock[];
 }
 ```
 
@@ -290,9 +288,9 @@ interface CodeDispatchLog {
  */
 interface ToolExecution extends ToolExecutionInput {
   /** Root model-requested call, resolved for every root and nested execution. */
-  readonly rootCallId: CallId
+  readonly rootCallId: CallId;
   /** Registry-assigned identity shared with nested calls only as their opaque `parent` token. */
-  readonly token: ToolExecutionToken
+  readonly token: ToolExecutionToken;
 }
 ```
 
@@ -302,9 +300,9 @@ interface ToolExecution extends ToolExecutionInput {
  * may replace the signal for its delegated lifetime, but it cannot remove it.
  * The registry fuses every replacement with the captured caller signal.
  */
-interface ToolDispatchExecution extends Omit<ToolExecution, 'signal'> {
+interface ToolDispatchExecution extends Omit<ToolExecution, "signal"> {
   /** Cancellation signal visible to the next wrapper or tool body. */
-  signal: AbortSignal
+  signal: AbortSignal;
 }
 ```
 
@@ -321,50 +319,50 @@ A `ToolGuard` is scope-aware final pre-dispatch policy. Its return type delibera
  * @param execution - the identity-protected call after extensible pre-execute policy completed.
  * @returns a final denial reason, or `undefined` to leave the call allowed.
  */
-type ToolGuard = (execution: Readonly<ToolExecution>) => string | undefined
+type ToolGuard = (execution: Readonly<ToolExecution>) => string | undefined;
 ```
 
 ```ts type-equiv
 /** Canonical failure detail; internal routing information remains optional. */
 interface ToolFailure {
   /** Human-readable failure message without the Native `Error: ` envelope. */
-  message: string
+  message: string;
   /** Internal error class/code used by policy and durable diagnostics. */
-  info?: ToolErrorInfo
+  info?: ToolErrorInfo;
 }
 ```
 
 ```ts type-equiv
 /** Successful canonical tool execution, including its Native/model projection. */
 interface ToolExecutionSuccess {
-  readonly isError: false
+  readonly isError: false;
   /** Execution-local canonical value; deliberately omitted from durable events. */
-  readonly value: JsonValue
-  readonly content: ContentBlock[]
-  readonly error?: never
-  readonly meta?: JsonValue
-  readonly additionalContexts?: UserMessage[]
+  readonly value: JsonValue;
+  readonly content: ContentBlock[];
+  readonly error?: never;
+  readonly meta?: JsonValue;
+  readonly additionalContexts?: UserMessage[];
   /** The agent loop stops after committing this successful result batch. */
-  readonly concludesTurn?: true
+  readonly concludesTurn?: true;
 }
 ```
 
 ```ts type-equiv
 /** Failed canonical tool execution; failures never carry a successful value. */
 interface ToolExecutionFailure {
-  readonly isError: true
-  readonly error: ToolFailure
-  readonly value?: never
-  readonly content: ContentBlock[]
-  readonly meta?: JsonValue
-  readonly additionalContexts?: UserMessage[]
-  readonly concludesTurn?: never
+  readonly isError: true;
+  readonly error: ToolFailure;
+  readonly value?: never;
+  readonly content: ContentBlock[];
+  readonly meta?: JsonValue;
+  readonly additionalContexts?: UserMessage[];
+  readonly concludesTurn?: never;
 }
 ```
 
 ```ts type-equiv
 /** The discriminated, execution-local outcome of one tool call. */
-type ToolExecutionResult = ToolExecutionSuccess | ToolExecutionFailure
+type ToolExecutionResult = ToolExecutionSuccess | ToolExecutionFailure;
 ```
 
 The result carries only the outcome. Call identity remains on the immutable `ToolExecution` that accompanies it through every hook and on the durable `tool/call` / `tool/result` session events, so wrappers cannot create a second, disagreeing identity. The canonical `value` is execution-local: the loop persists only `content`, `error`, and `meta`, while `tool/code-dispatch` stores the sub-call's rendered `content` and `isError` verbatim. Replay reproduces presentation but cannot reconstruct canonical intermediate values.
@@ -382,10 +380,7 @@ Each interception waterfall returns a typed **Decision** (the idiom shared with 
  * denies. Input rewriting is excluded because arguments are already logged and
  * presented.
  */
-type PreToolDecision =
-  | { kind: 'allow' }
-  | { kind: 'deny'; reason: string }
-  | { kind: 'ask'; reason?: string }
+type PreToolDecision = { kind: "allow" } | { kind: "deny"; reason: string } | { kind: "ask"; reason?: string };
 ```
 
 ```ts type-equiv
@@ -394,9 +389,9 @@ type PreToolDecision =
  * next request, or block by turning corrective feedback into an error result.
  */
 type PostToolDecision =
-  | { kind: 'accept'; content?: ContentBlock[]; value?: never; additionalContexts?: UserMessage[] }
-  | { kind: 'accept'; value: JsonValue; content?: never; additionalContexts?: UserMessage[] }
-  | { kind: 'block'; feedback: ContentBlock[]; additionalContexts?: UserMessage[] }
+  | { kind: "accept"; content?: ContentBlock[]; value?: never; additionalContexts?: UserMessage[] }
+  | { kind: "accept"; value: JsonValue; content?: never; additionalContexts?: UserMessage[] }
+  | { kind: "block"; feedback: ContentBlock[]; additionalContexts?: UserMessage[] };
 ```
 
 Call `next()` for the default or return a decision to short-circuit. Pre-policy may deny or ask; only `allowed-once` proceeds, while a non-grant, missing approval channel or service, or agent-less request becomes a denial. Guards may still impose a final denial. Arguments cannot be rewritten because history, audit, UI, and execution must agree.
@@ -409,12 +404,12 @@ Raw schemas from subagents, workflows, MCP, and dynamic registrations use the wi
 
 ```ts type-equiv
 /** Scalar JSON values supported by `enum` and `const`. */
-type JsonSchemaScalar = string | number | boolean | null
+type JsonSchemaScalar = string | number | boolean | null;
 ```
 
 ```ts type-equiv
 /** Single-type keywords accepted by the enforced subset. */
-type JsonSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'boolean' | 'null'
+type JsonSchemaType = "object" | "array" | "string" | "number" | "integer" | "boolean" | "null";
 ```
 
 ```ts type-equiv
@@ -425,35 +420,35 @@ type JsonSchemaType = 'object' | 'array' | 'string' | 'number' | 'integer' | 'bo
  */
 interface JsonSchemaNode {
   /** Omit with no constraints for any JSON value, or use `oneOf`. */
-  type?: JsonSchemaType
+  type?: JsonSchemaType;
   /** Exactly one branch must validate; at least two branches are required. */
-  oneOf?: JsonSchemaNode[]
+  oneOf?: JsonSchemaNode[];
   /** Nested property schemas (`type: 'object'` only). */
-  properties?: Record<string, JsonSchemaNode>
+  properties?: Record<string, JsonSchemaNode>;
   /** Required property names; each must appear in `properties`. */
-  required?: string[]
+  required?: string[];
   /** `false` rejects undeclared keys; absent/`true` follows JSON Schema's open default. */
-  additionalProperties?: boolean
+  additionalProperties?: boolean;
   /** Item schema (`type: 'array'` only); absent accepts any JSON item. */
-  items?: JsonSchemaNode
+  items?: JsonSchemaNode;
   /** Allowed values for a scalar node. */
-  enum?: JsonSchemaScalar[]
+  enum?: JsonSchemaScalar[];
   /** The single allowed value for a scalar node. */
-  const?: JsonSchemaScalar
+  const?: JsonSchemaScalar;
   /** Annotation, ignored for validation. */
-  description?: string
+  description?: string;
   /** Annotation, ignored for validation. */
-  title?: string
+  title?: string;
   /** Annotation, ignored for validation but required to be lossless JSON. */
-  default?: JsonValue
+  default?: JsonValue;
   /** Annotation, ignored for validation but required to be lossless JSON. */
-  examples?: JsonValue
+  examples?: JsonValue;
 }
 ```
 
 ```ts type-equiv
 /** A consumer-constrained object-rooted schema. */
-type ObjectJsonSchema = JsonSchemaNode & { type: 'object' }
+type ObjectJsonSchema = JsonSchemaNode & { type: "object" };
 ```
 
 ## Tool-presentation UI vocabulary
@@ -474,6 +469,89 @@ The full presentation field docs live in [`packages/core/tools/src/presentation.
 ## Cordis API
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxruntimepolicy--runtimepolicyservice"></a>
+
+### `ctx.runtimePolicy` — `RuntimePolicyService`
+
+Runtime permission, budget, resource scheduling, and world-freeze service.
+
+```ts cordis-catalog
+/**
+ * Register a tool-owned requirement classifier. First non-undefined result wins.
+ * @param id Stable classifier identifier.
+ * @param classify Requirement classifier.
+ * @param options Ordering options.
+ * @returns Function that unregisters the classifier.
+ */
+registerToolRequirements( id: string, classify: ToolRequirementClassifier, options: ToolRequirementClassifierOptions = {}, ): () => void
+
+/**
+ * Resolve requirements exactly once for a registry-minted execution. The
+ * same frozen snapshot is reused by approval, resource scheduling, budget,
+ * and effect auditing so a stateful classifier cannot make those stages drift.
+ * @param exec Registry-minted tool execution.
+ * @returns Detached normalized capability requirements.
+ */
+requirements(exec: ToolExecution): CapabilityRequirement[]
+
+/**
+ * Resolve the effective permission snapshot for an agent.
+ * @param agent Agent whose policy is resolved.
+ * @returns Effective immutable permission snapshot.
+ */
+permissionSnapshot(agent: Agent): CapabilityPermissionSnapshot
+
+/**
+ * Resolve effective session-local budget limits.
+ * @param session Session whose delegation ceiling is applied.
+ * @returns Effective budget limits.
+ */
+budgetLimits(session: Session): BudgetVector
+
+/**
+ * Resolve the current global budget snapshot.
+ * @param session Session whose durable charges are folded.
+ * @returns Current limits, consumption, and remaining budget.
+ */
+budgetSnapshot(session: Session): GlobalBudgetSnapshot
+
+/**
+ * Capture the parent's exact permission ceiling and remaining budget before
+ * the child publication boundary. A later parent policy switch belongs to
+ * the parent's future and cannot widen an already delegated child.
+ * @param parent Parent agent at the delegation boundary.
+ * @returns Frozen child delegation ceiling.
+ */
+captureDelegation(parent: Agent): RuntimeDelegationSnapshot
+
+/**
+ * Capture the execution world visible to an agent.
+ * @param agent Agent whose sandbox and capabilities are captured.
+ * @returns Execution world snapshot.
+ */
+worldSnapshot(agent: Agent): ExecutionWorldSnapshot
+
+/**
+ * Capture the resolved runtime configuration for one epoch.
+ * @param agent Agent whose runtime configuration is captured.
+ * @param header Durable epoch header.
+ * @returns Resolved runtime configuration snapshot.
+ */
+resolvedConfig(agent: Agent, header: EpochHeader): ResolvedRuntimeConfigSnapshot
+
+/**
+ * Persist or reuse all execution-domain freeze facts.
+ * @param agent Agent whose execution facts are frozen.
+ * @param header Durable epoch header.
+ * @returns Exact sequence references for the frozen facts.
+ */
+freeze(agent: Agent, header: EpochHeader): RuntimeSnapshotRefs
+```
+
+Types: [Agent](core.md) · [EpochHeader](session.md) · [Session](session.md)
+
+Source: [`packages/execution/runtime-policy/src/index.ts`](../../packages/execution/runtime-policy/src/index.ts)
 
 <a id="ctxtools--toolruntime"></a>
 

@@ -16,39 +16,38 @@ Committed session fixtures retain their complete session header and event payloa
 A consuming `*.snapshot.ts` is the scenario table plus one factory call:
 
 ```ts
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import {
-  defineAcpSnapshotSuite,
-  type Scenario,
-  type SnapshotSuiteOptions,
-} from '@deepseek-ai/dsh-acp-snapshot'
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { defineAcpSnapshotSuite, type Scenario, type SnapshotSuiteOptions } from "@deepseek-ai/dsh-acp-snapshot";
 
-function snapshotMode(value: string | undefined): SnapshotSuiteOptions['mode'] {
+function snapshotMode(value: string | undefined): SnapshotSuiteOptions["mode"] {
   switch (value) {
     case undefined:
-    case '':
-    case 'replay': return 'replay'
-    case 'record': return 'record'
-    case 'refresh': return 'refresh'
-    default: throw new Error(`unknown DSH_SNAPSHOT mode: ${value}`)
+    case "":
+    case "replay":
+      return "replay";
+    case "record":
+      return "record";
+    case "refresh":
+      return "refresh";
+    default:
+      throw new Error(`unknown DSH_SNAPSHOT mode: ${value}`);
   }
 }
 
-const SCENARIOS: Scenario[] = [
-  { name: 'text-turn', hasModelTurn: true, recorded: true, pinsHeader: true },
-]
+const SCENARIOS: Scenario[] = [{ name: "text-turn", hasModelTurn: true, recorded: true, pinsHeader: true }];
 
 defineAcpSnapshotSuite({
-  agent: { // absolute paths, resolved from the suite's own location
-    binScript: fileURLToPath(new URL('../../../packages/examples/acp-demo/src/bin.ts', import.meta.url)),
-    configPath: fileURLToPath(new URL('../cordis.yml', import.meta.url)),
-    tsconfigPath: fileURLToPath(new URL('../../../tsconfig.json', import.meta.url)),
+  agent: {
+    // absolute paths, resolved from the suite's own location
+    binScript: fileURLToPath(new URL("../../../packages/examples/acp-demo/src/bin.ts", import.meta.url)),
+    configPath: fileURLToPath(new URL("../cordis.yml", import.meta.url)),
+    tsconfigPath: fileURLToPath(new URL("../../../tsconfig.json", import.meta.url)),
   },
-  snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), 'snapshots'),
+  snapshotsDir: join(dirname(fileURLToPath(import.meta.url)), "snapshots"),
   scenarios: SCENARIOS, // exactly one entry per header class sets pinsHeader
   mode: snapshotMode(process.env.DSH_SNAPSHOT),
-})
+});
 ```
 
 A scenario booting a differently-composed tree sets its own `configPath` (an overlay whose basename still ends in `cordis.yml`, so the bin's replay swap finds the sibling `*cordis.snapshot.yml`) and, when that composition changes the request header, its own `headerClass` with its own pinning scenario — the acp-agent example's Code Mode and filesystem scenarios are templates. Default generated workspaces are stored in session fixtures as `{{cwd}}` so platform temp roots and random basenames do not affect recordings; `workspaceParent` moves the generated cwd outside the platform temp area when temporary-directory grants are themselves under test, keeps that explicit path in the fixture, and remains parent-owned while the harness removes only the generated child. A scenario's committed `workspace/` is copied into that child first, then `prepareWorkspace` runs against the generated cwd before the agent starts. Reserve this hook for fixtures Git cannot represent portably, keep ordinary seeds in `workspace/`, and pair it with `posixOnly` when the generated paths are invalid on Windows.

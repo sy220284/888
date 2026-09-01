@@ -26,11 +26,11 @@ Schema 17 在本包内拥有 codec，不导入其他持久化格式中可变的�
 
 ```ts
 interface Config {
-  path: string
-  journalMode?: 'wal' | 'delete' | 'truncate' | 'persist'
-  busyTimeoutMs?: number
-  preparedSessionCacheSize?: number
-  writeBatchMaxDelayMs?: number
+  path: string;
+  journalMode?: "wal" | "delete" | "truncate" | "persist";
+  busyTimeoutMs?: number;
+  preparedSessionCacheSize?: number;
+  writeBatchMaxDelayMs?: number;
 }
 ```
 

@@ -11,16 +11,16 @@ LLM 适配器是一个继承 `LlmAdapter` 并实现 `stream()` 方法的类，�
 ## 最小实现
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
-import { LlmAdapter, type GenerateOptions, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { Context } from "@deepseek-ai/cordis";
+import Schema from "@deepseek-ai/schemastery";
+import { LlmAdapter, type GenerateOptions, type StreamChunk } from "@deepseek-ai/dsh-llm";
 
 class MyAdapter extends LlmAdapter {
-  private apiKey: string
+  private apiKey: string;
 
   constructor(apiKey: string) {
-    super()
-    this.apiKey = apiKey
+    super();
+    this.apiKey = apiKey;
   }
 
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
@@ -31,21 +31,21 @@ class MyAdapter extends LlmAdapter {
 }
 
 export interface Config {
-  apiKey: string
-  providers: string[]
+  apiKey: string;
+  providers: string[];
 }
 
 export const Config: Schema<Config> = Schema.object({
   apiKey: Schema.string().required(),
   providers: Schema.array(Schema.string()).required(),
-})
+});
 
-export const name = 'my-llm-adapter'
-export const inject = ['llm']
+export const name = "my-llm-adapter";
+export const inject = ["llm"];
 
 export function apply(ctx: Context, config: Config) {
-  const adapter = new MyAdapter(config.apiKey)
-  ctx.llm.registerAdapter(config.providers, adapter)
+  const adapter = new MyAdapter(config.apiKey);
+  ctx.llm.registerAdapter(config.providers, adapter);
 }
 ```
 
@@ -54,48 +54,48 @@ export function apply(ctx: Context, config: Config) {
 `stream()` 必须按以下协议生成分片：
 
 ```ts
-import { CallId, type StreamChunk } from '@deepseek-ai/dsh-llm'
+import { CallId, type StreamChunk } from "@deepseek-ai/dsh-llm";
 
 async function* exampleChunks(): AsyncIterable<StreamChunk> {
   // 1. Start each content block with block-start.
-  yield { type: 'block-start', index: 0, blockType: 'text' }
+  yield { type: "block-start", index: 0, blockType: "text" };
 
   // 2. Stream text through text-delta.
-  yield { type: 'text-delta', index: 0, text: 'Hello' }
-  yield { type: 'text-delta', index: 0, text: ' world' }
+  yield { type: "text-delta", index: 0, text: "Hello" };
+  yield { type: "text-delta", index: 0, text: " world" };
 
   // 3. End each content block with block-end and the complete block.
   yield {
-    type: 'block-end',
+    type: "block-end",
     index: 0,
-    block: { type: 'text', text: 'Hello world' },
-  }
+    block: { type: "text", text: "Hello world" },
+  };
 
   // 4. Tool-call block.
-  yield { type: 'block-start', index: 1, blockType: 'tool-call' }
+  yield { type: "block-start", index: 1, blockType: "tool-call" };
   yield {
-    type: 'tool-call-delta',
+    type: "tool-call-delta",
     index: 1,
-    id: CallId('call-123'),
-    name: 'bash',
+    id: CallId("call-123"),
+    name: "bash",
     argumentsDelta: '{"command":"ls"}',
-  }
+  };
   yield {
-    type: 'block-end',
+    type: "block-end",
     index: 1,
     block: {
-      type: 'tool-call',
-      id: CallId('call-123'),
-      name: 'bash',
+      type: "tool-call",
+      id: CallId("call-123"),
+      name: "bash",
       arguments: '{"command":"ls"}',
     },
-  }
+  };
 
   // 5. Token usage.
-  yield { type: 'usage', usage: { inputTokens: 100, outputTokens: 50 } }
+  yield { type: "usage", usage: { inputTokens: 100, outputTokens: 50 } };
 
   // 6. Finish reason.
-  yield { type: 'finish', reason: { kind: 'stop' } }
+  yield { type: "finish", reason: { kind: "stop" } };
   // Alternatively, { kind: 'tool-calls' } requests tool execution.
 }
 ```
@@ -117,7 +117,7 @@ async function* exampleChunks(): AsyncIterable<StreamChunk> {
 ## 注册适配器
 
 ```ts ignore-check
-ctx.llm.registerAdapter(['my-provider'], adapter)
+ctx.llm.registerAdapter(["my-provider"], adapter);
 ```
 
 第一个参数是该适配器处理的提供方路由列表。`GenerateOptions.provider` 选择已注册的适配器，`GenerateOptions.model` 则传入由适配器拥有、无需在生命周期启动时注册的模型 id。适配器能够向选择器公布模型选项时，请覆写 `listModels()`。
@@ -126,14 +126,14 @@ ctx.llm.registerAdapter(['my-provider'], adapter)
 
 ```yaml
 - id: my-llm
-  name: './src/my-llm-adapter.ts'
+  name: "./src/my-llm-adapter.ts"
   config:
     apiKey: !!js process.env.MY_API_KEY
     providers:
       - my-provider
 
 - id: agent-loop
-  name: '@deepseek-ai/dsh-agent-loop'
+  name: "@deepseek-ai/dsh-agent-loop"
   config:
     agents:
       - id: main
@@ -155,34 +155,28 @@ ctx.llm.registerAdapter(['my-provider'], adapter)
 适配器应通过带稳定 code 的 `LlmError` 抛出传输和协议故障；agent loop（智能体循环）会保留该错误及其 code，用于诊断和策略处理。不要依赖普通 `Error` 被自动转换。每个提供方 HTTP 请求还必须合并 `attributionHeaders()`，并传递 `options.signal`。
 
 ```ts
-import {
-  attributionHeaders,
-  LlmAdapter,
-  LlmError,
-  type GenerateOptions,
-  type StreamChunk,
-} from '@deepseek-ai/dsh-llm'
+import { attributionHeaders, LlmAdapter, LlmError, type GenerateOptions, type StreamChunk } from "@deepseek-ai/dsh-llm";
 
 class HttpAdapter extends LlmAdapter {
   constructor(private readonly endpoint: string) {
-    super()
+    super();
   }
 
   async *stream(options: GenerateOptions): AsyncIterable<StreamChunk> {
     const response = await fetch(this.endpoint, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'content-type': 'application/json',
+        "content-type": "application/json",
         ...attributionHeaders(),
       },
       body: JSON.stringify({ model: options.model, messages: options.messages }),
-      ...options.signal ? { signal: options.signal } : {},
-    })
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
     if (!response.ok) {
-      throw new LlmError(`Provider API error: ${response.status}`, 'PROVIDER_HTTP_ERROR')
+      throw new LlmError(`Provider API error: ${response.status}`, "PROVIDER_HTTP_ERROR");
     }
     // A real adapter parses the response and emits the complete chunk sequence.
-    yield { type: 'finish', reason: { kind: 'stop' } }
+    yield { type: "finish", reason: { kind: "stop" } };
   }
 }
 ```

@@ -7,17 +7,17 @@
 ## 接口面
 
 ```ts
-import { withFileLock, writeFileAtomic } from '@deepseek-ai/dsh-atomic-write'
+import { withFileLock, writeFileAtomic } from "@deepseek-ai/dsh-atomic-write";
 
-declare const text: string
-declare const render: (previous: string) => string
+declare const text: string;
+declare const render: (previous: string) => string;
 
-await writeFileAtomic('/home/u/.dsh/settings.yaml', text, { mode: 0o600 })
+await writeFileAtomic("/home/u/.dsh/settings.yaml", text, { mode: 0o600 });
 
 // Read-modify-write against the same file from several processes.
-await withFileLock('/home/u/.dsh/settings.yaml', async () => {
-  await writeFileAtomic('/home/u/.dsh/settings.yaml', render(text), { mode: 0o600 })
-})
+await withFileLock("/home/u/.dsh/settings.yaml", async () => {
+  await writeFileAtomic("/home/u/.dsh/settings.yaml", render(text), { mode: 0o600 });
+});
 ```
 
 `writeFileAtomic` 提交一份已经渲染好的字符串。约定按故障利用它的先后顺序列出：

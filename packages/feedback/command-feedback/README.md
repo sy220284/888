@@ -6,10 +6,10 @@ Trigger-independent session feedback plus human-facing `/feedback` capture. The 
 
 ## Command contract
 
-| Input | Result |
-|---|---|
+| Input              | Result                                                                                                                                                      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/feedback <text>` | Append `feedback/record` and acknowledge with `Feedback recorded for session {sessionId}`, `Anonymous user: {userId}`, plus the session-sharing disclosure. |
-| `/feedback` | Return a direct usage error. Whitespace-only input is treated as empty. |
+| `/feedback`        | Return a direct usage error. Whitespace-only input is treated as empty.                                                                                     |
 
 Surrounding whitespace is discarded, but feedback is otherwise unparsed: no truncation, case folding, or control words. Text that looks like another command, such as `/feedback /plan felt slow`, is feedback content. Repeated commands each produce their own event; nothing is replaced or merged.
 
@@ -17,12 +17,12 @@ Surrounding whitespace is discarded, but feedback is otherwise unparsed: no trun
 
 The acknowledgement names the receiving session id and reports how that session is shared, read from the mounted [`telemetry`](../../session/session-telemetry/README.md) service through the plugin context (`ctx.get('telemetry')`, never a declared injection). The disclosure is one sentence chosen from the backend's [`SessionTelemetrySharingStatus`](../../session/session-telemetry/README.md):
 
-| Disclosed status | Acknowledgement sentence |
-|---|---|
-| `full` | `Session sharing is enabled.` |
-| `feedback-only` | `Session sharing is feedback-gated; recording feedback releases the session prefix for sharing.` |
-| `disabled` | `Session sharing is disabled.` |
-| no service | `Session sharing is not configured.` |
+| Disclosed status | Acknowledgement sentence                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| `full`           | `Session sharing is enabled.`                                                                    |
+| `feedback-only`  | `Session sharing is feedback-gated; recording feedback releases the session prefix for sharing.` |
+| `disabled`       | `Session sharing is disabled.`                                                                   |
+| no service       | `Session sharing is not configured.`                                                             |
 
 The disclosure states the deployment's current sharing policy only; it never promises delivery or retention. With `full` or `feedback-only`, records are handed to the backend's non-blocking enqueue and the SDK owns batching, retry, and loss policy, so the sentence claims nothing about what reached a collector; `disabled` claims nothing about future reconfiguration. The disclosure adds no event and never enters the model surface.
 
@@ -40,9 +40,9 @@ The producer injects only `commands`. A custom app mounts the registry plus this
 
 ```yaml
 - id: commands
-  name: '@deepseek-ai/dsh-commands'
+  name: "@deepseek-ai/dsh-commands"
 - id: command-feedback
-  name: '@deepseek-ai/dsh-command-feedback'
+  name: "@deepseek-ai/dsh-command-feedback"
 ```
 
 The shipped `dsh` base mounts this command unconditionally; it has no configuration and no dependency on the persisted-goal stack. The Web client exposes it through the command adapter. Headless mode, ACP automation, and JSON-RPC do not provide a command adapter, so they do not expose it.

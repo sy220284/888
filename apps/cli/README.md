@@ -6,11 +6,11 @@ The `dsh` command is the product launcher for profiles: ordered stacks of plugin
 
 ## Entry modes
 
-| Command | Purpose |
-|---|---|
-| `dsh --profile <name>` | Boot the named profile under `$DSH_HOME/profiles/<name>`. |
-| `dsh --profile headless "job"` | Run one fresh persisted session, print the final answer, and exit. |
-| `dsh web` | Alias of `--profile web`. |
+| Command                                   | Purpose                                                                    |
+| ----------------------------------------- | -------------------------------------------------------------------------- |
+| `dsh --profile <name>`                    | Boot the named profile under `$DSH_HOME/profiles/<name>`.                  |
+| `dsh --profile headless "job"`            | Run one fresh persisted session, print the final answer, and exit.         |
+| `dsh web`                                 | Alias of `--profile web`.                                                  |
 | `dsh plugin --profile <name> <pnpm args>` | Manage a profile's plugins by forwarding to pnpm in the profile directory. |
 
 The invoking directory is the default workspace root. The `web` and `headless` profiles auto-initialize on first use from shipped templates; any other profile must be created through `dsh plugin`.
@@ -32,6 +32,7 @@ dsh --help                          # the launcher's own help
 A profile directory holds a `package.json` (out-of-tree plugin dependencies plus the profile manifest `dsh.profile` with its ordered `bundles` list) and a `cordis.patch.yml` (the user's own patch layer).
 
 The tree composes over an empty root:
+
 - each bundle's patch in `dsh.profile.bundles` order
 - then the profile's `cordis.patch.yml`, then the home-level `$DSH_HOME/cordis.patch.yml`
 - then `--patch` overlays

@@ -9,13 +9,13 @@ The `Branded<B>` nominal-typing primitive — a tiny, **type-only** package (no 
 A brand makes structurally-identical strings non-interchangeable at the type level: a `SessionId` cannot be passed where a `CallId` is expected, even though both are plain `string`s at runtime.
 
 ```ts
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from "@deepseek-ai/dsh-brand";
 
-export type SessionId = Branded<'SessionId'>
+export type SessionId = Branded<"SessionId">;
 
 /** Brand a string as a SessionId (a plain cast — zero runtime cost). */
 export function SessionId(id: string): SessionId {
-  return id as SessionId
+  return id as SessionId;
 }
 ```
 

@@ -99,7 +99,7 @@ Plugins loaded under the returned context see `config` merged into the service's
 
 ```ts cordis-catalog
 /** The root context of the application (every child context shares it). @experimental */
-root: this
+root: this;
 ```
 
 The root context of the application (every child context shares it). @experimental
@@ -121,7 +121,7 @@ Base URL used to resolve relative plugin/module specifiers, if the runtime sets 
 
 ```ts cordis-catalog
 /** The event bus. Its methods are also mixed onto `ctx` (`ctx.on`, `ctx.emit`, ...). */
-events: EventsService
+events: EventsService;
 ```
 
 The event bus. Its methods are also mixed onto `ctx` (`ctx.on`, `ctx.emit`, ...).
@@ -132,7 +132,7 @@ The event bus. Its methods are also mixed onto `ctx` (`ctx.on`, `ctx.emit`, ...)
 
 ```ts cordis-catalog
 /** The logging service. Call `ctx.logger(name)` for a named logger. */
-logger: LoggerService
+logger: LoggerService;
 ```
 
 The logging service. Call `ctx.logger(name)` for a named logger.
@@ -143,7 +143,7 @@ The logging service. Call `ctx.logger(name)` for a named logger.
 
 ```ts cordis-catalog
 /** The reflection layer backing the context proxy (`ctx.get`, `ctx.provide`, ...). */
-reflect: ReflectService
+reflect: ReflectService;
 ```
 
 The reflection layer backing the context proxy (`ctx.get`, `ctx.provide`, ...).
@@ -154,7 +154,7 @@ The reflection layer backing the context proxy (`ctx.get`, `ctx.provide`, ...).
 
 ```ts cordis-catalog
 /** The plugin registry. Its methods are mixed onto `ctx` (`ctx.plugin`, `ctx.inject`). */
-registry: RegistryService
+registry: RegistryService;
 ```
 
 The plugin registry. Its methods are mixed onto `ctx` (`ctx.plugin`, `ctx.inject`).

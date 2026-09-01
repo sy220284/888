@@ -41,11 +41,11 @@
 }
 
 .tab:hover,
-.tab[data-active='true'] {
+.tab[data-active="true"] {
   color: var(--dsw-alias-label-primary);
 }
 
-.tab[data-active='true']::after,
+.tab[data-active="true"]::after,
 .tab:focus-visible::after {
   position: absolute;
   right: 0;
@@ -54,7 +54,7 @@
   height: 2px;
   border-radius: 2px 2px 0 0;
   background: var(--dsw-alias-label-primary);
-  content: '';
+  content: "";
 }
 
 .tab:focus-visible {

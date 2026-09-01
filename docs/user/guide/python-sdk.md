@@ -82,16 +82,16 @@ print(result.final_response)
 
 ## Understand the example composition
 
-| Property | Value |
-|---|---|
-| System prompt | `DSH_SYSTEM_PROMPT`, falling back to `You are a helpful software engineer assistant.` |
-| Model in `minimal.py` | `--model`, then `DSH_MODEL`, then `deepseek-v4-flash` |
-| Model-facing tools | Persistent `bash` and `str_replace_editor` only |
-| Bash timeout | 300 seconds |
-| Editor output limit | 16,000 characters |
-| Context compaction | Disabled |
-| Filesystem | Bare local backend; absolute editor paths may address any path visible to the runtime process |
-| Session persistence | Uncompressed JSONL under `DSH_SESSION_ROOT` |
+| Property              | Value                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| System prompt         | `DSH_SYSTEM_PROMPT`, falling back to `You are a helpful software engineer assistant.`         |
+| Model in `minimal.py` | `--model`, then `DSH_MODEL`, then `deepseek-v4-flash`                                         |
+| Model-facing tools    | Persistent `bash` and `str_replace_editor` only                                               |
+| Bash timeout          | 300 seconds                                                                                   |
+| Editor output limit   | 16,000 characters                                                                             |
+| Context compaction    | Disabled                                                                                      |
+| Filesystem            | Bare local backend; absolute editor paths may address any path visible to the runtime process |
+| Session persistence   | Uncompressed JSONL under `DSH_SESSION_ROOT`                                                   |
 
 The composition omits harness identity, workspace prompt text, skills, one-shot Bash, task tools, compaction, and every other model-facing plugin. Sandbox-policy facts are logged as runtime user context rather than appended to the system prompt.
 

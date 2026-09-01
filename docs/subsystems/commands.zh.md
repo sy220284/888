@@ -14,7 +14,7 @@
 /** Immutable metadata for a command's optional unstructured input. */
 interface CommandInputDescriptor {
   /** Placeholder shown before the user supplies free-form input. */
-  readonly hint: string
+  readonly hint: string;
   /**
    * Whether composer image attachments may accompany an invocation. Absent or
    * false = the executor rejects an invocation carrying images and capable
@@ -22,7 +22,7 @@ interface CommandInputDescriptor {
    * handler receives the admitted durable blocks and owns every further
    * grammar decision, including rejecting sub-commands that cannot use them.
    */
-  readonly images?: boolean
+  readonly images?: boolean;
 }
 ```
 
@@ -34,19 +34,19 @@ interface CommandInputDescriptor {
 /** Plugin-owned command registration. */
 interface CommandDefinition {
   /** Lowercase command name without the leading slash. */
-  readonly name: string
+  readonly name: string;
   /** Human-readable summary used in discovery UI. */
-  readonly description: string
+  readonly description: string;
   /** Optional free-form input hint advertised to capable clients. */
-  readonly input?: CommandInputDescriptor
+  readonly input?: CommandInputDescriptor;
   /**
    * Whether `command/run` records `rawInput`. Defaults to true. A command
    * whose domain event owns the payload sets this false to avoid duplicating
    * that payload in the session log.
    */
-  readonly recordInput?: boolean
+  readonly recordInput?: boolean;
   /** Execute against the receiving agent without sending the command to the model. */
-  readonly handler: (invocation: CommandInvocation) => CommandResult | Promise<CommandResult>
+  readonly handler: (invocation: CommandInvocation) => CommandResult | Promise<CommandResult>;
 }
 ```
 
@@ -58,11 +58,11 @@ interface CommandDefinition {
 /** Invocation passed to one registered command handler. */
 interface CommandInvocation {
   /** Pairing id already written to this invocation's `command/run` event. */
-  readonly commandId: CommandId
+  readonly commandId: CommandId;
   /** Exact agent whose UI received the command. */
-  readonly agent: Agent
+  readonly agent: Agent;
   /** Exact text following the registered command name, including separator whitespace. */
-  readonly rawInput: string
+  readonly rawInput: string;
   /**
    * Durably admitted image blocks accompanying this invocation, in submission
    * order; empty unless the definition declares `input.images`. The handler
@@ -70,9 +70,9 @@ interface CommandInvocation {
    * and a handler whose grammar cannot use them in this invocation returns an
    * error so the dispatching composer retains the originals.
    */
-  readonly attachments: readonly ImageBlock[]
+  readonly attachments: readonly ImageBlock[];
   /** Cancellation signal owned by the dispatching UI request. */
-  readonly signal: AbortSignal
+  readonly signal: AbortSignal;
 }
 ```
 
@@ -80,12 +80,12 @@ interface CommandInvocation {
 /** Expected command outcome rendered directly by the dispatching UI. */
 type CommandResult =
   | {
-    readonly kind: 'success'
-    readonly text?: string
-    /** Earlier authoritative domain event that owns a richer presentation. */
-    readonly sourceEventSeq?: number
-  }
-  | { readonly kind: 'error'; readonly text: string }
+      readonly kind: "success";
+      readonly text?: string;
+      /** Earlier authoritative domain event that owns a richer presentation. */
+      readonly sourceEventSeq?: number;
+    }
+  | { readonly kind: "error"; readonly text: string };
 ```
 
 `sourceEventSeq` 是可选字段，且只用于成功结果。存在时，它指向接收会话日志中更早的一条非命令事件；`command/done` 会持久化同一引用，让客户端能够将命令生命周期与该领域投影合并，而无须解析 `text` 或依赖相邻行。
@@ -98,11 +98,11 @@ type CommandResult =
 /** Handler-free immutable command view returned to UI adapters. */
 interface CommandDescriptor {
   /** Lowercase command name without the leading slash. */
-  readonly name: string
+  readonly name: string;
   /** Human-readable summary used in discovery UI. */
-  readonly description: string
+  readonly description: string;
   /** Optional free-form input hint advertised to capable clients. */
-  readonly input?: CommandInputDescriptor
+  readonly input?: CommandInputDescriptor;
 }
 ```
 
@@ -110,9 +110,9 @@ interface CommandDescriptor {
 /** Syntactically valid slash command before registry resolution. */
 interface ParsedCommand {
   /** Lowercase command name without the leading slash. */
-  readonly name: string
+  readonly name: string;
   /** Exact text following the command name. */
-  readonly rawInput: string
+  readonly rawInput: string;
 }
 ```
 

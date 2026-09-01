@@ -46,7 +46,7 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
-.toggle[aria-pressed='true'] {
+.toggle[aria-pressed="true"] {
   color: var(--dsw-alias-label-primary);
   background: var(--dsw-alias-interactive-bg-hover);
 }
@@ -89,8 +89,8 @@
 }
 
 .control:hover:not(:disabled),
-.control[aria-checked='true'],
-.control[aria-pressed='true'] {
+.control[aria-checked="true"],
+.control[aria-pressed="true"] {
   color: var(--dsw-alias-label-primary);
 }
 
@@ -126,11 +126,11 @@
   transition: transform 120ms var(--ds-ease-in-out);
 }
 
-.controlTrack[data-on='true'] {
+.controlTrack[data-on="true"] {
   background: var(--dsw-alias-state-business-primary);
 }
 
-.controlTrack[data-on='true'] .controlThumb {
+.controlTrack[data-on="true"] .controlThumb {
   transform: translateX(10px);
 }
 

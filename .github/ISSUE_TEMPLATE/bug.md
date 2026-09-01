@@ -1,13 +1,14 @@
 ---
 name: Bug
 about: 记录现有预期行为的失效
-title: ''
-labels: ''
-assignees: ''
+title: ""
+labels: ""
+assignees: ""
 type: Bug
 ---
 
 <!-- 标题写中文行动或结果句；外露正文不超过 50 单位。 -->
+
 一句话说明错误结果。
 
 <details>

@@ -46,10 +46,10 @@ Create `hello-plugin/package.json`:
 Create `hello-plugin/index.js` with the plugin entry point:
 
 ```js
-export const name = 'hello-plugin'
+export const name = "hello-plugin";
 
 export function apply() {
-  console.log('[hello-plugin] plugin loaded!')
+  console.log("[hello-plugin] plugin loaded!");
 }
 ```
 
@@ -91,10 +91,7 @@ The first use initializes the profile (with `@deepseek-ai/dsh-base` as its first
   },
   "dsh": {
     "profile": {
-      "bundles": [
-        "@deepseek-ai/dsh-base",
-        "dsh-hello-plugin"
-      ]
+      "bundles": ["@deepseek-ai/dsh-base", "dsh-hello-plugin"]
     }
   }
 }
@@ -133,7 +130,7 @@ A bundle that defines a runnable app mounts an ordinary provider plugin:
 
 ```yaml
 - id: hello-startup
-  name: 'dsh-hello-plugin/startup'
+  name: "dsh-hello-plugin/startup"
 ```
 
 The plugin exports `inject = ['cmdlineArgs']`, calls `parseCmdline` from [`@deepseek-ai/dsh-cmdline`](../../../../packages/boot/cmdline/README.md) with its own commander program, and provides its app-owned service from the program's action. The launcher hands every plugin the same immutable arguments after launcher flags, so app-specific flags need no launcher change and multiple plugins may parse the snapshot. The Loader row needs no launcher marker or special kind.
@@ -142,7 +139,7 @@ Rows configured by those arguments inject the provider's service and read it fro
 
 ```yaml
 - id: my-app
-  name: '@example/my-app'
+  name: "@example/my-app"
   inject: [myAppStartup]
   config:
     port: !!js ctx.myAppStartup.port ?? 8080

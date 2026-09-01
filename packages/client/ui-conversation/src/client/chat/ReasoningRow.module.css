@@ -8,8 +8,8 @@
   overflow: hidden;
 }
 
-.root[data-state='running'] .row::after {
-  content: '';
+.root[data-state="running"] .row::after {
+  content: "";
   position: absolute;
   inset-block: 0;
   left: 0;
@@ -25,8 +25,13 @@
 }
 
 @keyframes dsh-reasoning-row-sweep {
-  0% { left: -300px; }
-  90%, 100% { left: 100%; }
+  0% {
+    left: -300px;
+  }
+  90%,
+  100% {
+    left: 100%;
+  }
 }
 
 .leading {
@@ -75,7 +80,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .root[data-state='running'] .row::after {
+  .root[data-state="running"] .row::after {
     animation: none;
   }
 }

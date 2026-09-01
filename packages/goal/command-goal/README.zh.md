@@ -6,14 +6,14 @@
 
 ## 命令约定
 
-| 输入 | 结果 |
-|---|---|
-| `/goal` | 显示当前目标、持久 phase、Round 计数／上限、进程本地续行启用状态与有效的下一步命令；被阻塞的 goal 还会显示策略代码和说明，没有 goal 时则显示用法。 |
-| `/goal <objective>` | 创建 goal 并启用续行，或用全新身份替换已完成 goal。未完成 goal 绝不会在没有显式 clear 的情况下被替换。 |
-| `/goal edit <objective>` | 编辑当前目标，不改变其 phase 或续行启用状态。编辑已完成 goal 会创建新的 active goal。 |
-| `/goal pause` | 暂停 active goal，并停用续行。 |
-| `/goal resume` | 恢复已停止 goal，或在会话 resume／fork 后为 active goal 重新启用续行；仍受剩余 Round 上限约束。 |
-| `/goal clear` | 清除当前指针，同时保留其持久历史和 tombstone。 |
+| 输入                     | 结果                                                                                                                                               |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/goal`                  | 显示当前目标、持久 phase、Round 计数／上限、进程本地续行启用状态与有效的下一步命令；被阻塞的 goal 还会显示策略代码和说明，没有 goal 时则显示用法。 |
+| `/goal <objective>`      | 创建 goal 并启用续行，或用全新身份替换已完成 goal。未完成 goal 绝不会在没有显式 clear 的情况下被替换。                                             |
+| `/goal edit <objective>` | 编辑当前目标，不改变其 phase 或续行启用状态。编辑已完成 goal 会创建新的 active goal。                                                              |
+| `/goal pause`            | 暂停 active goal，并停用续行。                                                                                                                     |
+| `/goal resume`           | 恢复已停止 goal，或在会话 resume／fork 后为 active goal 重新启用续行；仍受剩余 Round 上限约束。                                                    |
+| `/goal clear`            | 清除当前指针，同时保留其持久历史和 tombstone。                                                                                                     |
 
 只有控制词占据完整输入时才不区分大小写。其他任何非空后缀都属于目标，因此 `/goal pause after verification` 会创建该字面目标。goal 领域会去除目标首尾空白并进行验证。由于通用命令平面没有模态编辑器或确认原语，`edit` 会内联接收替换内容；若试图替换未完成的 goal，则直接返回错误，提示用户执行 edit 或 clear。
 
@@ -27,11 +27,11 @@
 
 ```yaml
 - id: commands
-  name: '@deepseek-ai/dsh-commands'
+  name: "@deepseek-ai/dsh-commands"
 - id: goal
-  name: '@deepseek-ai/dsh-goal'
+  name: "@deepseek-ai/dsh-goal"
 - id: command-goal
-  name: '@deepseek-ai/dsh-command-goal'
+  name: "@deepseek-ai/dsh-command-goal"
 ```
 
 随附 `dsh` 基础配置启用持久 goal 栈和此命令；Web 客户端提供其交互适配器。ACP（Agent Client Protocol）自动化应用启用领域与模型工具，但不挂载命令适配器；`goals: false` 会移除该栈。无 UI 的 `agent-spine-demo` 必须显式配置 `goals: {}`，避免无头单次调用方在不知情时从一个物理轮次变为包含多个 Round 的操作。

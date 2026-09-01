@@ -17,12 +17,12 @@
 
 两个必写点，其间节流：
 
-| 触发 | 性质 |
-|---|---|
-| `turn/end` | 必写——冷读要的正是轮次终值。 |
-| 会话释放（detach） | 必写——live 转 cold 的时刻；此后冷读阶梯接管该会话。 |
-| 累计 `writeEveryEvents` 个已提交事件 | 配置节流（条数）。 |
-| 距首个脏事件 `writeIntervalMs` 毫秒 | 配置节流（间隔）。 |
+| 触发                                 | 性质                                                |
+| ------------------------------------ | --------------------------------------------------- |
+| `turn/end`                           | 必写——冷读要的正是轮次终值。                        |
+| 会话释放（detach）                   | 必写——live 转 cold 的时刻；此后冷读阶梯接管该会话。 |
+| 累计 `writeEveryEvents` 个已提交事件 | 配置节流（条数）。                                  |
+| 距首个脏事件 `writeIntervalMs` 毫秒  | 配置节流（间隔）。                                  |
 
 两个 `Config` 字段均必填（无默认值）：写入节奏是部署选择，没有普适正确值，由 cordis.yml 明示。
 
@@ -40,7 +40,7 @@
 
 ```yaml
 - id: session-projection-cache
-  name: '@deepseek-ai/dsh-session-projection-cache'
+  name: "@deepseek-ai/dsh-session-projection-cache"
   config:
     writeEveryEvents: 200
     writeIntervalMs: 5000

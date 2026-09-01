@@ -18,8 +18,8 @@
 
 ## 工具：`skill`
 
-| 参数 | 类型 | 说明 |
-|---|---|---|
+| 参数   | 类型           | 说明                                            |
+| ------ | -------------- | ----------------------------------------------- |
 | `name` | string（必填） | 可用 skill 列表中精确的 kebab-case skill 名称。 |
 
 执行使用调用 agent 的 `session.header.cwd`，使结果随工作区变化的提供方能够解析出胜出的 skill。成功调用返回规范形式的 `{ name, provider, resourceBase?, content }`，其中不包含目录排名和提供方内部机制；其 Native 渲染器会生成一个文本结果，其中包含 `<skill_content name="...">`、`<skill_resources>` 和 `<skill_instructions>`。
@@ -45,8 +45,9 @@
 A skill is a reusable set of task-specific instructions. The following skills are available in this session:
 
 <available_skills>
+
 - `<name>`: <normalized-and-capped-description>
-</available_skills>
+  </available_skills>
 
 If the user names a skill, or the task clearly matches a skill's description, call the `skill` tool with the exact skill name before taking task actions. Load all applicable skills, then follow their full instructions. This catalog contains summaries only; do not infer or follow a skill's instructions until it has been loaded.
 A user may also invoke a skill directly; its <skill_content> block then appears in this conversation. Follow it, and do not call the `skill` tool again for that skill.

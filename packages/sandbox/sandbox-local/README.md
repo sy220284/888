@@ -20,7 +20,7 @@ The Windows rung keeps one deterministic write SID and standing ACE per workspac
 
 ```yaml
 - id: sandbox
-  name: '@deepseek-ai/dsh-sandbox-local'
+  name: "@deepseek-ai/dsh-sandbox-local"
 ```
 
 Consumers: [`@deepseek-ai/dsh-bash-sandbox`](../../shell/bash-sandbox/); see [the acp-agent example](../../../examples/acp-agent/) for the runnable default composition.

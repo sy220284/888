@@ -9,24 +9,24 @@
 创建 `config-demo.ts`，并将其放在 `tmp/cordis-tutorial` 中：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
+import type { Context } from "@deepseek-ai/cordis";
+import Schema from "@deepseek-ai/schemastery";
 
-export const name = 'config-demo'
+export const name = "config-demo";
 
 export interface Config {
-  greeting: string
-  targets: string[]
+  greeting: string;
+  targets: string[];
 }
 
 export const Config: Schema<Config> = Schema.object({
-  greeting: Schema.string().default('Hello'),
-  targets: Schema.array(String).default(['world']),
-})
+  greeting: Schema.string().default("Hello"),
+  targets: Schema.array(String).default(["world"]),
+});
 
 export function apply(ctx: Context, config: Config) {
   for (const target of config.targets) {
-    console.log(`${config.greeting}, ${target}!`)
+    console.log(`${config.greeting}, ${target}!`);
   }
 }
 ```
@@ -36,9 +36,9 @@ export function apply(ctx: Context, config: Config) {
 对其进行配置：
 
 ```yaml
-- name: './config-demo.ts'
+- name: "./config-demo.ts"
   config:
-    targets: ['alpha', 'beta']
+    targets: ["alpha", "beta"]
 ```
 
 运行：
@@ -55,9 +55,9 @@ Hello, beta!
 现在向它传入无效内容：
 
 ```yaml
-- name: './config-demo.ts'
+- name: "./config-demo.ts"
   config:
-    targets: 'not-an-array'
+    targets: "not-an-array"
 ```
 
 ```
@@ -72,7 +72,7 @@ ValidationError: invalid config:
 本仓库使用的 loader 支持 `!!js` 标签，用于必须在加载时计算的配置值：
 
 ```yaml
-- name: './config-demo.ts'
+- name: "./config-demo.ts"
   config:
     greeting: !!js process.env.DEMO_GREETING ?? 'Hello'
 ```

@@ -9,40 +9,42 @@ This chapter registers a model-callable tool with the harness's `tools` service,
 Create `greet-tool.ts` in `tmp/cordis-tutorial`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import { CallId } from '@deepseek-ai/dsh-llm'
+import type { Context } from "@deepseek-ai/cordis";
+import { defineTool } from "@deepseek-ai/dsh-tools";
+import { CallId } from "@deepseek-ai/dsh-llm";
 
-export const name = 'greet-tool'
-export const inject = ['tools']
+export const name = "greet-tool";
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
-  ctx.tools.register(defineTool({
-    name: 'greet',
-    description: 'Greet the named person.',
-    parameters: {
-      name: { type: 'string', required: true, description: 'Who to greet' },
-    },
-    output: {
-      schema: { type: 'string' },
-      render: (_args, value) => [{ type: 'text', text: value }],
-    },
-    async execute(args) {
-      return `Hello, ${args.name}!`
-    },
-  }))
+  ctx.tools.register(
+    defineTool({
+      name: "greet",
+      description: "Greet the named person.",
+      parameters: {
+        name: { type: "string", required: true, description: "Who to greet" },
+      },
+      output: {
+        schema: { type: "string" },
+        render: (_args, value) => [{ type: "text", text: value }],
+      },
+      async execute(args) {
+        return `Hello, ${args.name}!`;
+      },
+    }),
+  );
 
   // Drive one call through the real execution pipeline, standing in for
   // the model. CallId brands the correlation id a provider would issue.
   void (async () => {
     const result = await ctx.tools.execute({
-      callId: CallId('demo-1'),
-      name: 'greet',
-      arguments: { name: 'Cordis' },
+      callId: CallId("demo-1"),
+      name: "greet",
+      arguments: { name: "Cordis" },
       signal: new AbortController().signal,
-    })
-    console.log('tool replied:', JSON.stringify(result.content))
-  })()
+    });
+    console.log("tool replied:", JSON.stringify(result.content));
+  })();
 }
 ```
 
@@ -53,19 +55,17 @@ Every pattern here is from the earlier chapters: `inject: ['tools']` ([chapter 3
 Create `tool-logger.ts` — a separate plugin that watches every tool call in the app through the harness's `tools/result` event:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-tools'
+import type { Context } from "@deepseek-ai/cordis";
+import type {} from "@deepseek-ai/dsh-tools";
 
-export const name = 'tool-logger'
-export const inject = ['tools']
+export const name = "tool-logger";
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
-  ctx.on('tools/result', (exec, result) => {
-    const text = result.content
-      .map(block => (block.type === 'text' ? block.text : ''))
-      .join('')
-    console.log(`[tool-logger] ${exec.name} -> ${text}`)
-  })
+  ctx.on("tools/result", (exec, result) => {
+    const text = result.content.map((block) => (block.type === "text" ? block.text : "")).join("");
+    console.log(`[tool-logger] ${exec.name} -> ${text}`);
+  });
 }
 ```
 
@@ -74,10 +74,10 @@ The `import type {} from '@deepseek-ai/dsh-tools'` line pulls in the package's d
 ## Compose and run
 
 ```yaml
-- name: '@deepseek-ai/dsh-system-prompt'
-- name: '@deepseek-ai/dsh-tools'
-- name: './tool-logger.ts'
-- name: './greet-tool.ts'
+- name: "@deepseek-ai/dsh-system-prompt"
+- name: "@deepseek-ai/dsh-tools"
+- name: "./tool-logger.ts"
+- name: "./greet-tool.ts"
 ```
 
 `@deepseek-ai/dsh-tools` injects the `systemPrompt` service because tools contribute schemas to the system prompt, so the composition lists its provider too. Without it, the tools plugin remains PENDING as described in [chapter 6](06-composition-and-hmr.md).

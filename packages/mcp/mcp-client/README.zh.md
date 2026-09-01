@@ -10,45 +10,45 @@ MCP 客户端桥接插件：连接外部 [Model Context Protocol](https://modelc
 
 ```yaml
 - id: mcp-github
-  name: '@deepseek-ai/dsh-mcp-client'
+  name: "@deepseek-ai/dsh-mcp-client"
   config:
     serverName: github
     transport: stdio
     command: npx
-    args: ['-y', '@modelcontextprotocol/server-github']
+    args: ["-y", "@modelcontextprotocol/server-github"]
     env:
       GITHUB_TOKEN: !!js process.env.GITHUB_TOKEN
 
 - id: mcp-web
-  name: '@deepseek-ai/dsh-mcp-client'
+  name: "@deepseek-ai/dsh-mcp-client"
   config:
     serverName: web
     transport: streamable-http
     url: http://localhost:3000/mcp
     headers:
-      Authorization: !!js '`Bearer ${process.env.MCP_TOKEN}`'
+      Authorization: !!js "`Bearer ${process.env.MCP_TOKEN}`"
 ```
 
 模型会看到 `mcp__github__create_issue`、`mcp__web__search` 等工具，这与 Claude Code 和 Codex 使用的服务器限定形状相同。HMR（热模块替换）支持热替换：编辑配置项会触发断开 + 重新连接，无需重启进程；`serverName` 不变时会生成完全相同的工具名称。
 
 ## 配置
 
-| 字段 | 传输 | 必填 | 描述 |
-|---|---|---|---|
-| `transport` | 两者 | 是 | `"stdio"` 或 `"streamable-http"` |
-| `serverName` | 两者 | 是 | 该服务器面向模型工具名称的 namespace；`[A-Za-z0-9_-]{1,32}`，在存活实例中唯一 |
-| `command` | stdio | 是 | 要 spawn 的可执行文件 |
-| `args` | stdio | 否 | 传给命令的参数 |
-| `env` | stdio | 否 | 合并到已清理环境中的额外环境变量 |
-| `cwd` | stdio | 否 | 子进程工作目录 |
-| `url` | http | 是 | MCP 服务器 URL |
-| `headers` | http | 否 | 额外标头（例如认证 token） |
-| `toolCallTimeoutMs` | 两者 | 否 | 每次 `callTool` 调用的超时（默认 60000） |
-| `failOnStartupError` | 两者 | 否 | 初始连接或工具同步失败时拒绝插件激活（默认 `false`） |
-| `reconnect.enabled` | 两者 | 否 | 连接丢失后自动重新连接（默认 `true`） |
-| `reconnect.initialDelayMs` | 两者 | 否 | 首次重连延迟（毫秒）；每次连续失败尝试翻倍（默认 500） |
-| `reconnect.maxDelayMs` | 两者 | 否 | 退避上限（毫秒）；同时也是重置尝试预算所需的正常运行时长（默认 30000） |
-| `reconnect.maxAttempts` | 两者 | 否 | 每次中断期间连续失败尝试次数上限，超出后彻底放弃（默认 10） |
+| 字段                       | 传输  | 必填 | 描述                                                                          |
+| -------------------------- | ----- | ---- | ----------------------------------------------------------------------------- |
+| `transport`                | 两者  | 是   | `"stdio"` 或 `"streamable-http"`                                              |
+| `serverName`               | 两者  | 是   | 该服务器面向模型工具名称的 namespace；`[A-Za-z0-9_-]{1,32}`，在存活实例中唯一 |
+| `command`                  | stdio | 是   | 要 spawn 的可执行文件                                                         |
+| `args`                     | stdio | 否   | 传给命令的参数                                                                |
+| `env`                      | stdio | 否   | 合并到已清理环境中的额外环境变量                                              |
+| `cwd`                      | stdio | 否   | 子进程工作目录                                                                |
+| `url`                      | http  | 是   | MCP 服务器 URL                                                                |
+| `headers`                  | http  | 否   | 额外标头（例如认证 token）                                                    |
+| `toolCallTimeoutMs`        | 两者  | 否   | 每次 `callTool` 调用的超时（默认 60000）                                      |
+| `failOnStartupError`       | 两者  | 否   | 初始连接或工具同步失败时拒绝插件激活（默认 `false`）                          |
+| `reconnect.enabled`        | 两者  | 否   | 连接丢失后自动重新连接（默认 `true`）                                         |
+| `reconnect.initialDelayMs` | 两者  | 否   | 首次重连延迟（毫秒）；每次连续失败尝试翻倍（默认 500）                        |
+| `reconnect.maxDelayMs`     | 两者  | 否   | 退避上限（毫秒）；同时也是重置尝试预算所需的正常运行时长（默认 30000）        |
+| `reconnect.maxAttempts`    | 两者  | 否   | 每次中断期间连续失败尝试次数上限，超出后彻底放弃（默认 10）                   |
 
 ## 工具命名
 
@@ -72,11 +72,11 @@ MCP 客户端桥接插件：连接外部 [Model Context Protocol](https://modelc
 
 ## 消费的服务
 
-| 服务 | 用途 |
-|---|---|
-| `ctx.tools` | 注册／注销 MCP 工具 |
+| 服务              | 用途                                         |
+| ----------------- | -------------------------------------------- |
+| `ctx.tools`       | 注册／注销 MCP 工具                          |
 | `ctx.attachments` | 可选；在模型投影前校验并持久保存图片结果批次 |
-| `ctx.llm` | 可选；证明确切调用路由明确支持图片输入 |
+| `ctx.llm`         | 可选；证明确切调用路由明确支持图片输入       |
 
 ## 模型体验
 

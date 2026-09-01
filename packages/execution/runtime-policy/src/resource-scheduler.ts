@@ -1,5 +1,7 @@
 import type { CapabilityAccess, CapabilityRequirement } from './types.ts'
+import { selectorContains } from './selector.ts'
 
+/** Idempotent release handle for one granted resource set. */
 export interface ResourceLease {
   release(): void
 }
@@ -9,7 +11,7 @@ interface Waiter {
   readonly requirements: readonly CapabilityRequirement[]
   readonly signal?: AbortSignal
   readonly resolve: (lease: ResourceLease) => void
-  readonly reject: (error: unknown) => void
+  readonly reject: (error: Error) => void
   abortListener?: () => void
 }
 
@@ -17,19 +19,12 @@ interface ActiveLease {
   readonly requirements: readonly CapabilityRequirement[]
 }
 
-function selectorContains(selector: string, value: string): boolean {
-  if (selector === '*') return true
-  if (selector.endsWith('/**')) {
-    const root = selector.slice(0, -3).replace(/\/$/, '')
-    return value === root || value.startsWith(`${root}/`)
-  }
-  if (selector.endsWith('.*')) {
-    const root = selector.slice(0, -2)
-    return value === root || value.startsWith(`${root}.`)
-  }
-  return selector === value
-}
-
+/**
+ * Return whether two exact or wildcard resource values overlap.
+ * @param left - first resource value.
+ * @param right - second resource value.
+ * @returns whether either selector contains the other value.
+ */
 export function resourceValuesOverlap(left: string, right: string): boolean {
   return selectorContains(left, right) || selectorContains(right, left)
 }
@@ -45,7 +40,12 @@ function isGlobalUnknown(requirement: CapabilityRequirement): boolean {
     && requirement.resource.value === '*'
 }
 
-/** Read/read may overlap; every write/execute/control access is exclusive on overlapping resources. */
+/**
+ * Read/read may overlap; every write, execute, or control access is exclusive on overlapping resources.
+ * @param left - first capability requirement set.
+ * @param right - second capability requirement set.
+ * @returns whether the sets must execute exclusively.
+ */
 export function requirementsConflict(
   left: readonly CapabilityRequirement[],
   right: readonly CapabilityRequirement[],
@@ -62,8 +62,12 @@ export function requirementsConflict(
   return false
 }
 
-function abortError(signal: AbortSignal): unknown {
-  return signal.reason ?? new Error('resource acquisition aborted')
+function asError(reason: unknown): Error {
+  return reason instanceof Error ? reason : new Error(String(reason))
+}
+
+function abortError(signal: AbortSignal): Error {
+  return signal.reason === undefined ? new Error('resource acquisition aborted') : asError(signal.reason)
 }
 
 /**
@@ -78,9 +82,17 @@ export class ResourceScheduler {
   private nextId = 1
   private disposed = false
 
+  /** Current grant count. @returns number of currently granted leases. */
   get activeCount(): number { return this.active.size }
+  /** Current queue depth. @returns number of requests waiting for compatible resources. */
   get queuedCount(): number { return this.queue.length }
 
+  /**
+   * Queue a resource set and resolve when FIFO conflict rules permit it.
+   * @param requirements - resources required by one operation.
+   * @param signal - optional cancellation signal while queued.
+   * @returns a lease that releases the granted resources.
+   */
   acquire(requirements: readonly CapabilityRequirement[], signal?: AbortSignal): Promise<ResourceLease> {
     if (this.disposed) return Promise.reject(new Error('resource scheduler is disposed'))
     if (signal?.aborted === true) return Promise.reject(abortError(signal))
@@ -110,6 +122,10 @@ export class ResourceScheduler {
     })
   }
 
+  /**
+   * Reject queued acquisitions and prevent future grants.
+   * @param reason - error propagated to queued callers.
+   */
   dispose(reason: unknown = new Error('resource scheduler disposed')): void {
     if (this.disposed) return
     this.disposed = true
@@ -117,7 +133,7 @@ export class ResourceScheduler {
       if (waiter.signal !== undefined && waiter.abortListener !== undefined) {
         waiter.signal.removeEventListener('abort', waiter.abortListener)
       }
-      waiter.reject(reason)
+      waiter.reject(asError(reason))
     }
   }
 

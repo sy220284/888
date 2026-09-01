@@ -13,15 +13,15 @@ spill 存储 seam 是一项[能力 seam](../../.agents/notes/implemented/archite
 ```ts type-equiv
 /** One request to persist text to a spill artifact. */
 interface SaveTextSpill {
-  owner: SpillOwner
-  source: SpillSource
+  owner: SpillOwner;
+  source: SpillSource;
   /**
    * A caller-suggested base name (e.g. `web_fetch.txt`). The backend sanitizes
    * it to a single safe path segment before use — it is a hint, never a path.
    */
-  suggestedName: string
+  suggestedName: string;
   /** The full text to persist (UTF-8). */
-  content: string
+  content: string;
 }
 ```
 
@@ -34,7 +34,7 @@ interface SaveTextSpill {
  * re-owned, and spills produced after the fork use the child session id.
  */
 interface SpillOwner {
-  sessionId: SessionId
+  sessionId: SessionId;
 }
 ```
 
@@ -48,11 +48,11 @@ interface SpillOwner {
  */
 interface SpillSource {
   /** The tool whose result was spilled (e.g. `web_fetch`). */
-  toolName: string
+  toolName: string;
   /** The model-issued call id the result belongs to. */
-  callId: CallId
+  callId: CallId;
   /** A short human label for the artifact (e.g. `result`). */
-  label: string
+  label: string;
 }
 ```
 
@@ -61,9 +61,9 @@ interface SpillSource {
 ```ts type-equiv
 /** A saved spill artifact: its locator, byte length, and backend-specific retrieval guidance. */
 interface SpillRef {
-  locator: SpillLocator
-  bytes: number
-  retrievalHint: string
+  locator: SpillLocator;
+  bytes: number;
+  retrievalHint: string;
 }
 ```
 
@@ -75,7 +75,7 @@ interface SpillRef {
  * filesystem path; a remote or database backend may use a URI or key. Consumers
  * render it with {@link SpillRef.retrievalHint}, but do not parse it.
  */
-type SpillLocator = Branded<'SpillLocator'>
+type SpillLocator = Branded<"SpillLocator">;
 ```
 
 ## 服务

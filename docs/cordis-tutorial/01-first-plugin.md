@@ -9,12 +9,12 @@ In the loader configuration used here, a Cordis plugin module named-exports an `
 In your `tmp/cordis-tutorial` directory (see [setup](index.md#setup)), create `hello.ts`:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'hello'
+export const name = "hello";
 
 export function apply(ctx: Context) {
-  console.log('hello from my first plugin')
+  console.log("hello from my first plugin");
 }
 ```
 
@@ -25,7 +25,7 @@ The `name` export is optional display metadata; it labels the plugin in diagnost
 This tutorial's launcher assembles the application from configuration. Create `cordis.yml`:
 
 ```yaml
-- name: './hello.ts'
+- name: "./hello.ts"
 ```
 
 The file is a list of plugin entries. `name` is a module specifier — a relative path or an npm package name — and the loader mounts every entry. Entries start concurrently, so list position guarantees nothing about which plugin loads first; ordering comes from service dependencies (`inject`, [chapter 3](03-services.md)), not from position in the file.
@@ -55,21 +55,21 @@ There is no framework bootstrap code in your file: a plugin describes what it co
 A function is the most common form, but Cordis accepts three:
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
 // 1. Function plugin (what you just wrote).
 export function apply(ctx: Context) {}
 
 // 2. Object plugin: an object with an `apply` method.
 export const objectPlugin = {
-  name: 'object-plugin',
+  name: "object-plugin",
   apply(ctx: Context) {},
-}
+};
 
 // 3. Class plugin: a Service subclass (covered in chapter 3).
 export class MyService extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'myTutorialService')
+    super(ctx, "myTutorialService");
   }
 }
 ```
@@ -82,7 +82,7 @@ Make `apply` throw:
 
 ```ts ignore-check
 export function apply(ctx: Context) {
-  throw new Error('apply exploded')
+  throw new Error("apply exploded");
 }
 ```
 

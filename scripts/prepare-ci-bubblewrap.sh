@@ -12,8 +12,8 @@ readonly BUBBLEWRAP_URL="https://archive.ubuntu.com/ubuntu/pool/main/b/bubblewra
 : "${GITHUB_PATH:?prepare-ci-bubblewrap requires GITHUB_PATH}"
 
 if [[ "$(uname -s)" != 'Linux' || "$(uname -m)" != 'x86_64' ]]; then
-  echo 'prepare-ci-bubblewrap supports only Linux x86_64 hosted runners' >&2
-  exit 1
+	echo 'prepare-ci-bubblewrap supports only Linux x86_64 hosted runners' >&2
+	exit 1
 fi
 
 archive="${RUNNER_TEMP}/bubblewrap_${BUBBLEWRAP_VERSION}_amd64.deb"
@@ -23,10 +23,10 @@ curl --fail --silent --show-error --location --retry 3 --retry-all-errors --outp
 printf '%s  %s\n' "$BUBBLEWRAP_SHA256" "$archive" | sha256sum --check --status
 mkdir -p "$root"
 dpkg-deb --extract "$archive" "$root"
-printf '%s\n' "$root/usr/bin" >> "$GITHUB_PATH"
+printf '%s\n' "$root/usr/bin" >>"$GITHUB_PATH"
 
-sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 \
-  || echo 'apparmor userns knob absent — the functional probe decides'
+sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 ||
+	echo 'apparmor userns knob absent — the functional probe decides'
 "$root/usr/bin/bwrap" --version
 "$root/usr/bin/bwrap" --ro-bind / / --dev /dev --unshare-pid --proc /proc --die-with-parent -- true
 echo 'bubblewrap functional probe passed'

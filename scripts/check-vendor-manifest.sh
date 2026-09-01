@@ -10,8 +10,8 @@ vendor_src_changed=$(echo "$staged" | grep -E '^vendor/[^/]+/(src/|bin\.js)' || 
 manifest_changed=$(echo "$staged" | grep -x 'vendor/README.md' || true)
 
 if [[ -n "$vendor_src_changed" && -z "$manifest_changed" ]]; then
-  echo 'vendor manifest guard: vendored SOURCE changed without updating vendor/README.md:'
-  echo "$vendor_src_changed" | sed 's/^/  /'
-  echo 'Log the modification in vendor/README.md ("Local modifications") and stage it.'
-  exit 1
+	echo 'vendor manifest guard: vendored SOURCE changed without updating vendor/README.md:'
+	echo "$vendor_src_changed" | sed 's/^/  /'
+	echo 'Log the modification in vendor/README.md ("Local modifications") and stage it.'
+	exit 1
 fi

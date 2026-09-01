@@ -65,7 +65,7 @@
    the success token. A `- `/`+ ` prefix is drawn here so a copied line and the
    shown line agree, and so the sign reads without relying on color alone. */
 .del::before {
-  content: '- ';
+  content: "- ";
   color: var(--dsw-alias-state-error-primary);
 }
 
@@ -74,7 +74,7 @@
 }
 
 .add::before {
-  content: '+ ';
+  content: "+ ";
   color: var(--dsw-alias-state-success-primary);
 }
 

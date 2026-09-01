@@ -10,7 +10,7 @@
 
 ```yaml
 tools:
-  mode: native   # native (default) | code | both
+  mode: native # native (default) | code | both
 ```
 
 `native` 以函数定义的形式贡献可见工具。`code` 会提供保留的 `run_code` 传输、生成的 `tools:sdk` 段，以及声明「只有 `run_code` 可被直接调用」的 `tools:code-only` 规则。执行器随后强制执行该规则：模型直接调用其他任何工具时，会在策略运行前将该调用解析为 `UNKNOWN_TOOL`；`both` 同时提供两种形式，且不声明该规则，因为其中的原生调用确实可以执行。没有单独声明呈现模式的 agent 默认采用此配置；agent preset 可通过 [`dsh-agent-tool-presentation`](../agent-tool-presentation/README.zh.md) 自行选择呈现模式。不能注册、遮蔽、限制或移除该保留传输，且无论配置何种模式，该名称都是保留的，因为任何 agent 都可能选择 code 模式。非原生模式要求所加载 `ctx.codeRuntime` 的 `language` 有已注册的 SDK 渲染器——TypeScript 经 [`dsh-code-runtime-worker-thread`](../../code-runtime/code-runtime-worker-thread/README.zh.md) 交付；Python 渲染器内置，驱动任何报告 `language: 'python'` 的运行时（第一方 `dsh-code-runtime-python` 后端另行交付）。没有渲染器的运行时语言会导致提示词组装明确失败；如果 `systemPrompt.toolOrder` 条目指向当前模式未贡献的工具，系统会拒绝组装提示词。`system-prompt/assemble` 监听器可以替换注册表贡献；它返回的组装结果具有权威性，因此该监听器负责保留可用的 Code Mode 协议。
@@ -67,29 +67,31 @@ tools:
 第一方插件作者可以使用本包导出的 `defineTool()` 辅助函数定义类型化工具参数 schema：
 
 ```ts
-import { readFile } from 'node:fs/promises'
-import type { Context } from '@deepseek-ai/cordis'
-import { defineTool } from '@deepseek-ai/dsh-tools'
+import { readFile } from "node:fs/promises";
+import type { Context } from "@deepseek-ai/cordis";
+import { defineTool } from "@deepseek-ai/dsh-tools";
 
-declare const ctx: Context
+declare const ctx: Context;
 
-ctx.tools.register(defineTool({
-  name: 'read_file',
-  description: 'Read a file from disk.',
-  parameters: {
-    path: { type: 'string', required: true, description: 'Absolute file path' },
-    offset: { type: 'number' },
-    limit: { type: 'number' },
-  },
-  output: {
-    schema: { type: 'string' },
-    render: (_args, value) => [{ type: 'text', text: value }],
-  },
-  async execute(args, exec) {
-    // args is typed: { path: string; offset?: number; limit?: number }
-    return readFile(args.path, { encoding: 'utf8', signal: exec.signal })
-  },
-}))
+ctx.tools.register(
+  defineTool({
+    name: "read_file",
+    description: "Read a file from disk.",
+    parameters: {
+      path: { type: "string", required: true, description: "Absolute file path" },
+      offset: { type: "number" },
+      limit: { type: "number" },
+    },
+    output: {
+      schema: { type: "string" },
+      render: (_args, value) => [{ type: "text", text: value }],
+    },
+    async execute(args, exec) {
+      // args is typed: { path: string; offset?: number; limit?: number }
+      return readFile(args.path, { encoding: "utf8", signal: exec.signal });
+    },
+  }),
+);
 ```
 
 统一 schema DSL 使用 `ParameterSchemaSpec` 表示隐式开放参数对象，使用 `ValueSchemaSpec` 表示任意 JSON 值根。它支持 `string`、`number`、`integer`、`boolean`、`null`、`array`、`object`、仅供作者使用的 `json`，以及恰好匹配一个分支的 `oneOf`；标量 `enum`/`const` 值必须符合其声明类型。每个显式 DSL 对象都声明 `additionalProperties: true | false`，而隐式参数根和原始 JSON Schema 保持标准的开放默认值。schema 记录只接受自身可枚举字符串键，schema 数组必须是稠密普通数组。编译、验证、从注册表分离以及 schema 到 TypeScript 的呈现均使用显式工作栈，因此，对有效深层 schema 的运行时处理受内存而非调用栈限制；`InferValue` 在 16 层容器内保留精确类型，之后回退到 `JsonValue`，使 TypeScript 自身也保持栈安全。
@@ -119,7 +121,7 @@ ctx.tools.register(defineTool({
 
 在 `code` 或 `both` 模式下，注册表为当前作用域公开保留的 `run_code` 传输和按所加载运行时语言生成的确定性 SDK——注册表按 `ctx.codeRuntime.language` 选择渲染器（`typescript` → 下方的 TypeScript SDK，`python` → Python SDK）。SDK 为每个可见工具声明精确的参数与规范输出类型（TypeScript 为 `ToolArgsMap`/`ToolOutputMap`，Python 为具名 `TypedDict`），每个绑定都会解析为该工具的规范 JSON 值。每个无损 JSON 绑定调用都会在原生调度约定下重新进入完整工具流水线（并发安全的调用最多可重叠 `maxParallelSubCalls` 个；独占调用单独运行并构成排序屏障），并在日志中与外层调用建立关联。拒绝及其他失败结果会以程序实际可见的 `ToolCallError` 形式拒绝，且只携带 `toolName` 和 `message`；Native 内容和内部错误码留在 Code 约定之外。程序的外层日志与返回值会重新进入模型上下文；当成功结算的子调用最终 Native 内容包含图片时，桥接层还会经父结果延后完整有序内容，避免图片被 JSON 专用绑定遮蔽。最终 post-execute 阻止或内容替换具有权威性。普通副作用不会回滚，子调用的 `additionalContexts` 会通过父结果延迟，以保持调用／结果相邻。运行结算会中止并排空尚未完成的绑定；运行时失败以 `CodeRunFailedError` 形式出现。
 
-在 `code`（而非 `both`）下，该传输同时也是模型唯一可用的入口：模型直呼其他任何可见工具名，都会在创建执行时、早于 `tools/pre-execute`、审批 `ask` 和 guards 解析为 `UNKNOWN_TOOL`，因此没有任何一方会观察或批准一个注定失败的调用。拒绝信息会给出正确路径（`only \`run_code\` is callable directly — call \`<name>\` from inside a \`run_code\` program instead`），因为同一份提示词刚刚声明过那个工具，只说 `unknown tool` 会被读成部署损坏。SDK 子分发携带外层执行的 `parent` token，不受此限制，因此程序保留 SDK 声明的全部绑定。参见[执行器塌缩 note](../../../.agents/notes/implemented/bug-fix/2026-08-07-code-mode-executor-collapse.md)、[Code Mode 基础](../../../.agents/notes/implemented/feature/2026-06-15-code-mode.md)、[类型化返回约定](../../../.agents/notes/implemented/feature/2026-07-20-code-mode-typed-tool-returns.md)和[代码运行时 seam](../../code-runtime/README.md)。可以运行 `pnpm run demo:code-mode` 试用。
+在 `code`（而非 `both`）下，该传输同时也是模型唯一可用的入口：模型直呼其他任何可见工具名，都会在创建执行时、早于 `tools/pre-execute`、审批 `ask` 和 guards 解析为 `UNKNOWN_TOOL`，因此没有任何一方会观察或批准一个注定失败的调用。拒绝信息会给出正确路径（`only \`run_code\` is callable directly — call \`<name>\` from inside a \`run_code\` program instead`），因为同一份提示词刚刚声明过那个工具，只说 `unknown tool`会被读成部署损坏。SDK 子分发携带外层执行的`parent`token，不受此限制，因此程序保留 SDK 声明的全部绑定。参见[执行器塌缩 note](../../../.agents/notes/implemented/bug-fix/2026-08-07-code-mode-executor-collapse.md)、[Code Mode 基础](../../../.agents/notes/implemented/feature/2026-06-15-code-mode.md)、[类型化返回约定](../../../.agents/notes/implemented/feature/2026-07-20-code-mode-typed-tool-returns.md)和[代码运行时 seam](../../code-runtime/README.md)。可以运行`pnpm run demo:code-mode` 试用。
 
 - **SDK 段**（`tools:sdk`，顺序 150）：一个在组装时求值的提示词段，每次组装都会重新生成与所加载运行时语言相符的 SDK 文本。TypeScript 形态会生成 `JsonValue`、精确的 `ToolArgsMap` / `ToolOutputMap`、`ToolName`、`ToolCallError` 声明，以及映射调用作用域最终可见工具的 `tools` 命名空间（特殊名称使用带引号的键），并附带固定的使用说明；Python 形态（`ctx.codeRuntime.language === 'python'`）发出等价的具名 `TypedDict` 与一个带相同用法说明的 `tools` 对象。其输出具有确定性：工具按字典序排列；工具集合不变时，文本逐字节相同（有利于前缀 cache）。两个代码生成器都已导出，且绝不会在提示词组装期间抛出：`jsonSchemaToTs` 处理统一 schema 的每种构造并将不受支持的原始构造降级为 `unknown`；`jsonSchemaToPy` 同理，降级为 `Any`（当某字段名不是合法的 `TypedDict` 属性时，或在 SDK 渲染之外被调用时——`TypedDict` 声明所需的命名上下文由该渲染提供——整个对象降级为 `dict[str, Any]`）。
 - **分发桥接层**（`run_code` 的 execute）：每个绑定调用都会在分发前快照为无损 JSON（`undefined`、`BigInt`、循环、稀疏数组、`-0` 和特殊对象会使该次调用被拒绝），经由每次运行独有、复用原生并发约定的池调度——调用严格按提交顺序启动，连续的 `isConcurrencySafe` 调用最多可重叠经校验的 `maxParallelSubCalls` 配置个（默认 10；设为 `1` 即恢复串行分发），被分类为独占的调用先排空池、单独运行并阻挡其后的调用——以外层执行的不透明 token 作为 `parent`，并经过完整的 pre-execute → guards → execute → post-execute → result 流水线。成功会返回策略处理后的最终规范值；失败以一条消息到达 worker，并成为 `ToolCallError(toolName, message)`。每个已启动的子调用在进入流水线时记录一条 `tool/code-dispatch-start` 事件（确定性 id `<parent>:code:<n>`，按提交顺序编号），并以一条携带完整模型可见 `content`/`isError` 结果的 `tool/code-dispatch` 事件完结（采用 `tool/result` 词汇，因此 UI 会沿原生路径呈现子调用——这对事件的 `time` 字段承载每个子调用的计时）；因 run 结算而被放弃的排队调用两者都不记录。`deriveMessages()` 既不公开这两个事件，也不持久化规范值。token 关联使按提交语义工作的观察器可以延后提交内部调用的成功结果，直到最终 `run_code` 结果确定，而无需暴露进行中的外层执行；普通工具副作用不会回滚。每个子调用的 `additionalContexts` 条目以及每份成功且含图片的最终内容序列都会按分发顺序通过外层 `ToolRunContext` 延迟；循环只在父级 `run_code` 结果之后追加这些上下文，从而保持相邻关系和来源归属，即使程序后来失败也不例外。

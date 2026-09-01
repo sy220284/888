@@ -6,12 +6,12 @@
 
 ## 配置
 
-| 键 | 默认值 | 含义 |
-|---|---:|---|
-| `backendType` | `shell` | 每个 Agent shell 使用的已注册 terminal backend。 |
-| `timeoutMs` | `300000` | 单条命令的墙钟上限；超时关闭 shell。 |
-| `maxOutputChars` | `16000` | 保留的命令输出字符上限；固定诊断文本在其后追加。 |
-| `description` | 持久 shell 描述 | 模型可见的环境契约。 |
+| 键               |          默认值 | 含义                                             |
+| ---------------- | --------------: | ------------------------------------------------ |
+| `backendType`    |         `shell` | 每个 Agent shell 使用的已注册 terminal backend。 |
+| `timeoutMs`      |        `300000` | 单条命令的墙钟上限；超时关闭 shell。             |
+| `maxOutputChars` |         `16000` | 保留的命令输出字符上限；固定诊断文本在其后追加。 |
+| `description`    | 持久 shell 描述 | 模型可见的环境契约。                             |
 
 ## 模型体验
 
@@ -33,7 +33,7 @@
 
 #### 模型看到什么
 
-命令共享每个 Agent 的一个 shell，因此 cwd、`$env:` 变量、函数和后台任务跨调用保留。结果排除私有完成标记、shell 提示符与回显的输入行（PSReadLine 会把提交的输入渲染回输出流；marker 锚定提取与包装器原文剥离将其移除）。非零包装命令追加 `[exit code: N]` —— 命令运行原生程序时是精确的原生退出码，PowerShell 终止性错误为 `1`。shell 在报告状态前退出的，改为追加 `[shell exited: code N]`、`[shell killed by signal: SIG]` 或 `[shell exited]`（backend 两者都没有时；Windows 强杀按无 signal 的 exit 1 报告），然后重置并告知模型下一次调用从全新 shell 开始。长输出保留最早的前缀并附裁剪提示；若 PTY 已丢弃该前缀，结果会明确说明。超时返回有界的部分输出、关闭不确定的 shell 并报告重置。
+命令共享每个 Agent 的一个 shell，因此 cwd、`$env:` 变量、函数和后台任务跨调用保留。工具复用所选 terminal backend 已发布的提示符，不再改写 backend 的就绪协议。结果排除私有完成标记、backend shell 提示符与回显的输入行（PSReadLine 会把提交的输入渲染回输出流；marker 锚定提取与包装器原文剥离将其移除）。非零包装命令追加 `[exit code: N]` —— 命令运行原生程序时是精确的原生退出码，PowerShell 终止性错误为 `1`。shell 在报告状态前退出的，改为追加 `[shell exited: code N]`、`[shell killed by signal: SIG]` 或 `[shell exited]`（backend 两者都没有时；Windows 强杀按无 signal 的 exit 1 报告），然后重置并告知模型下一次调用从全新 shell 开始。长输出保留最早的前缀并附裁剪提示；若 PTY 已丢弃该前缀，结果会明确说明。超时返回有界的部分输出、关闭不确定的 shell 并报告重置。
 
 #### Token 影响
 

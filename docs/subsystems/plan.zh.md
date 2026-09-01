@@ -22,7 +22,7 @@ agent 运行时，唯一的追加点是前置（prepend）注册的 `agent/pre-s
 /** Deployment-owned plan guidance. */
 interface PlanModeConfig {
   /** Guidance rendered as the `plan:policy` prompt section while plan mode is active. */
-  section: string
+  section: string;
 }
 ```
 

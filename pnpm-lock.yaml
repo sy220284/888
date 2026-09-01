@@ -7,6 +7,9 @@ settings:
 overrides:
   '@deepseek-ai/cosmokit': link:vendor/cosmokit
   '@deepseek-ai/schemastery': link:vendor/schemastery
+  brace-expansion@^5.0.0: 5.0.9
+  protobufjs@^7.0.0: 7.6.5
+  undici@^7.0.0: 7.29.0
 
 patchedDependencies:
   node-pty@1.2.0-beta.15: b40ae545608897914bd25fb009c97eeac478c34e8a910298ddcb01b746534bb0
@@ -75,9 +78,6 @@ importers:
       knip:
         specifier: ^6.16.1
         version: 6.16.1
-      lefthook:
-        specifier: ^2.1.9
-        version: 2.1.9
       lightningcss:
         specifier: ^1.32.0
         version: 1.32.0
@@ -3436,6 +3436,9 @@ importers:
       '@deepseek-ai/dsh-compaction':
         specifier: workspace:^
         version: link:../compaction
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-recovery':
         specifier: workspace:^
         version: link:../../llm/recovery
@@ -4144,6 +4147,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-native-execution':
         specifier: workspace:^
         version: link:../native-execution
@@ -4153,6 +4159,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
 
   packages/execution/runtime-policy:
     dependencies:
@@ -7459,9 +7468,6 @@ importers:
 
   packages/subagent/subagent:
     dependencies:
-      '@deepseek-ai/dsh-runtime-policy':
-        specifier: workspace:^
-        version: link:../../execution/runtime-policy
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -7487,6 +7493,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../../llm/llm
+      '@deepseek-ai/dsh-runtime-policy':
+        specifier: workspace:^
+        version: link:../../execution/runtime-policy
       '@deepseek-ai/dsh-sandbox':
         specifier: workspace:^
         version: link:../../sandbox/sandbox
@@ -8027,6 +8036,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
       '@deepseek-ai/dsh-native-execution':
         specifier: workspace:^
         version: link:../../execution/native-execution
@@ -9262,8 +9274,8 @@ importers:
         specifier: link:../cosmokit
         version: link:../cosmokit
       js-yaml:
-        specifier: ^4.1.0
-        version: 4.3.0
+        specifier: ^4.3.1
+        version: 4.3.1
 
   vendor/loader:
     dependencies:
@@ -9331,8 +9343,8 @@ importers:
         specifier: 11.16.1
         version: 11.16.1
       vite:
-        specifier: ^6.4.3
-        version: 6.4.3(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.22.4)(yaml@2.9.0)
+        specifier: ^5.4.21
+        version: 5.4.21(@types/node@26.1.2)(lightningcss@1.33.0)
       vitepress:
         specifier: ^1.6.4
         version: 1.6.4(@algolia/client-search@5.55.2)(@types/node@26.1.2)(@types/react@18.3.31)(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(search-insights@2.17.3)(typescript@6.0.3)
@@ -12271,12 +12283,8 @@ packages:
   brace-expansion@2.1.3:
     resolution: {integrity: sha512-DRdx5neNsG/QXbniLFWi2YmC/68oeOOmKz6zOjVk6ZS1ZLXgLIKqVEc6hWsmkjBbgii0SwaBTcJ5XKj5gzY/4A==}
 
-  brace-expansion@5.0.6:
-    resolution: {integrity: sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g==}
-    engines: {node: 18 || 20 || >=22}
-
-  brace-expansion@5.0.8:
-    resolution: {integrity: sha512-JZyDyq3D4AUifKTPOB7DELf6XsB3WdPuNxCtob1vFXPsSXhdAiHBWJ/tJ8HAc9aH84BK+5JFZLNkJKx3G9kzQg==}
+  brace-expansion@5.0.9:
+    resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
     engines: {node: 20 || >=22}
 
   browserslist@4.28.6:
@@ -13225,10 +13233,6 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@4.3.0:
-    resolution: {integrity: sha512-1td788aAnnZ5qs7V2QIRl1owjtYpbKt749Y3xauqQgwIIGF/xXWz1wMTEBx5O3LK3lXLVuqXPdPxj2BoFHaW9Q==}
-    hasBin: true
-
   js-yaml@4.3.1:
     resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
@@ -13348,60 +13352,6 @@ packages:
 
   layout-base@2.0.1:
     resolution: {integrity: sha512-dp3s92+uNI1hWIpPGH3jK2kxE2lMjdXdr+DH8ynZHpd6PUlH6x6cbuXnoMmiNumznqaNO31xu9e79F0uuZ0JFg==}
-
-  lefthook-darwin-arm64@2.1.9:
-    resolution: {integrity: sha512-119HryNcvr4nqn0wUIrNPgpMEPn9yMQzEcW/lezRsnb56PCJriJB92+MCySPVcWDxJnZef7o0T3jdnPNiSH7Qg==}
-    cpu: [arm64]
-    os: [darwin]
-
-  lefthook-darwin-x64@2.1.9:
-    resolution: {integrity: sha512-dwo5Tke2XcQCM56DGHgFKBfRbJIL6xs2wZ0zG1TUVZgl4t4mQUt6LiZ4V/ZQfYHTZF9qywvXoIlR5N35qOaiVQ==}
-    cpu: [x64]
-    os: [darwin]
-
-  lefthook-freebsd-arm64@2.1.9:
-    resolution: {integrity: sha512-+09PVap6nl6xsaHch5JLtq7WvIR++U1Q2MzA2ai0M4uB/VP3AqrvKqHw6+9hjyKnIH+HHL83uqi77EAY+LaxLA==}
-    cpu: [arm64]
-    os: [freebsd]
-
-  lefthook-freebsd-x64@2.1.9:
-    resolution: {integrity: sha512-8XresjKIYpkE9ARgCtBEZgJZxAU3T4MIqzj4zNy15XRT59I1Us+QdqXTNm+pkZ41Yd2X/nxs2Pkvbq3NWWlIGw==}
-    cpu: [x64]
-    os: [freebsd]
-
-  lefthook-linux-arm64@2.1.9:
-    resolution: {integrity: sha512-1oNIQfwrPe6rgU2KcDM3aF6+hpZDCKx1TmawQKpXUY5gVsbZ7MqX0Sk/1lnnWxqPm+kQQ5f6J2dpFWd+4xH8jg==}
-    cpu: [arm64]
-    os: [linux]
-
-  lefthook-linux-x64@2.1.9:
-    resolution: {integrity: sha512-fT+7Q+BJyGp+CslFQkNXmdFRgyVXsPHPi9NAsDX0a6QOyNnoORByAsvx6zeAKuF5rL3BBgNfho1/v2RuGxGy9w==}
-    cpu: [x64]
-    os: [linux]
-
-  lefthook-openbsd-arm64@2.1.9:
-    resolution: {integrity: sha512-4bVuafBk3dddVNo0+3hMbjcJs4mqYAstxpPMmX2ufkudSTYFNIhWoqwuGVQV/SS/xdcOKJAldW4qayAzed2ysw==}
-    cpu: [arm64]
-    os: [openbsd]
-
-  lefthook-openbsd-x64@2.1.9:
-    resolution: {integrity: sha512-PmPoMmLP/wQQWcQ9u2YH86bTZ3UCfBsxuEmVTEyPU2U8R1qSTp5r/Gs3G8cN5Mxo91XB9oBERtF1n+xD3W6aVA==}
-    cpu: [x64]
-    os: [openbsd]
-
-  lefthook-windows-arm64@2.1.9:
-    resolution: {integrity: sha512-KphfkBKmwBnmolyrdhIl3lrBaOyTcCgXBT2AB/9OHnEXhOLvv5uTCUkrD4YRAxXPtFKq6UvnapIeoL3GZq0bdA==}
-    cpu: [arm64]
-    os: [win32]
-
-  lefthook-windows-x64@2.1.9:
-    resolution: {integrity: sha512-2qlUtkJHZ3MyUxgV5XTEmcrIoNZA07iwaquoswAcqv/1MeBFXlD+O+koFRfrzWng2O5WYEbpJnd8tvaYnV8fTA==}
-    cpu: [x64]
-    os: [win32]
-
-  lefthook@2.1.9:
-    resolution: {integrity: sha512-bwDaIOViTktE8kJLf9jP0p+H2/RDTlFFlc43Am2YgUsX22hI6Sq4RbzsrecwzY5y+MHTipOH7WsmWSEniePHWQ==}
-    hasBin: true
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -14108,8 +14058,8 @@ packages:
   property-information@7.2.0:
     resolution: {integrity: sha512-IAtzIB6sUiWaJYrX9smp3V46pBGbBeLFRGdh25kg1334VcBlD8HzhPeNIWQH9zhGmo2itIe25EHt9dQP7G5hmg==}
 
-  protobufjs@7.6.4:
-    resolution: {integrity: sha512-RJJPTTpvFfHcWLkIa2JFWK4XvtSzS0yEWDmunqHXli1h3JlkbcQZXDZdcWxv+JK3Xsl5/UFDPZ0iGm7DAengYw==}
+  protobufjs@7.6.5:
+    resolution: {integrity: sha512-/FPD0nUc9jH6rfFjji9IBqOz4pcSE3CsT1m7Ep6Mdb0LxSUMj8hgl6GomOvZzpNpAqqGaXA0P3VSrZLFzIhQrw==}
     engines: {node: '>=12.0.0'}
 
   proxy-addr@2.0.7:
@@ -14602,8 +14552,8 @@ packages:
   undici-types@8.3.0:
     resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
 
-  undici@7.28.0:
-    resolution: {integrity: sha512-cRZYrTDwWznlnRiPjggAGxZXanty6M8RV1ff8Wm4LWXBp7/IG8v5DnOm74DtUBp9OONpK75YlPnIjQqX0dBDtA==}
+  undici@7.29.0:
+    resolution: {integrity: sha512-IDxfleLmmbSskfWSUATiN1nfn2rDuvnMOqb5CWR92iIfojA0Ud+ulOAAEQ57LPr9rWmsreUyf5lwyao+7GNNVw==}
     engines: {node: '>=20.18.1'}
 
   unicorn-magic@0.3.0:
@@ -15946,7 +15896,7 @@ snapshots:
     dependencies:
       google-auth-library: 10.7.0
       p-retry: 4.6.2
-      protobufjs: 7.6.4
+      protobufjs: 7.6.5
       ws: 8.21.1
     optionalDependencies:
       '@modelcontextprotocol/sdk': 1.30.0(zod@4.4.3)
@@ -17591,11 +17541,7 @@ snapshots:
     dependencies:
       balanced-match: 1.0.2
 
-  brace-expansion@5.0.6:
-    dependencies:
-      balanced-match: 4.0.4
-
-  brace-expansion@5.0.8:
+  brace-expansion@5.0.9:
     dependencies:
       balanced-match: 4.0.4
 
@@ -17984,7 +17930,7 @@ snapshots:
       openapi-fetch: 0.14.1
       platform: 1.3.6
       tar: 7.5.22
-      undici: 7.28.0
+      undici: 7.29.0
 
   eastasianwidth@0.2.0: {}
 
@@ -18642,10 +18588,6 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@4.3.0:
-    dependencies:
-      argparse: 2.0.1
-
   js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
@@ -18694,7 +18636,7 @@ snapshots:
       saxes: 6.0.0
       symbol-tree: 3.2.4
       tough-cookie: 6.0.1
-      undici: 7.28.0
+      undici: 7.29.0
       w3c-xmlserializer: 5.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
@@ -18793,49 +18735,6 @@ snapshots:
   layout-base@1.0.2: {}
 
   layout-base@2.0.1: {}
-
-  lefthook-darwin-arm64@2.1.9:
-    optional: true
-
-  lefthook-darwin-x64@2.1.9:
-    optional: true
-
-  lefthook-freebsd-arm64@2.1.9:
-    optional: true
-
-  lefthook-freebsd-x64@2.1.9:
-    optional: true
-
-  lefthook-linux-arm64@2.1.9:
-    optional: true
-
-  lefthook-linux-x64@2.1.9:
-    optional: true
-
-  lefthook-openbsd-arm64@2.1.9:
-    optional: true
-
-  lefthook-openbsd-x64@2.1.9:
-    optional: true
-
-  lefthook-windows-arm64@2.1.9:
-    optional: true
-
-  lefthook-windows-x64@2.1.9:
-    optional: true
-
-  lefthook@2.1.9:
-    optionalDependencies:
-      lefthook-darwin-arm64: 2.1.9
-      lefthook-darwin-x64: 2.1.9
-      lefthook-freebsd-arm64: 2.1.9
-      lefthook-freebsd-x64: 2.1.9
-      lefthook-linux-arm64: 2.1.9
-      lefthook-linux-x64: 2.1.9
-      lefthook-openbsd-arm64: 2.1.9
-      lefthook-openbsd-x64: 2.1.9
-      lefthook-windows-arm64: 2.1.9
-      lefthook-windows-x64: 2.1.9
 
   levn@0.4.1:
     dependencies:
@@ -19357,11 +19256,11 @@ snapshots:
 
   minimatch@10.2.5:
     dependencies:
-      brace-expansion: 5.0.6
+      brace-expansion: 5.0.9
 
   minimatch@10.2.6:
     dependencies:
-      brace-expansion: 5.0.8
+      brace-expansion: 5.0.9
 
   minimatch@9.0.9:
     dependencies:
@@ -19706,7 +19605,7 @@ snapshots:
 
   property-information@7.2.0: {}
 
-  protobufjs@7.6.4:
+  protobufjs@7.6.5:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
       '@protobufjs/base64': 1.1.2
@@ -20276,7 +20175,7 @@ snapshots:
 
   undici-types@8.3.0: {}
 
-  undici@7.28.0: {}
+  undici@7.29.0: {}
 
   unicorn-magic@0.3.0: {}
 
@@ -20370,22 +20269,6 @@ snapshots:
       tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 22.20.0
-      fsevents: 2.3.3
-      jiti: 2.7.0
-      lightningcss: 1.33.0
-      tsx: 4.22.4
-      yaml: 2.9.0
-
-  vite@6.4.3(@types/node@26.1.2)(jiti@2.7.0)(lightningcss@1.33.0)(tsx@4.22.4)(yaml@2.9.0):
-    dependencies:
-      esbuild: 0.25.12
-      fdir: 6.5.0(picomatch@4.0.7)
-      picomatch: 4.0.7
-      postcss: 8.5.26
-      rollup: 4.63.0
-      tinyglobby: 0.2.17
-    optionalDependencies:
-      '@types/node': 26.1.2
       fsevents: 2.3.3
       jiti: 2.7.0
       lightningcss: 1.33.0

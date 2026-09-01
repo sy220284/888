@@ -254,6 +254,7 @@ declare module '@deepseek-ai/cordis' {
      * @param payload.attempt - one-based request attempt in this step.
      * @param payload.header - exact canonical request header being frozen.
      * @param payload.signal - current turn cancellation signal.
+     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
      * @mode waterfall
      */
     'agent/step-snapshot'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; step: number; attempt: number; header: EpochHeader; signal: AbortSignal }, next: () => Promise<StepSnapshotRefs>): Promise<StepSnapshotRefs>

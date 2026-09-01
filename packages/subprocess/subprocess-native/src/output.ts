@@ -13,6 +13,7 @@ function root(): string {
   return spillRoot
 }
 
+/** Bounded native subprocess output window with optional spill-file retention. */
 export class NativeOutputCollector implements SubprocessOutputReader {
   private readonly chunks: Buffer[] = []
   private retainedBytes = 0
@@ -29,6 +30,10 @@ export class NativeOutputCollector implements SubprocessOutputReader {
     }
   }
 
+  /**
+   * Append one output chunk while enforcing memory and spill limits.
+   * @param chunk - raw subprocess output bytes.
+   */
   push(chunk: Buffer): void {
     if (this.sealed || chunk.length === 0) return
     this.totalBytes += chunk.length
@@ -65,6 +70,7 @@ export class NativeOutputCollector implements SubprocessOutputReader {
     }
   }
 
+  /** Finalize output collection and close any active spill file. */
   seal(): void {
     if (this.sealed) return
     this.sealed = true

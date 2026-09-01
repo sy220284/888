@@ -58,7 +58,11 @@ class DeepSeekHarness:
             raise TypeError("pass either DeepSeekHarnessConfig or keyword options, not both")
         self.config = config or DeepSeekHarnessConfig(**kwargs)
         cwd = str(Path(self.config.cwd or Path.cwd()).resolve())
-        runtime_cwd = str(Path(self.config.runtime_cwd).resolve()) if self.config.runtime_cwd is not None else cwd
+        runtime_cwd = (
+            str(Path(self.config.runtime_cwd).resolve())
+            if self.config.runtime_cwd is not None
+            else cwd
+        )
         self._cwd = cwd
         env = dict(self.config.env)
         if self.config.session_root is not None:
@@ -184,7 +188,10 @@ class Session:
 
 
 def _is_inbox_receipt(notification: Notification, session_id: str, message_id: str) -> bool:
-    if notification.method != "session.event" or notification.payload.get("sessionId") != session_id:
+    if (
+        notification.method != "session.event"
+        or notification.payload.get("sessionId") != session_id
+    ):
         return False
     event = notification.payload.get("event")
     if not isinstance(event, dict) or event.get("type") != "agent/inbox/spliced":

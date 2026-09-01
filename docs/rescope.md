@@ -6,17 +6,17 @@ The Cordis framework and its foundation libraries are vendored under [`vendor/`]
 
 ## Name mapping
 
-| Directory | Upstream name | Published name | Version | Role |
-|---|---|---|---|---|
-| `vendor/cordis/` | `cordis` | `@deepseek-ai/cordis` | 4.0.0-rc.7 | Framework core: `Context`, `Service`, `Fiber`, events |
-| `vendor/cosmokit/` | `cosmokit` | `@deepseek-ai/cosmokit` | 1.8.1 | Shared utilities the framework and Schemastery build on |
-| `vendor/schemastery/` | `schemastery` | `@deepseek-ai/schemastery` | 3.18.0 | Config schemas (`Schema`) behind every plugin's `Config` |
-| `vendor/loader/` | `@cordisjs/plugin-loader` | `@deepseek-ai/cordis-plugin-loader` | 1.0.0-rc.5 | `cordis.yml` loading, plugin resolution, repository cache |
-| `vendor/include/` | `@cordisjs/plugin-include` | `@deepseek-ai/cordis-plugin-include` | 1.0.4 | Config includes and patch overlays |
-| `vendor/group/` | `@cordisjs/plugin-group` | `@deepseek-ai/cordis-plugin-group` | 1.0.0 | Nested plugin groups |
-| `vendor/timer/` | `@cordisjs/plugin-timer` | `@deepseek-ai/cordis-plugin-timer` | 1.1.2 | Disposal-aware timers on `ctx` |
-| `vendor/hmr/` | `@cordisjs/plugin-hmr` | `@deepseek-ai/cordis-plugin-hmr` | 1.0.15 | Hot module replacement for plugins and config |
-| `vendor/logger-console/` | `@cordisjs/plugin-logger-console` | `@deepseek-ai/cordis-plugin-logger-console` | 1.0.0 | Console logger exporter |
+| Directory                | Upstream name                     | Published name                              | Version    | Role                                                      |
+| ------------------------ | --------------------------------- | ------------------------------------------- | ---------- | --------------------------------------------------------- |
+| `vendor/cordis/`         | `cordis`                          | `@deepseek-ai/cordis`                       | 4.0.0-rc.7 | Framework core: `Context`, `Service`, `Fiber`, events     |
+| `vendor/cosmokit/`       | `cosmokit`                        | `@deepseek-ai/cosmokit`                     | 1.8.1      | Shared utilities the framework and Schemastery build on   |
+| `vendor/schemastery/`    | `schemastery`                     | `@deepseek-ai/schemastery`                  | 3.18.0     | Config schemas (`Schema`) behind every plugin's `Config`  |
+| `vendor/loader/`         | `@cordisjs/plugin-loader`         | `@deepseek-ai/cordis-plugin-loader`         | 1.0.0-rc.5 | `cordis.yml` loading, plugin resolution, repository cache |
+| `vendor/include/`        | `@cordisjs/plugin-include`        | `@deepseek-ai/cordis-plugin-include`        | 1.0.4      | Config includes and patch overlays                        |
+| `vendor/group/`          | `@cordisjs/plugin-group`          | `@deepseek-ai/cordis-plugin-group`          | 1.0.0      | Nested plugin groups                                      |
+| `vendor/timer/`          | `@cordisjs/plugin-timer`          | `@deepseek-ai/cordis-plugin-timer`          | 1.1.2      | Disposal-aware timers on `ctx`                            |
+| `vendor/hmr/`            | `@cordisjs/plugin-hmr`            | `@deepseek-ai/cordis-plugin-hmr`            | 1.0.15     | Hot module replacement for plugins and config             |
+| `vendor/logger-console/` | `@cordisjs/plugin-logger-console` | `@deepseek-ai/cordis-plugin-logger-console` | 1.0.0      | Console logger exporter                                   |
 
 Subpath exports keep their path: `@cordisjs/plugin-loader/repository` becomes `@deepseek-ai/cordis-plugin-loader/repository`.
 
@@ -32,12 +32,12 @@ Subpath exports keep their path: `@cordisjs/plugin-loader/repository` becomes `@
 
 ## What your code has to change
 
-| Site | Before | After |
-|---|---|---|
-| Module import | `import { Context } from 'cordis'` | `import { Context } from '@deepseek-ai/cordis'` |
-| Typed-event merge | `declare module 'cordis'` | `declare module '@deepseek-ai/cordis'` |
-| `package.json` dependency key | `"@cordisjs/plugin-hmr": "^1.0.15"` | `"@deepseek-ai/cordis-plugin-hmr": "^1.0.15"` |
-| `cordis.yml` plugin entry | `name: '@cordisjs/plugin-include'` | `name: '@deepseek-ai/cordis-plugin-include'` |
+| Site                          | Before                              | After                                           |
+| ----------------------------- | ----------------------------------- | ----------------------------------------------- |
+| Module import                 | `import { Context } from 'cordis'`  | `import { Context } from '@deepseek-ai/cordis'` |
+| Typed-event merge             | `declare module 'cordis'`           | `declare module '@deepseek-ai/cordis'`          |
+| `package.json` dependency key | `"@cordisjs/plugin-hmr": "^1.0.15"` | `"@deepseek-ai/cordis-plugin-hmr": "^1.0.15"`   |
+| `cordis.yml` plugin entry     | `name: '@cordisjs/plugin-include'`  | `name: '@deepseek-ai/cordis-plugin-include'`    |
 
 ## Applying, verifying, and reverting
 

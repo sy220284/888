@@ -2,7 +2,7 @@
 
 English | [中文](adding-a-vendored-package.zh.md)
 
-When the harness needs another upstream Cordis package (e.g. `@cordisjs/plugin-http`), it is **vendored** as pinned source under `vendor/`, not added as an npm dependency — see [the vendoring decision](../../.agents/notes/implemented/process/2026-06-11-vendor-cordis-as-source.md) for why. [vendor/README.md](../../vendor/README.md) covers *updating* an already-vendored package; this guide is the file-by-file checklist for adding a **new** one. (Verified against the existing vendored set; if it drifts, fix it here.)
+When the harness needs another upstream Cordis package (e.g. `@cordisjs/plugin-http`), it is **vendored** as pinned source under `vendor/`, not added as an npm dependency — see [the vendoring decision](../../.agents/notes/implemented/process/2026-06-11-vendor-cordis-as-source.md) for why. [vendor/README.md](../../vendor/README.md) covers _updating_ an already-vendored package; this guide is the file-by-file checklist for adding a **new** one. (Verified against the existing vendored set; if it drifts, fix it here.)
 
 ## 1. Copy the source in
 
@@ -20,12 +20,16 @@ vendor/<dir>/
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src", "outDir": "lib/types",
-    "noUncheckedIndexedAccess": false, "exactOptionalPropertyTypes": false,
-    "noImplicitOverride": false, "noUnusedLocals": false, "noUnusedParameters": false
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+    "noImplicitOverride": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
   },
   "include": ["src"],
-  "references": [{ "path": "../cordis" }, { "path": "../cosmokit" }]
+  "references": [{ "path": "../cordis" }, { "path": "../cosmokit" }],
 }
 ```
 
@@ -35,18 +39,18 @@ Local relative imports/exports in vendored TypeScript source use explicit `.ts` 
 
 ## 2. Register it in the root configs
 
-| File | Change |
-|---|---|
-| `tsconfig.base.json` | add `"<npm-name>": ["./vendor/<dir>/src"]` to `paths` |
-| `tsconfig.host.json` | add `{ "path": "./vendor/<dir>" }` to `references` (before the `packages/*` entries; vendored code enters the graph through the host aggregate only) |
-| `vendor/README.md` | add a manifest table row (dir, npm name, version, upstream repo, commit SHA) and log any local modifications |
-| `scripts/publint-all.ts` | only if the vendored package is itself published from here (vendored deps normally are not — skip) |
+| File                     | Change                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tsconfig.base.json`     | add `"<npm-name>": ["./vendor/<dir>/src"]` to `paths`                                                                                                |
+| `tsconfig.host.json`     | add `{ "path": "./vendor/<dir>" }` to `references` (before the `packages/*` entries; vendored code enters the graph through the host aggregate only) |
+| `vendor/README.md`       | add a manifest table row (dir, npm name, version, upstream repo, commit SHA) and log any local modifications                                         |
+| `scripts/publint-all.ts` | only if the vendored package is itself published from here (vendored deps normally are not — skip)                                                   |
 
 Covered automatically by globs — no edits needed: root `package.json` workspaces (`vendor/*`), `tsdown.config.ts`, `vitest.config.ts`, `.oxlintrc.json`. A per-package `vendor/<dir>/tsdown.config.ts` is needed ONLY if the build configuration differs from the root default (dual ESM/CJS or multiple entries — see `vendor/schemastery` and `vendor/logger-console`); its entry should read the JS emitted under `lib/types`.
 
 ## 3. Mind the manifest guard
 
-`scripts/check-vendor-manifest.sh` (a pre-commit hook) fails if anything under `vendor/*/src` is staged without `vendor/README.md` also staged. Stage the manifest update alongside the source so the commit passes.
+Run `scripts/check-vendor-manifest.sh` manually to verify that a staged change under `vendor/*/src` includes the matching `vendor/README.md` manifest update.
 
 ## 4. Verify
 

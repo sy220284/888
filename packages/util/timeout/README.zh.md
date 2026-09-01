@@ -11,17 +11,24 @@
 ## 对外接口
 
 ```ts
-import { clampTimeout, deadline, idleWatchdog, MAX_TIMER_DELAY_MS, timeoutOf, TimeoutReason } from '@deepseek-ai/dsh-timeout'
+import {
+  clampTimeout,
+  deadline,
+  idleWatchdog,
+  MAX_TIMER_DELAY_MS,
+  timeoutOf,
+  TimeoutReason,
+} from "@deepseek-ai/dsh-timeout";
 ```
 
-| 导出项 | 职责 |
-|---|---|
-| `clampTimeout(requested, def, max, name?)` | 验证调用方可选的、值为正且有限的提示，从 `def` 填充，并限制在 `max` 以内。如果提示为非正数或非有限数，则抛出错误（包含 `name`）。 |
-| `deadline(upstream, timeoutMs, code)` | 将 `upstream` 取消与超时融合为一个 `AbortSignal`（`AbortSignal.any`）；超时携带 `TimeoutReason`。`[Symbol.dispose]` 清除 timer。 |
-| `idleWatchdog(upstream, timeoutMs, code)` | 保持一个稳定的融合信号，并且只在受保护的异步迭代器 `next()` 尚未完成时启动 timer。完成后停止 timer；后续需求或 `pulse()` 活动会重新启动 timer；dispose（资源释放）时清除；并发需求被拒绝。 |
-| `MAX_TIMER_DELAY_MS` | Node 在不将延迟限制为 1 毫秒时可调度的最大延迟（`2_147_483_647`）。负责 timer 的配置不得超过该值。 |
-| `timeoutOf(signal \| { reason }, code?)` | 从已中止的信号/错误中恢复 `TimeoutReason`，否则返回 `undefined`，即超时与取消的分类器。传入 `code` 可仅匹配这个 deadline 的 timer（见下文的嵌套）。 |
-| `TimeoutReason` | 标记在超时中止上的内部原因（`code` + `timeoutMs`）。它不是公开错误；提供方将其转换为自己的错误/字段。 |
+| 导出项                                     | 职责                                                                                                                                                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `clampTimeout(requested, def, max, name?)` | 验证调用方可选的、值为正且有限的提示，从 `def` 填充，并限制在 `max` 以内。如果提示为非正数或非有限数，则抛出错误（包含 `name`）。                                                          |
+| `deadline(upstream, timeoutMs, code)`      | 将 `upstream` 取消与超时融合为一个 `AbortSignal`（`AbortSignal.any`）；超时携带 `TimeoutReason`。`[Symbol.dispose]` 清除 timer。                                                           |
+| `idleWatchdog(upstream, timeoutMs, code)`  | 保持一个稳定的融合信号，并且只在受保护的异步迭代器 `next()` 尚未完成时启动 timer。完成后停止 timer；后续需求或 `pulse()` 活动会重新启动 timer；dispose（资源释放）时清除；并发需求被拒绝。 |
+| `MAX_TIMER_DELAY_MS`                       | Node 在不将延迟限制为 1 毫秒时可调度的最大延迟（`2_147_483_647`）。负责 timer 的配置不得超过该值。                                                                                         |
+| `timeoutOf(signal \| { reason }, code?)`   | 从已中止的信号/错误中恢复 `TimeoutReason`，否则返回 `undefined`，即超时与取消的分类器。传入 `code` 可仅匹配这个 deadline 的 timer（见下文的嵌套）。                                        |
+| `TimeoutReason`                            | 标记在超时中止上的内部原因（`code` + `timeoutMs`）。它不是公开错误；提供方将其转换为自己的错误/字段。                                                                                      |
 
 ## `timeoutMs <= 0` 哨兵值
 
@@ -30,17 +37,17 @@ import { clampTimeout, deadline, idleWatchdog, MAX_TIMER_DELAY_MS, timeoutOf, Ti
 ## 使用形态
 
 ```ts
-import { deadline, timeoutOf } from '@deepseek-ai/dsh-timeout'
+import { deadline, timeoutOf } from "@deepseek-ai/dsh-timeout";
 
-declare function runWork(options: { signal: AbortSignal }): Promise<unknown>
+declare function runWork(options: { signal: AbortSignal }): Promise<unknown>;
 
 // Scope-lifetime consumer (foreground bash, one fetch): `using` disposes the timer.
 export async function runWithDeadline(upstream: AbortSignal | undefined, timeoutMs: number): Promise<unknown> {
-  using d = deadline(upstream, timeoutMs, 'BASH_TIMEOUT')
-  const outcome = await runWork({ signal: d.signal })               // work listens on d.signal and terminates itself
-  const timedOut = timeoutOf(d.signal, 'BASH_TIMEOUT') !== undefined // classify the first abort, scoped to OUR code
-  const aborted = d.signal.aborted && !timedOut                     // mutually exclusive: timeout won, or cancel did
-  return { outcome, timedOut, aborted }
+  using d = deadline(upstream, timeoutMs, "BASH_TIMEOUT");
+  const outcome = await runWork({ signal: d.signal }); // work listens on d.signal and terminates itself
+  const timedOut = timeoutOf(d.signal, "BASH_TIMEOUT") !== undefined; // classify the first abort, scoped to OUR code
+  const aborted = d.signal.aborted && !timedOut; // mutually exclusive: timeout won, or cancel did
+  return { outcome, timedOut, aborted };
 }
 ```
 

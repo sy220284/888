@@ -4,11 +4,11 @@
 
 本家族持久化过大的工具输出，并以有界预览和取回定位信息替换内联结果。
 
-| 包 | 职责 | ctx 键 |
-|---|---|---|
-| [`spill/`](spill/README.zh.md) | 定义 spill 存储 | `ctx.spillStore` |
-| [`spill-local/`](spill-local/README.zh.md) | 在会话范围的本地文件中存储 spill 文本 | 注册到 `ctx.spillStore` |
-| [`spill-policy/`](spill-policy/README.zh.md) | 应用执行后 spill 策略 | 监听 `ctx.tools` |
+| 包                                           | 职责                                  | ctx 键                  |
+| -------------------------------------------- | ------------------------------------- | ----------------------- |
+| [`spill/`](spill/README.zh.md)               | 定义 spill 存储                       | `ctx.spillStore`        |
+| [`spill-local/`](spill-local/README.zh.md)   | 在会话范围的本地文件中存储 spill 文本 | 注册到 `ctx.spillStore` |
+| [`spill-policy/`](spill-policy/README.zh.md) | 应用执行后 spill 策略                 | 监听 `ctx.tools`        |
 
 参见[工具输出 spill 决策](../../.agents/notes/implemented/architecture/2026-07-08-tool-output-spill-files.zh.md)，其中记录了存储、保留和工具自有输出处理之间的边界。
 

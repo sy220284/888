@@ -24,14 +24,14 @@ interface ProjectionDefinition<
   S extends SessionProjectionStateMap[K] = SessionProjectionStateMap[K],
 > {
   /** The projection key this unit owns (its `SessionProjectionStateMap` entry). */
-  key: K
+  key: K;
   /** Validates persisted state before it seeds a fold. */
-  stateSchema: ZodType<S>
+  stateSchema: ZodType<S>;
   /**
    * State for the empty log.
    * @returns the initial state.
    */
-  init(): NoInfer<S>
+  init(): NoInfer<S>;
   /**
    * Pure transition: previous state + one committed event → next state. A
    * unit uninterested in an event MUST return the same state reference — an
@@ -40,25 +40,27 @@ interface ProjectionDefinition<
    * @param event - the next committed session event.
    * @returns the next state (same reference when the event is not the unit's).
    */
-  apply(state: NoInfer<S>, event: SessionEvent): NoInfer<S>
+  apply(state: NoInfer<S>, event: SessionEvent): NoInfer<S>;
   /** Client view. Omit for host-only units. */
-  wire?: K extends keyof SessionProjectionMap ? {
-    /** Validates the wire payload before it leaves the host. */
-    viewSchema: ZodType<SessionProjectionMap[K]>
-    /**
-     * State → wire payload (the read-side projection).
-     * @param state - the current state.
-     * @returns the whole current value for this unit's key.
-     */
-    view(state: NoInfer<S>): SessionProjectionMap[K]
-  } : never
+  wire?: K extends keyof SessionProjectionMap
+    ? {
+        /** Validates the wire payload before it leaves the host. */
+        viewSchema: ZodType<SessionProjectionMap[K]>;
+        /**
+         * State → wire payload (the read-side projection).
+         * @param state - the current state.
+         * @returns the whole current value for this unit's key.
+         */
+        view(state: NoInfer<S>): SessionProjectionMap[K];
+      }
+    : never;
   /**
    * Persisted-cache invalidation version: bump whenever the serialized state fields or the
    * fold semantics change, so persisted `(sessionId, key, ver, seq, val)`
    * rows from an older unit are discarded instead of being forward-applied
    * into garbage. Non-negative integer.
    */
-  stateVersion: number
+  stateVersion: number;
 }
 ```
 
@@ -74,9 +76,9 @@ The whole-value event rule is load-bearing: a state-carrying log event carries t
  */
 interface ProjectionSnapshot {
   /** Seq of the last event the values reflect; -1 for an empty log. */
-  asOfSeq: number
+  asOfSeq: number;
   /** Whole current client value per registered key. */
-  values: Partial<SessionProjectionMap>
+  values: Partial<SessionProjectionMap>;
 }
 ```
 
@@ -91,10 +93,10 @@ type ProjectionChangeListener = (
   key: Extract<keyof SessionProjectionMap, string>,
   value: unknown,
   seq: number,
-) => void
+) => void;
 ```
 
-`snapshot(session)` is fully synchronous: a carrier reads it in the same tick as its page slice, so `asOfSeq` covers both reads at one sequence number. It returns only client views, and every value passes its unit's `viewSchema` before return. `stateOf(session, key)` reads one live host state without computing unrelated views; callers must not mutate the borrowed reference. The change feed fires once per client-visible unit whose state *reference* changed for each committed event; `apply` must return the same reference when its state did not change.
+`snapshot(session)` is fully synchronous: a carrier reads it in the same tick as its page slice, so `asOfSeq` covers both reads at one sequence number. It returns only client views, and every value passes its unit's `viewSchema` before return. `stateOf(session, key)` reads one live host state without computing unrelated views; callers must not mutate the borrowed reference. The change feed fires once per client-visible unit whose state _reference_ changed for each committed event; `apply` must return the same reference when its state did not change.
 
 ## The registry: `ctx.sessionProjections`
 

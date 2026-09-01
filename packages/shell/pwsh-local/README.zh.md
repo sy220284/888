@@ -12,15 +12,15 @@
 
 ```yaml
 - id: bash
-  name: '@deepseek-ai/dsh-pwsh-local'
+  name: "@deepseek-ai/dsh-pwsh-local"
   config:
-    cwd: C:\path\to\workspace   # default: process.cwd()
-    timeoutMs: 120000           # default foreground timeout
-    maxTimeoutMs: 600000        # cap for per-call overrides
-    maxOutputBytes: 64000       # per-stream in-memory cap; overflow spills to disk
-    maxSpillBytes: 67108864     # per-stream full-output spill cap
-    graceMs: 3000               # kill escalation and post-exit pipe-drain grace
-    pwshPath: C:\Program Files\PowerShell\7\pwsh.exe  # explicit executable; else well-known locations, then PATH
+    cwd: C:\path\to\workspace # default: process.cwd()
+    timeoutMs: 120000 # default foreground timeout
+    maxTimeoutMs: 600000 # cap for per-call overrides
+    maxOutputBytes: 64000 # per-stream in-memory cap; overflow spills to disk
+    maxSpillBytes: 67108864 # per-stream full-output spill cap
+    graceMs: 3000 # kill escalation and post-exit pipe-drain grace
+    pwshPath: C:\Program Files\PowerShell\7\pwsh.exe # explicit executable; else well-known locations, then PATH
 ```
 
 ## 行为

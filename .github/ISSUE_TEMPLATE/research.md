@@ -1,13 +1,14 @@
 ---
 name: Research
 about: 形成结论、证据或决策
-title: ''
-labels: ''
-assignees: ''
+title: ""
+labels: ""
+assignees: ""
 type: Research
 ---
 
 <!-- 标题写中文行动或结果句；外露正文不超过 50 单位。 -->
+
 一句话说明待回答的问题。
 
 <details>

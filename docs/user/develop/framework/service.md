@@ -9,9 +9,9 @@ A service is a capability one plugin exposes to other plugins. `inject` declares
 In Harness, `tools`, `llm`, and `agents` are services. Each is a named capability mounted on `ctx`:
 
 ```ts ignore-check
-ctx.tools    // ToolRuntime service
-ctx.llm      // LLM service
-ctx.agents   // Agent service
+ctx.tools; // ToolRuntime service
+ctx.llm; // LLM service
+ctx.agents; // Agent service
 ```
 
 Any plugin can provide a service for other plugins to consume.
@@ -21,11 +21,11 @@ Any plugin can provide a service for other plugins to consume.
 Declare `inject` to use an existing service:
 
 ```ts ignore-check
-export const inject = ['tools']
+export const inject = ["tools"];
 
 export function apply(ctx: Context) {
   // ctx.tools exists and is ready here.
-  ctx.tools.register(/* ... */)
+  ctx.tools.register(/* ... */);
 }
 ```
 
@@ -36,13 +36,13 @@ When `apply` runs, every service declared by `inject` is ready. If a service is 
 ### Extend Service
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
 export default class MetricsService extends Service {
-  static inject = ['llm']  // A service may depend on other services.
+  static inject = ["llm"]; // A service may depend on other services.
 
   constructor(ctx: Context) {
-    super(ctx, 'metrics')  // 'metrics' is the service name.
+    super(ctx, "metrics"); // 'metrics' is the service name.
   }
 
   // Public service method.
@@ -55,10 +55,10 @@ export default class MetricsService extends Service {
 After loading this plugin, consumers access the service as `ctx.metrics`:
 
 ```ts ignore-check
-export const inject = ['metrics']
+export const inject = ["metrics"];
 
 export function apply(ctx: Context) {
-  ctx.metrics.record('tool_call', 1)
+  ctx.metrics.record("tool_call", 1);
 }
 ```
 
@@ -67,20 +67,22 @@ export function apply(ctx: Context) {
 Use TypeScript declaration merging to type `ctx.metrics`:
 
 ```ts
-import { Service, type Context } from '@deepseek-ai/cordis'
+import { Service, type Context } from "@deepseek-ai/cordis";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    metrics: MetricsService
+    metrics: MetricsService;
   }
 }
 
 export default class MetricsService extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'metrics')
+    super(ctx, "metrics");
   }
 
-  record(event: string, value: number) { /* ... */ }
+  record(event: string, value: number) {
+    /* ... */
+  }
 }
 ```
 
@@ -90,12 +92,12 @@ export default class MetricsService extends Service {
 
 ```ts ignore-check
 // Required: the plugin does not load while the service is absent.
-export const inject = ['tools']
+export const inject = ["tools"];
 
 // Optional: omit inject and query with ctx.get() at the use site.
 export function apply(ctx: Context) {
-  const metrics = ctx.get('metrics')
-  metrics?.record('plugin_loaded', 1)
+  const metrics = ctx.get("metrics");
+  metrics?.record("plugin_loaded", 1);
 }
 ```
 
@@ -114,26 +116,26 @@ This prevents a plugin from calling a service that no longer exists.
 
 ```yaml
 - id: group-a
-  name: '@deepseek-ai/cordis-plugin-group'
+  name: "@deepseek-ai/cordis-plugin-group"
   group: true
   isolate:
     shell: true
   config:
-    - name: '@deepseek-ai/dsh-bash-local'
+    - name: "@deepseek-ai/dsh-bash-local"
       config:
         timeoutMs: 5000
-    - name: './src/plugin-a.ts'
+    - name: "./src/plugin-a.ts"
 
 - id: group-b
-  name: '@deepseek-ai/cordis-plugin-group'
+  name: "@deepseek-ai/cordis-plugin-group"
   group: true
   isolate:
     shell: true
   config:
-    - name: '@deepseek-ai/dsh-bash-local'
+    - name: "@deepseek-ai/dsh-bash-local"
       config:
         timeoutMs: 60000
-    - name: './src/plugin-b.ts'
+    - name: "./src/plugin-b.ts"
 ```
 
 `plugin-a` and `plugin-b` each see the Bash instance in their own group, with no cross-group effect.

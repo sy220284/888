@@ -8,9 +8,9 @@ Configurable registry service for package-owned runtime invariant checks. The ro
 
 ```ts
 interface Config {
-  enabled?: boolean
-  package_allowlist?: string[]
-  package_blocklist?: string[]
+  enabled?: boolean;
+  package_allowlist?: string[];
+  package_blocklist?: string[];
 }
 ```
 
@@ -34,16 +34,16 @@ When no plausible runtime relationship exists, the companion uses an empty insta
 
 The current executable companions protect these relationships:
 
-| Companion | Checks |
-|---|---|
-| `dsh-session`, `dsh-agent`, `dsh-scope`, `dsh-agent-loop` | Session enclosure and call/result trace, agent-status transitions, inbox FIFO conservation, scoped subjects, and model-request reconstruction. |
-| `dsh-llm`, `dsh-llm-retry`, `dsh-tools`, `dsh-system-prompt` | Stream grammar, durable retry position and bounds, tool-pipeline stages and frozen results, and authoritative prompt-assembly data. |
-| `dsh-compaction`, `dsh-hook-protocol`, `dsh-sandbox-policy` | Durable compaction and hook pairing, compaction metadata, and sandbox-mode vocabulary. |
-| `dsh-fs`, `dsh-subagent`, `dsh-workflow` | Filesystem event identity, provider/child pairing, and workflow/agent lifecycle identity. |
-| `dsh-goal`, `dsh-goal-round-driver` | Durable goal source/content agreement, revision and lifecycle transitions, timestamps, sequential admitted rounds, and reconstructed continuation prompts. |
-| `dsh-permission-presets`, `dsh-user-approval` | Active-preset references and approval asked/decided audit pairing. |
-| `dsh-jobs`, `dsh-tool-todo` | Task snapshot lifecycle/ownership fields and durable whole-list todo structure. |
-| `dsh-time-context` | Durable clock readings agree with the session's open turn and next pre-step position and elapsed baseline; rendered time parses and does not postdate its event. |
+| Companion                                                    | Checks                                                                                                                                                           |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dsh-session`, `dsh-agent`, `dsh-scope`, `dsh-agent-loop`    | Session enclosure and call/result trace, agent-status transitions, inbox FIFO conservation, scoped subjects, and model-request reconstruction.                   |
+| `dsh-llm`, `dsh-llm-retry`, `dsh-tools`, `dsh-system-prompt` | Stream grammar, durable retry position and bounds, tool-pipeline stages and frozen results, and authoritative prompt-assembly data.                              |
+| `dsh-compaction`, `dsh-hook-protocol`, `dsh-sandbox-policy`  | Durable compaction and hook pairing, compaction metadata, and sandbox-mode vocabulary.                                                                           |
+| `dsh-fs`, `dsh-subagent`, `dsh-workflow`                     | Filesystem event identity, provider/child pairing, and workflow/agent lifecycle identity.                                                                        |
+| `dsh-goal`, `dsh-goal-round-driver`                          | Durable goal source/content agreement, revision and lifecycle transitions, timestamps, sequential admitted rounds, and reconstructed continuation prompts.       |
+| `dsh-permission-presets`, `dsh-user-approval`                | Active-preset references and approval asked/decided audit pairing.                                                                                               |
+| `dsh-jobs`, `dsh-tool-todo`                                  | Task snapshot lifecycle/ownership fields and durable whole-list todo structure.                                                                                  |
+| `dsh-time-context`                                           | Durable clock readings agree with the session's open turn and next pre-step position and elapsed baseline; rendered time parses and does not postdate its event. |
 
 The root entrypoint of each owner remains independent of diagnostics. Loading the service alone installs no product checks, and loading a companion without the service waits on its declared `invariants` injection.
 
@@ -52,18 +52,18 @@ The root entrypoint of each owner remains independent of diagnostics. Loading th
 ## Composition
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import InvariantRegistry from '@deepseek-ai/dsh-invariants'
-import * as SessionInvariant from '@deepseek-ai/dsh-session/invariant'
+import type { Context } from "@deepseek-ai/cordis";
+import InvariantRegistry from "@deepseek-ai/dsh-invariants";
+import * as SessionInvariant from "@deepseek-ai/dsh-session/invariant";
 
-declare const ctx: Context
+declare const ctx: Context;
 
 ctx.plugin(InvariantRegistry, {
   enabled: true,
-  package_allowlist: ['^@deepseek-ai/dsh-'],
-  package_blocklist: ['^@deepseek-ai/dsh-agent-loop$'],
-})
-ctx.plugin(SessionInvariant)
+  package_allowlist: ["^@deepseek-ai/dsh-"],
+  package_blocklist: ["^@deepseek-ai/dsh-agent-loop$"],
+});
+ctx.plugin(SessionInvariant);
 ```
 
 The standard agent composition mounts the service and its four core stateful companions. Custom compositions explicitly add companions for other loaded packages whose contracts they want checked; filters can disable or select registrations without changing package entrypoints.

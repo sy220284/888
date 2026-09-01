@@ -27,7 +27,9 @@ def _load_platforms() -> dict[str, tuple[str, str]]:
             or not isinstance(raw["tag"], str)
             or not isinstance(raw["executable"], str)
         ):
-            raise RuntimeError(f"{path} platform entries must contain string tag and executable fields")
+            raise RuntimeError(
+                f"{path} platform entries must contain string tag and executable fields"
+            )
         platforms[name] = (raw["tag"], raw["executable"])
     return platforms
 
@@ -37,13 +39,23 @@ _PLATFORMS = _load_platforms()
 
 def _host_platform_tag() -> str:
     machine = platform.machine().lower()
-    arch = "arm64" if machine in {"arm64", "aarch64"} else "x64" if machine in {"x86_64", "amd64"} else machine
+    arch = (
+        "arm64"
+        if machine in {"arm64", "aarch64"}
+        else "x64"
+        if machine in {"x86_64", "amd64"}
+        else machine
+    )
     system = platform.system().lower()
-    key = f"macos-{arch}" if system == "darwin" else f"linux-{arch}" if system == "linux" else system
+    key = (
+        f"macos-{arch}" if system == "darwin" else f"linux-{arch}" if system == "linux" else system
+    )
     try:
         return _PLATFORMS[key][0]
     except KeyError as exc:
-        raise RuntimeError(f"unsupported deepseek-harness-runtime-bin build platform: {key}") from exc
+        raise RuntimeError(
+            f"unsupported deepseek-harness-runtime-bin build platform: {key}"
+        ) from exc
 
 
 class RuntimeBuildHook(BuildHookInterface):
@@ -66,7 +78,9 @@ class RuntimeBuildHook(BuildHookInterface):
             )
         expected_executable = matches[0][1]
         runtime_dir = Path(self.root) / "src" / "deepseek_harness_runtime" / "runtime"
-        runtime_files = sorted(runtime_dir.glob("dsh-jsonrpc-agent-pkg-*") if runtime_dir.is_dir() else [])
+        runtime_files = sorted(
+            runtime_dir.glob("dsh-jsonrpc-agent-pkg-*") if runtime_dir.is_dir() else []
+        )
         expected_files = [expected_executable, f"{expected_executable}-rg"]
         if "-macos-" in expected_executable:
             expected_files.append(f"{expected_executable}-spawn-helper")

@@ -79,9 +79,7 @@
       "time": 0,
       "data": {
         "title": "Run the advanced packaged-runtime snapsh",
-        "messageSeqs": [
-          4
-        ],
+        "messageSeqs": [4],
         "source": {
           "kind": "fallback"
         }
@@ -242,13 +240,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        8,
-        9,
-        10,
-        11,
-        12
-      ],
+      "sourceEventSeqs": [8, 9, 10, 11, 12],
       "surfaceOp": "append"
     },
     {
@@ -296,9 +288,7 @@
           "packageId": "pkg-1"
         }
       },
-      "sourceEventSeqs": [
-        14
-      ],
+      "sourceEventSeqs": [14],
       "surfaceOp": "append"
     },
     {
@@ -428,13 +418,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        18,
-        19,
-        20,
-        21,
-        22
-      ],
+      "sourceEventSeqs": [18, 19, 20, 21, 22],
       "surfaceOp": "append"
     },
     {
@@ -483,9 +467,7 @@
           "pluginRunId": "run-1"
         }
       },
-      "sourceEventSeqs": [
-        24
-      ],
+      "sourceEventSeqs": [24],
       "surfaceOp": "append"
     },
     {
@@ -652,13 +634,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        29,
-        30,
-        31,
-        32,
-        33
-      ],
+      "sourceEventSeqs": [29, 30, 31, 32, 33],
       "surfaceOp": "append"
     },
     {
@@ -737,9 +713,7 @@
           "id": "{{messageId}}"
         }
       },
-      "sourceEventSeqs": [
-        35
-      ],
+      "sourceEventSeqs": [35],
       "surfaceOp": "append"
     },
     {
@@ -869,13 +843,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        41,
-        42,
-        43,
-        44,
-        45
-      ],
+      "sourceEventSeqs": [41, 42, 43, 44, 45],
       "surfaceOp": "append"
     },
     {
@@ -919,9 +887,7 @@
           "id": "{{messageId}}"
         }
       },
-      "sourceEventSeqs": [
-        47
-      ],
+      "sourceEventSeqs": [47],
       "surfaceOp": "append"
     },
     {
@@ -1051,13 +1017,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        51,
-        52,
-        53,
-        54,
-        55
-      ],
+      "sourceEventSeqs": [51, 52, 53, 54, 55],
       "surfaceOp": "append"
     },
     {
@@ -1141,9 +1101,7 @@
           "id": "{{messageId}}"
         }
       },
-      "sourceEventSeqs": [
-        57
-      ],
+      "sourceEventSeqs": [57],
       "surfaceOp": "append"
     },
     {
@@ -1273,13 +1231,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        65,
-        66,
-        67,
-        68,
-        69
-      ],
+      "sourceEventSeqs": [65, 66, 67, 68, 69],
       "surfaceOp": "append"
     },
     {
@@ -1323,9 +1275,7 @@
           "id": "{{messageId}}"
         }
       },
-      "sourceEventSeqs": [
-        71
-      ],
+      "sourceEventSeqs": [71],
       "surfaceOp": "append"
     },
     {
@@ -1485,13 +1435,7 @@
           "outputTokens": 3
         }
       },
-      "sourceEventSeqs": [
-        76,
-        77,
-        78,
-        79,
-        80
-      ],
+      "sourceEventSeqs": [76, 77, 78, 79, 80],
       "surfaceOp": "append"
     },
     {
@@ -1634,9 +1578,7 @@
           "time": 0,
           "data": {
             "title": "Run the advanced packaged-runtime snapsh",
-            "messageSeqs": [
-              4
-            ],
+            "messageSeqs": [4],
             "source": {
               "kind": "fallback"
             }
@@ -1845,13 +1787,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            8,
-            9,
-            10,
-            11,
-            12
-          ],
+          "sourceEventSeqs": [8, 9, 10, 11, 12],
           "surfaceOp": "append"
         }
       }
@@ -1911,9 +1847,7 @@
               "packageId": "pkg-1"
             }
           },
-          "sourceEventSeqs": [
-            14
-          ],
+          "sourceEventSeqs": [14],
           "surfaceOp": "append"
         }
       }
@@ -2091,13 +2025,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            18,
-            19,
-            20,
-            21,
-            22
-          ],
+          "sourceEventSeqs": [18, 19, 20, 21, 22],
           "surfaceOp": "append"
         }
       }
@@ -2158,9 +2086,7 @@
               "pluginRunId": "run-1"
             }
           },
-          "sourceEventSeqs": [
-            24
-          ],
+          "sourceEventSeqs": [24],
           "surfaceOp": "append"
         }
       }
@@ -2381,13 +2307,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            29,
-            30,
-            31,
-            32,
-            33
-          ],
+          "sourceEventSeqs": [29, 30, 31, 32, 33],
           "surfaceOp": "append"
         }
       }
@@ -2490,9 +2410,7 @@
               "id": "{{messageId}}"
             }
           },
-          "sourceEventSeqs": [
-            35
-          ],
+          "sourceEventSeqs": [35],
           "surfaceOp": "append"
         }
       }
@@ -2670,13 +2588,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            41,
-            42,
-            43,
-            44,
-            45
-          ],
+          "sourceEventSeqs": [41, 42, 43, 44, 45],
           "surfaceOp": "append"
         }
       }
@@ -2874,9 +2786,7 @@
           "time": 0,
           "data": {
             "title": "Reply with exactly DIRECT_CHILD_OK and",
-            "messageSeqs": [
-              5
-            ],
+            "messageSeqs": [5],
             "source": {
               "kind": "fallback"
             }
@@ -3080,13 +2990,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            10,
-            11,
-            12,
-            13,
-            14
-          ],
+          "sourceEventSeqs": [10, 11, 12, 13, 14],
           "surfaceOp": "append"
         }
       }
@@ -3180,9 +3084,7 @@
               "id": "{{messageId}}"
             }
           },
-          "sourceEventSeqs": [
-            47
-          ],
+          "sourceEventSeqs": [47],
           "surfaceOp": "append"
         }
       }
@@ -3360,13 +3262,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            51,
-            52,
-            53,
-            54,
-            55
-          ],
+          "sourceEventSeqs": [51, 52, 53, 54, 55],
           "surfaceOp": "append"
         }
       }
@@ -3578,9 +3474,7 @@
           "time": 0,
           "data": {
             "title": "Reply with exactly WORKFLOW_CHILD_OK and",
-            "messageSeqs": [
-              5
-            ],
+            "messageSeqs": [5],
             "source": {
               "kind": "fallback"
             }
@@ -3802,13 +3696,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            10,
-            11,
-            12,
-            13,
-            14
-          ],
+          "sourceEventSeqs": [10, 11, 12, 13, 14],
           "surfaceOp": "append"
         }
       }
@@ -3933,9 +3821,7 @@
               "id": "{{messageId}}"
             }
           },
-          "sourceEventSeqs": [
-            57
-          ],
+          "sourceEventSeqs": [57],
           "surfaceOp": "append"
         }
       }
@@ -4113,13 +3999,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            65,
-            66,
-            67,
-            68,
-            69
-          ],
+          "sourceEventSeqs": [65, 66, 67, 68, 69],
           "surfaceOp": "append"
         }
       }
@@ -4175,9 +4055,7 @@
               "id": "{{messageId}}"
             }
           },
-          "sourceEventSeqs": [
-            71
-          ],
+          "sourceEventSeqs": [71],
           "surfaceOp": "append"
         }
       }
@@ -4391,13 +4269,7 @@
               "outputTokens": 3
             }
           },
-          "sourceEventSeqs": [
-            76,
-            77,
-            78,
-            79,
-            80
-          ],
+          "sourceEventSeqs": [76, 77, 78, 79, 80],
           "surfaceOp": "append"
         }
       }

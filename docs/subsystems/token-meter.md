@@ -12,17 +12,17 @@ Source: [`packages/llm/token-meter/src/types.ts`](../../packages/llm/token-meter
 /** Detached immutable request-pressure and surface snapshot at one consumed log revision. */
 interface TokenMeasurement {
   /** Number of durable events consumed; equal to the next unread event seq. */
-  readonly logRevision: number
+  readonly logRevision: number;
   /** Provider or heuristic anchor used for this measurement. */
-  readonly baseline: TokenMeasurementBaseline
+  readonly baseline: TokenMeasurementBaseline;
   /** Signed repricing of current surface content relative to the baseline anchor. */
-  readonly surfaceDeltaTokens: number
+  readonly surfaceDeltaTokens: number;
   /** Non-negative current request-and-response pressure. */
-  readonly totalTokens: number
+  readonly totalTokens: number;
   /** Total heuristic tokens across the current surface. */
-  readonly surfaceTokens: number
+  readonly surfaceTokens: number;
   /** Current surface nodes in positional head-to-tail order. */
-  readonly nodes: readonly TokenSurfaceNode[]
+  readonly nodes: readonly TokenSurfaceNode[];
 }
 ```
 
@@ -34,9 +34,9 @@ interface TokenMeasurement {
 /** One token-priced node in the current ordered session surface. */
 interface TokenSurfaceNode {
   /** Durable sequence number of the surface event. */
-  readonly seq: number
+  readonly seq: number;
   /** Heuristic tokens for the exact message projected by this node. */
-  readonly tokens: number
+  readonly tokens: number;
 }
 ```
 

@@ -6,24 +6,24 @@ The **`ShellExecutor`** (`ctx.shell`) defines WHAT a bash backend does — run f
 
 This package owns the Service Definition role of the bash capability, split so each role can evolve (and be swapped) independently:
 
-| Package | Role |
-|---|---|
-| `@deepseek-ai/dsh-shell` (this) | Service Definition: abstract service + vocabulary types |
-| `@deepseek-ai/dsh-bash-local` | Service Provider: local subprocesses |
+| Package                         | Role                                                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@deepseek-ai/dsh-shell` (this) | Service Definition: abstract service + vocabulary types                                                                                                |
+| `@deepseek-ai/dsh-bash-local`   | Service Provider: local subprocesses                                                                                                                   |
 | `@deepseek-ai/dsh-bash-sandbox` | Service Provider: `dsh-bash-local`'s mechanics with every spawn confined via [`ctx.sandbox`](../../sandbox/sandbox/), denials reported as result facts |
-| `@deepseek-ai/dsh-tool-bash` | the model-facing tool schemas over `ctx.shell` |
+| `@deepseek-ai/dsh-tool-bash`    | the model-facing tool schemas over `ctx.shell`                                                                                                         |
 
 The split is a standard capability seam ([capability-seams Agent Note](../../../.agents/notes/implemented/architecture/2026-06-13-capability-seams.md)): `dsh-bash-sandbox` is a sandboxing executor behind the same Service Definition — the Consumer detects its `sandboxMode` capability and adds escalation fields without importing the provider — and a containerized or remote executor slots in the same way.
 
 ## Service API (`ctx.shell`)
 
-| Member | Semantics |
-|---|---|
-| `run(spec)` | Foreground execution. Resolves when the command finishes. **Rejects only for infrastructure failures** (unusable workdir, missing shell, pre-aborted signal); nonzero exits, timeout kills, and abort kills resolve with a descriptive `ShellRunResult`. |
-| `start(spec)` | Background execution. Returns a task-free `ShellProcess` handle immediately; **no timeout applies**. The caller may adapt it into `ctx.jobs`. |
-| `sandboxMode` | The capability fact for the tool layer: the default mode a SANDBOXING executor confines under (`undefined` in the base class — "this executor does not sandbox"). `dsh-tool-bash` reads it at registration to advertise the escalation fields only when the composition honors them. |
-| `ShellProcess.readOutput()` | **Incremental** output read — consecutive reads never re-deliver. Reads that lost data to buffer bounds flag `lossy` and point at full-stream spill files. |
-| `ShellProcess.kill()` | Kill the process group. Returns `false` when it already finished. |
+| Member                      | Semantics                                                                                                                                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `run(spec)`                 | Foreground execution. Resolves when the command finishes. **Rejects only for infrastructure failures** (unusable workdir, missing shell, pre-aborted signal); nonzero exits, timeout kills, and abort kills resolve with a descriptive `ShellRunResult`.                             |
+| `start(spec)`               | Background execution. Returns a task-free `ShellProcess` handle immediately; **no timeout applies**. The caller may adapt it into `ctx.jobs`.                                                                                                                                        |
+| `sandboxMode`               | The capability fact for the tool layer: the default mode a SANDBOXING executor confines under (`undefined` in the base class — "this executor does not sandbox"). `dsh-tool-bash` reads it at registration to advertise the escalation fields only when the composition honors them. |
+| `ShellProcess.readOutput()` | **Incremental** output read — consecutive reads never re-deliver. Reads that lost data to buffer bounds flag `lossy` and point at full-stream spill files.                                                                                                                           |
+| `ShellProcess.kill()`       | Kill the process group. Returns `false` when it already finished.                                                                                                                                                                                                                    |
 
 Implementations subclass `ShellExecutor` and implement the abstract methods. Disposal must kill every running process and await its exit.
 

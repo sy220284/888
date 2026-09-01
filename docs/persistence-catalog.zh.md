@@ -15,17 +15,14 @@
 
 ```ts persistence-catalog
 /** The appendable event-type keys of {@link SessionEventMap}, plugin-merged extensions included. */
-export type SessionEventType = keyof SessionEventMap
+export type SessionEventType = keyof SessionEventMap;
 
 /**
  * The subset of {@link SessionEventType} values whose events produce LLM
  * messages and are eligible to appear on the ordered surface. Only these
  * event types may carry {@link SurfaceOp} and {@link SessionEvent.sourceEventSeqs}.
  */
-export type SurfaceEventType =
-  | 'user/message'
-  | 'assistant/message'
-  | 'tool/result'
+export type SurfaceEventType = "user/message" | "assistant/message" | "tool/result";
 
 /**
  * How a session event entered the ordered surface. Only valid on
@@ -40,9 +37,7 @@ export type SurfaceEventType =
  *   shadowed surface node. Used by compaction; any surface-replacing producer
  *   may use it.
  */
-export type SurfaceOp =
-  | 'append'
-  | { op: 'replace'; start: number; end: number }
+export type SurfaceOp = "append" | { op: "replace"; start: number; end: number };
 
 /**
  * One immutable entry in the session log.
@@ -59,12 +54,12 @@ export type SurfaceOp =
  */
 export type SessionEvent<T extends SessionEventType = SessionEventType> = {
   [K in SessionEventType]: {
-    type: K
+    type: K;
     /** Monotonic sequence number within the session. */
-    seq: number
+    seq: number;
     /** Unix epoch milliseconds. */
-    time: number
-    data: SessionEventMap[K]
+    time: number;
+    data: SessionEventMap[K];
     /**
      * Marks an event a reader may safely skip when it does not recognize
      * `type`. Absent means required: a reader meeting an unrecognized type
@@ -75,21 +70,23 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
      * defaulting to required means a forgotten marker over-refuses (an
      * inconvenience) rather than silently resuming a gutted session.
      */
-    ignorable?: true
-  } & (K extends SurfaceEventType ? {
-    /**
-     * Seq numbers of earlier events that this event cites as sources
-     * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
-     * or the surface nodes shadowed by a compaction replace node). An
-     * `assistant/message` may carry a present empty array for a known empty
-     * provider stream; when the field is absent, the event does not record which
-     * earlier events produced the message.
-     */
-    sourceEventSeqs?: number[]
-    /** How this event entered the surface; absent for non-surface events. */
-    surfaceOp?: SurfaceOp
-  } : object)
-}[T]
+    ignorable?: true;
+  } & (K extends SurfaceEventType
+    ? {
+        /**
+         * Seq numbers of earlier events that this event cites as sources
+         * (e.g. the `assistant/chunk` seqs that built an `assistant/message`,
+         * or the surface nodes shadowed by a compaction replace node). An
+         * `assistant/message` may carry a present empty array for a known empty
+         * provider stream; when the field is absent, the event does not record which
+         * earlier events produced the message.
+         */
+        sourceEventSeqs?: number[];
+        /** How this event entered the surface; absent for non-surface events. */
+        surfaceOp?: SurfaceOp;
+      }
+    : object);
+}[T];
 ```
 
 来源：[`packages/core/session/src/types.ts:378`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:385`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:414`](../packages/core/session/src/types.ts) · [`packages/core/session/src/types.ts:446`](../packages/core/session/src/types.ts)

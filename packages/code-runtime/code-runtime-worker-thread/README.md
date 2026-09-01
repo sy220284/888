@@ -8,12 +8,12 @@ Worker-thread implementation of the [`@deepseek-ai/dsh-code-runtime`](../code-ru
 
 ```yaml
 - id: code-runtime
-  name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+  name: "@deepseek-ai/dsh-code-runtime-worker-thread"
   config:
-    computeMs: 60000              # busy-time budget (measured event-loop active time)
-    maxWallMs: 600000             # wall-clock ceiling; never pauses for anything
-    maxOutputBytes: 67108864      # combined serialized outer-output cap (64 MiB)
-    maxOldGenerationSizeMb: 512   # worker heap cap (resourceLimits)
+    computeMs: 60000 # busy-time budget (measured event-loop active time)
+    maxWallMs: 600000 # wall-clock ceiling; never pauses for anything
+    maxOutputBytes: 67108864 # combined serialized outer-output cap (64 MiB)
+    maxOldGenerationSizeMb: 512 # worker heap cap (resourceLimits)
 ```
 
 Every field is validated and defaulted; `maxOutputBytes` is a safe integer of at least four bytes, the remaining fields are positive finite numbers, `maxWallMs` is additionally at most `2147483647` (Node's maximum `setTimeout` delay), and there are no other tunables.

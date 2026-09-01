@@ -6,11 +6,11 @@
 
 流水线渲染模板时替换以下占位符，除此之外不改写系统消息：
 
-| 占位符 | 填入内容 | 来源 |
-|---|---|---|
-| `{{source_lang}}` | 源语言名（`English` / `Chinese`） | 由改动侧文件推断：`.zh.md` 被改则为 `Chinese` |
-| `{{target_lang}}` | 目标语言名（`Chinese` / `English`） | 与 `{{source_lang}}` 相对 |
-| `{{terminology}}` | [terminology.md](terminology.md) 的完整表格（Markdown 原文） | 渲染时读取仓库当前版本，不缓存 |
+| 占位符            | 填入内容                                                     | 来源                                          |
+| ----------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| `{{source_lang}}` | 源语言名（`English` / `Chinese`）                            | 由改动侧文件推断：`.zh.md` 被改则为 `Chinese` |
+| `{{target_lang}}` | 目标语言名（`Chinese` / `English`）                          | 与 `{{source_lang}}` 相对                     |
+| `{{terminology}}` | [terminology.md](terminology.md) 的完整表格（Markdown 原文） | 渲染时读取仓库当前版本，不缓存                |
 
 流水线只识别上表中的占位符，并且一次翻译整篇文档。它不支持 `{{to}}`、`{{title_prompt}}`、`{{summary_prompt}}`、`{{terms_prompt}}`、`{{imt_style_guide}}`、`{{translation_rules}}` 或 `%%` 分段协议；输出采用模板正文规定的三段 XML，流水线解析取 `<final>` 段。
 

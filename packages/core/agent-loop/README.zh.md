@@ -37,15 +37,15 @@ agent（智能体）的唯一具体实现插件和循环驱动器。其包内部
 
 ```ts
 interface Config {
-  maxParallelToolCalls?: number // default 10; 1 is serial
+  maxParallelToolCalls?: number; // default 10; 1 is serial
   agents: Array<{
-    id: string                 // required
-    provider?: string
-    model?: string
-    maxTokens?: number         // positive per-request output-token cap
-    resumeSessionId?: string   // load this persisted session instead of creating one
-    cwd?: string               // optional workspace cwd for the fresh session
-  }>
+    id: string; // required
+    provider?: string;
+    model?: string;
+    maxTokens?: number; // positive per-request output-token cap
+    resumeSessionId?: string; // load this persisted session instead of creating one
+    cwd?: string; // optional workspace cwd for the fresh session
+  }>;
 }
 ```
 
@@ -74,6 +74,7 @@ interface Config {
 ### 插件负责的内容
 
 超出「调用模型、运行工具、重复」的所有内容，都属于监听事件分类体系的插件：
+
 - 钩子与策略：相关的 `agent/*` 检查点，加上受守卫保护的 `tools/pre-execute` → `tools/execute` → `tools/post-execute` → 定义拥有的 `finalizeContent` → `tools/result` 流水线；确切事件签名与 mode 位于 [core.md](../../../docs/subsystems/core.zh.md#cordis-surface) 与 [tools.md](../../../docs/subsystems/tools.zh.md#cordis-surface) 的生成区块
 - 压缩（compaction）：在 `agent/pre-step` 上观测压力；在 `agent/request-error` 上进行规范的溢出修复
 - 模型请求恢复：`dsh-llm-retry` 在 `agent/request-error` 上记录并等待针对确切提供方配置的 normal 或无界退避，发出不进入表层的 `llm/retry` 状态，然后返回重试动作

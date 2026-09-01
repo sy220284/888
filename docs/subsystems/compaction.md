@@ -10,11 +10,11 @@ Source: [`packages/compaction/compaction/src/types.ts`](../../packages/compactio
 
 Compaction extends [`SessionEventMap`](session.md) with three event types via declaration merging. All three are **log-only** — they record the lock, summary, selected range, shadowed event seqs, token count, and model call without joining the surface. `SurfaceEventType` is deliberately NOT extended (only message-producing events reach the model), so the summary itself rides on a separate `user/message` with `surfaceOp: { op: 'replace', start, end }` — the only surface mutation performed by summary compaction. The [Agent Note](../../.agents/notes/implemented/feature/2026-06-18-compaction-capability-seam.md) owns the rationale for reusing `user/message`.
 
-| Event | Payload | Role |
-|---|---|---|
-| `compaction/start` | `{ turn }` | acquires the log-recorded lock; a number identifies the open automatic turn, while `null` identifies a standalone manual attempt |
+| Event                | Payload                                                                                                                         | Role                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compaction/start`   | `{ turn }`                                                                                                                      | acquires the log-recorded lock; a number identifies the open automatic turn, while `null` identifies a standalone manual attempt                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `compaction/summary` | `{ summary, rawOutput?, llmStreamCall?, shadowedRange, shadowedSeqs, shadowedTokenCount, provider, model, maxTokens?, usage? }` | the safe summary projection, optional complete provider output and usage, an `llmStreamCall: true` marker when producing the result consumed exactly one call through this context's `ctx.llm.stream()` (which requires complete `rawOutput`), the shadowed surface-boundary pair (`start`/`end` seqs — a position span, not a numeric interval), the shadowed seqs in surface order, the estimated token count, and the summarize call's envelope (`provider`, `model`, plus its generation cap when one applied) — logged so the one-shot request is reconstructable from log + code (the reconstructability Agent Note); unmarked `rawOutput` does not identify the call path |
-| `compaction/end` | `{ turn, error? }` | releases the lock with the same numeric-or-null owner (`error` records an unsuccessful attempt) |
+| `compaction/end`     | `{ turn, error? }`                                                                                                              | releases the lock with the same numeric-or-null owner (`error` records an unsuccessful attempt)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 The lock brackets the **whole** operation: `compaction/start` is appended first, then summarization, the `compaction/summary` record, and the `user/message` replacement all land, and only then `compaction/end`. Releasing the lock last turns a crash mid-operation into a detectable orphaned lock (a `compaction/start` with no matching `compaction/end`) rather than a `compaction/end` that falsely claims compaction finished.
 
@@ -30,17 +30,17 @@ What a successful compaction returns to its caller: the bookkeeping-event seqs, 
 /** Result of a successful compaction operation. */
 interface CompactionResult {
   /** Stable identity shared by this compaction's complete durable lifecycle. */
-  compactionId: CompactionId
+  compactionId: CompactionId;
   /** Human command that initiated this compaction, when it was manual. */
-  sourceCommandId?: CommandId
+  sourceCommandId?: CommandId;
   /** The seq of the appended `compaction/start` event. */
-  startSeq: number
+  startSeq: number;
   /** The seq of the appended `compaction/summary` event. */
-  summarySeq: number
+  summarySeq: number;
   /** The seq of the appended `compaction/end` event. */
-  endSeq: number
+  endSeq: number;
   /** The summary content blocks produced by the backend. */
-  summary: ContentBlock[]
+  summary: ContentBlock[];
   /**
    * The surface-boundary pair that was shadowed: the seqs of the first
    * (`start`) and last (`end`) surface nodes of the replaced range. A
@@ -49,11 +49,11 @@ interface CompactionResult {
    * can be GREATER than `end`. {@link CompactionResult.shadowedSeqs} is the
    * authoritative set of shadowed nodes, in surface order.
    */
-  shadowedRange: { start: number; end: number }
+  shadowedRange: { start: number; end: number };
   /** The seqs of all shadowed surface nodes, in surface order. */
-  shadowedSeqs: number[]
+  shadowedSeqs: number[];
   /** Estimated token count of the shadowed content. */
-  shadowedTokenCount: number
+  shadowedTokenCount: number;
 }
 ```
 
@@ -63,7 +63,7 @@ Automatic callers state why policy is running; implementations may treat confirm
 
 ```ts type-equiv
 /** Why automatic policy is asking a backend to consider compaction. */
-type CompactionTrigger = 'pressure' | 'context-overflow'
+type CompactionTrigger = "pressure" | "context-overflow";
 ```
 
 `CompactionEngine` exposes `compactIfNeeded(agent, trigger, signal)` for automatic `pressure` or `context-overflow` policy, `compactNow(agent, signal)` for one useful idle-session reduction even below pressure, and `compactRegion(...)` for an explicit inclusive surface range. `compactNow()` runs as agent maintenance between turns, returns `null` without writing when no useful range exists, records a standalone `turn: null` bracket before summarization, and flushes a closed attempt before later queued prompts may derive from the new surface. Every backend creates its replacement `user/message` source with `compactCheckpointSource(compactionId, sourceCommandId?)`; client and wire consumers import that constructor, `CompactionCheckpointSource`, and `isCompactCheckpointSource()` from the cordis-free `@deepseek-ai/dsh-compaction/checkpoint` subpath, while the package root re-exports them for host consumers. The required transaction identity correlates the replacement checkpoint, while the predicate keeps recognition independent of any one backend. Implementations must forward the supplied signal to summarization. The seam owns no pricing API: the singleton [`ctx.tokenMeter`](token-meter.md) directly owns estimation and replay, while `dsh-compaction-basic` owns retention, event sequencing, routed summarization calls, and their configuration.
@@ -72,13 +72,7 @@ Expected manual failures use `ManualCompactionErrorCode`:
 
 ```ts type-equiv
 /** Expected failure classes for an explicit idle-session compaction request. */
-type ManualCompactionErrorCode =
-  | 'busy'
-  | 'cancelled'
-  | 'changed'
-  | 'summary'
-  | 'commit'
-  | 'persistence'
+type ManualCompactionErrorCode = "busy" | "cancelled" | "changed" | "summary" | "commit" | "persistence";
 ```
 
 `changed` and `summary` leave the conversation surface unchanged but still close and persist the failed attempt in the log. `commit` may follow partial mutation; `persistence` means the in-memory bracket closed but its flush failed. Cancellation remains separate and throws the exact abort reason after required cleanup.
@@ -95,15 +89,15 @@ The optional tool-result pruning service reports each durable content replacemen
 /** Cited source event and size accounting for one landed surface replacement. */
 interface PrunedEntry {
   /** Full-fidelity tool-result event shadowed by the replacement. */
-  readonly originalSeq: number
+  readonly originalSeq: number;
   /** Newly appended pruned tool-result event. */
-  readonly replacementSeq: number
+  readonly replacementSeq: number;
   /** Tool call shared by the original and replacement. */
-  readonly callId: CallId
+  readonly callId: CallId;
   /** Original text size in Unicode code points. */
-  readonly charsBefore: number
+  readonly charsBefore: number;
   /** Replacement text size in Unicode code points. */
-  readonly charsAfter: number
+  readonly charsAfter: number;
 }
 ```
 
@@ -111,9 +105,9 @@ interface PrunedEntry {
 /** Aggregate outcome of one stable-surface pruning pass. */
 interface PruneResult {
   /** Replacements in the snapshotted surface order. */
-  readonly pruned: readonly PrunedEntry[]
+  readonly pruned: readonly PrunedEntry[];
   /** Total Unicode code points removed across replacements. */
-  readonly charsRemoved: number
+  readonly charsRemoved: number;
 }
 ```
 

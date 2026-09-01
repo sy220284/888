@@ -9,11 +9,11 @@
 Cordis 配置项除了 `name` 和 `config`，还接受其他元数据：
 
 ```yaml
-- id: greeter          # stable identity for this entry
-  name: './greeter.ts'
+- id: greeter # stable identity for this entry
+  name: "./greeter.ts"
 - id: consumer
-  name: './consumer.ts'
-  disabled: true       # keep the entry, skip mounting it
+  name: "./consumer.ts"
+  disabled: true # keep the entry, skip mounting it
 ```
 
 `id` 为 Cordis 配置项提供稳定标识，使 loader 能区分修改现有 Cordis 配置项与先删除再添加。`disabled: true` 会卸载插件而不删除其 Cordis 配置项；改回原值后，插件以及所有因依赖其服务而处于 PENDING 的插件都会再次加载。
@@ -28,15 +28,15 @@ Cordis 配置项除了 `name` 和 `config`，还接受其他元数据：
 
 ```yaml
 - id: logger
-  name: '@deepseek-ai/cordis-plugin-logger-console'
+  name: "@deepseek-ai/cordis-plugin-logger-console"
 - id: timer
-  name: '@deepseek-ai/cordis-plugin-timer'
+  name: "@deepseek-ai/cordis-plugin-timer"
 - id: hmr
-  name: '@deepseek-ai/cordis-plugin-hmr'
+  name: "@deepseek-ai/cordis-plugin-hmr"
   config:
-    root: ['.']
+    root: ["."]
 - id: hello
-  name: './hello.ts'
+  name: "./hello.ts"
 ```
 
 列表中增加了两个辅助插件：HMR 通过 Cordis logger 服务记录日志，因此没有控制台导出器时看不到其消息；它还会 `inject` `timer` 服务来实现去抖，如果没有 `@deepseek-ai/cordis-plugin-timer`，它就会永远停在 PENDING，而且不发出任何提示。下一节就讨论这种静默状态。
@@ -65,39 +65,39 @@ hello from my EDITED plugin
 你可以直接查看这些状态。每个上下文都能枚举插件注册表；创建 `diagnose.ts`：
 
 ```ts
-import { FiberState, type Context } from '@deepseek-ai/cordis'
+import { FiberState, type Context } from "@deepseek-ai/cordis";
 
-export const name = 'diagnose'
+export const name = "diagnose";
 
 export function apply(ctx: Context) {
   setTimeout(() => {
     for (const runtime of ctx.registry.values()) {
       for (const fiber of runtime.fibers) {
         if (fiber.state === FiberState.PENDING) {
-          console.log(`${fiber.name} is PENDING — a required service is missing`)
+          console.log(`${fiber.name} is PENDING — a required service is missing`);
         }
       }
     }
-  }, 500)
+  }, 500);
 }
 ```
 
 再创建一个依赖无法满足的插件 `needs-timer.ts`：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'needs-timer'
-export const inject = ['timer']
+export const name = "needs-timer";
+export const inject = ["timer"];
 
 export function apply(ctx: Context) {
-  console.log('needs-timer loaded')
+  console.log("needs-timer loaded");
 }
 ```
 
 ```yaml
-- name: './needs-timer.ts'
-- name: './diagnose.ts'
+- name: "./needs-timer.ts"
+- name: "./diagnose.ts"
 ```
 
 运行它（直接执行 `node --import tsx ../../vendor/cordis/bin.js`，按 Ctrl-C 停止）：

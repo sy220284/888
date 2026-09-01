@@ -94,8 +94,8 @@
 }
 
 /* Running sweep glare — same deepsuite ShimmerText pattern as ToolRow. */
-.root[data-state='running']::after {
-  content: '';
+.root[data-state="running"]::after {
+  content: "";
   position: absolute;
   top: 0;
   bottom: 0;
@@ -112,8 +112,13 @@
 }
 
 @keyframes dsh-bash-row-sweep {
-  0% { left: -300px; }
-  90%, 100% { left: 100%; }
+  0% {
+    left: -300px;
+  }
+  90%,
+  100% {
+    left: 100%;
+  }
 }
 
 .leading {
@@ -227,7 +232,6 @@
   background: var(--dsw-alias-interactive-bg-hover-solid);
   color: var(--dsw-alias-label-primary);
 }
-
 
 .visuallyHidden {
   position: absolute;

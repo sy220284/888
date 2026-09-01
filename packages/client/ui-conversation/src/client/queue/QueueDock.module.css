@@ -5,17 +5,10 @@
   box-sizing: border-box;
   flex: none;
   width: calc(
-    100% -
-    var(--dsh-composer-side-clearance) -
-    var(--dsh-composer-side-clearance) -
-    var(--dsh-composer-dock-inset) -
-    var(--dsh-composer-dock-inset)
+    100% - var(--dsh-composer-side-clearance) - var(--dsh-composer-side-clearance) - var(--dsh-composer-dock-inset) -
+      var(--dsh-composer-dock-inset)
   );
-  max-width: calc(
-    var(--dsh-composer-card-max-width) -
-    var(--dsh-composer-dock-inset) -
-    var(--dsh-composer-dock-inset)
-  );
+  max-width: calc(var(--dsh-composer-card-max-width) - var(--dsh-composer-dock-inset) - var(--dsh-composer-dock-inset));
   /* Cancel the stack gap after this item and tuck 3px under the input card
      (square bottom), reading as one attached surface. */
   margin: 0 auto calc(0px - var(--dsh-composer-stack-gap) - 3px);
@@ -43,7 +36,7 @@
   /* The input card's own top border closes the shape below. */
   border-bottom: none;
   border-radius: inherit;
-  content: '';
+  content: "";
   pointer-events: none;
 }
 

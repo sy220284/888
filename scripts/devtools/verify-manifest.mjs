@@ -24,9 +24,14 @@ for (const component of manifest.tools.rust.components ?? []) {
   if (!rustToolchain.includes(`"${component}"`)) errors.push(`Rust component missing from rust-toolchain.toml: ${component}`)
 }
 
+function normalizeVersion(value) {
+  const match = String(value).match(/^(\d+)\.(\d+)(?:\.(\d+))?$/)
+  return match ? `${match[1]}.${match[2]}.${match[3] ?? '0'}` : String(value)
+}
+
 const pythonMatch = pyproject.match(/requires-python\s*=\s*">=([^"\s]+)"/)
 if (!pythonMatch) errors.push('python/sdk/pyproject.toml requires-python must use a >= lower bound')
-else if (manifest.tools.python.minimumVersion !== pythonMatch[1]) errors.push(`Python manifest mismatch: ${manifest.tools.python.minimumVersion} != ${pythonMatch[1]}`)
+else if (normalizeVersion(manifest.tools.python.minimumVersion) !== normalizeVersion(pythonMatch[1])) errors.push(`Python manifest mismatch: ${manifest.tools.python.minimumVersion} != ${pythonMatch[1]}`)
 
 const knownTools = new Set([...Object.keys(manifest.tools), 'native-build-chain'])
 for (const [name, profile] of Object.entries(profiles)) {

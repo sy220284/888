@@ -11,13 +11,13 @@ Building directly on the raw ACL mechanism is the recorded design choice: it imp
 ## Usage
 
 ```ts
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { AclSandbox, tempWriteSid, workspaceWriteSid } from '@deepseek-ai/dsh-sandbox-windows-acl'
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { AclSandbox, tempWriteSid, workspaceWriteSid } from "@deepseek-ai/dsh-sandbox-windows-acl";
 
-const workspaceRoot = process.cwd()
-const tempDir = mkdtempSync(join(tmpdir(), 'dsh-'))
+const workspaceRoot = process.cwd();
+const tempDir = mkdtempSync(join(tmpdir(), "dsh-"));
 
 // mode selects the token's restricting-SID list (see Modes below) and must
 // match the grant shape. workspace-write requires distinct workspace and
@@ -27,15 +27,15 @@ const sandbox = new AclSandbox({
   tempDir,
   writeSid: workspaceWriteSid(workspaceRoot),
   tempWriteSid: tempWriteSid(tempDir),
-  mode: 'workspace-write',
-})
-await sandbox.init() // throws on ANY Win32 failure — never spawns unrestricted
+  mode: "workspace-write",
+});
+await sandbox.init(); // throws on ANY Win32 failure — never spawns unrestricted
 
-const child = sandbox.spawn({ command: 'pwsh', args: ['-NoProfile', '-Command', '...'], cwd: workspaceRoot })
-const { stdout, stderr, exitCode } = await child.wait()
+const child = sandbox.spawn({ command: "pwsh", args: ["-NoProfile", "-Command", "..."], cwd: workspaceRoot });
+const { stdout, stderr, exitCode } = await child.wait();
 
-sandbox.dispose() // revokes the revocable (temp) grant, keeps the standing workspace ACE; reports every cleanup failure
-rmSync(tempDir, { recursive: true, force: true })
+sandbox.dispose(); // revokes the revocable (temp) grant, keeps the standing workspace ACE; reports every cleanup failure
+rmSync(tempDir, { recursive: true, force: true });
 ```
 
 A direct `AclSandbox` requires an explicit private temp directory (or `tempDir: null`; the ambient temp root is never an implicit grant), grants the workspace ACEs STANDING (dispose() leaves them — they are the cross-instance reuse cache), and grants the distinct temp SID revocably. The server-side reuse is the `AclWriteGrant` class: `add(path, standing)` per directory, `dispose()` revokes the revocable paths and frees the SID — see the runner contract below. Every Win32 API call in this package is checked; failures throw `Win32Error` carrying the API name, the exact Win32 code, the `FormatMessageW` system text, and the failing path/context. This is deliberate: the POC ignored every return value and, when `CreateRestrictedToken` failed, silently ran the child with the FULL unrestricted token (fail-open). This port fails closed by construction.
@@ -53,6 +53,7 @@ The runner creates the restricted token, spawns the wrapped argv under it with t
 **Workspace reuse and temp isolation**: the seam materializes the deterministic workspace SID's ACE STANDING (once per workspace per server lifetime, never revoked — it is the reuse cache), then creates a random private temp directory and distinct revocable SID for each live session/workspace pair. It passes both identities as the required `--write-sid`/`--temp-write-sid` pair; the runner verifies each against its owning path and neither grants nor revokes (`manageDacls: false`). A fork receives a different temp capability, and a fresh provider gives even the same resumed session a new path and SID, so crash residue is inert litter rather than a collision or inherited capability. Without the pair, `--temp` names a root: an agentless/standalone workspace-write runner creates a random private child, self-manages its temp SID, rewrites TMP/TEMP, and removes the child on exit. A workspace equal to or containing that root is rejected before any grant because its inheritable workspace ACE would otherwise authorize every private child; the direct API likewise rejects overlap between any writable root and the actual private temp directory. Re-granting the standing workspace ACE after a restart is idempotent: `grantWrite` reads the current DACL and skips `SetNamedSecurityInfoW` when the exact ACE already stands (that apply eagerly re-propagates the identical ACE across the whole tree — minutes on large workspaces). Known cost: the first grant on a big workspace tree blocks for that eager propagation once per workspace per machine.
 
 Modes (the token's restricting-SID list follows the mode; the keep-alive group is logon SID + Everyone in BOTH modes — early DLL init dies with `0xC0000142` and CNG crashes pwsh with `0xE0434352` without them):
+
 - `workspace-write` (logon SID, Everyone, workspace SID, temp SID): the workspace and the session's PRIVATE temp subdirectory carry separate Write grants; other ACL-addressable writes are denied except for the documented Everyone and hard-link boundaries.
 - `read-only` (logon SID, Everyone — NO write SID): no explicit write-SID grants. The write SID stays OUT of the list on purpose: the standing workspace grant ACE from an earlier workspace-write period (a `/permission` downgrade, or a crash-resumed session) remains INERT under read-only because the write-restricted pass-2 check grants only what the restricting list carries — while the standing ACE keeps the re-upgrade free of re-propagation. Everyone's ambient rights remain the documented partial boundary. NUL writes are AMBIENT, not granted: the device DACL grants Everyone read+write+execute (`0x1201BF`), so openers whose mask fits it (cmd `> NUL`, node `\\.\NUL`) can write it in BOTH modes — the sandbox cannot zero-grant the NUL device while Everyone stays in the keep-alive group. `Set-Content NUL` fails in both modes (a PowerShell/.NET-layer effect, pinned by the read-only suite — the device DACL is not the denying party); PowerShell's `> $null` redirection keeps working (it discards without opening NUL).
 

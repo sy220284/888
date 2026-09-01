@@ -42,7 +42,7 @@ effect(execute: () => Effect, label?: string): AsyncDisposable<Promise<void>>
 
 ```ts cordis-catalog
 /** The fiber (plugin runtime instance) that owns this context. */
-fiber: Fiber
+fiber: Fiber;
 ```
 
 拥有此上下文的 fiber（插件运行时实例）。
@@ -154,7 +154,7 @@ get name()
  * @returns nothing when the fiber is still active.
  * @throws {CordisError} `INACTIVE_EFFECT` when the fiber's uid has been cleared.
  */
-assertActive()
+assertActive();
 ```
 
 如果 fiber 已经 dispose，则抛出异常。
@@ -202,7 +202,7 @@ effect(execute: () => Effect, label?: string): AsyncDisposable<Promise<void>>
  *
  * @returns one {@link EffectMeta} tree per labeled live effect.
  */
-getEffects()
+getEffects();
 ```
 
 返回当前已注册作用的元数据。
@@ -289,9 +289,7 @@ update(config: any, noSave = false)
  * yielding several — generator effects register each yielded disposer as it
  * is produced.
  */
-type Effect<T = any> =
-  | SyncEffect<T>
-  | AsyncEffect<T>
+type Effect<T = any> = SyncEffect<T> | AsyncEffect<T>;
 ```
 
 [源码](../../vendor/cordis/src/fiber.ts#L83)
@@ -309,7 +307,7 @@ type Effect<T = any> =
  * Disposers run in reverse registration order when the owning fiber unloads;
  * they may be async, in which case unloading awaits them.
  */
-type Disposable<T = any> = () => T
+type Disposable<T = any> = () => T;
 ```
 
 [源码](../../vendor/cordis/src/fiber.ts#L74)
@@ -322,9 +320,9 @@ type Disposable<T = any> = () => T
 /** Tree node used to expose nested effect labels for diagnostics. */
 interface EffectMeta {
   /** Human-readable effect label, e.g. `ctx.on("event")` or `ctx.provide("name")`. */
-  label: string
+  label: string;
   /** Metadata of nested effects registered while this effect ran. */
-  children: EffectMeta[]
+  children: EffectMeta[];
 }
 ```
 
@@ -363,14 +361,14 @@ namespace CordisError {
 ```ts cordis-catalog
 /** Error raised when plugin configuration fails standard-schema validation. */
 class ValidationError extends TypeError {
-  name = 'ValidationError'
+  name = "ValidationError";
 
   /**
    * Build the aggregated message from schema issues.
    *
    * @param issues — the standard-schema issues, one message line each.
    */
-  constructor(issues: readonly StandardSchemaV1.Issue[])
+  constructor(issues: readonly StandardSchemaV1.Issue[]);
 }
 ```
 

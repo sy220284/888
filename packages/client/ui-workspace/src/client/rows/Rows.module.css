@@ -122,7 +122,9 @@
 }
 
 @keyframes row-in {
-  from { opacity: 0; }
+  from {
+    opacity: 0;
+  }
 }
 
 .slot {
@@ -148,11 +150,16 @@
   color: var(--dsw-alias-state-business-primary);
 }
 
-
 /* Project leading slot: folder by default, expand arrow on row hover. */
-.projectRow .chevron { display: none; }
-.projectRow:hover .chevron { display: inline-flex; }
-.projectRow:hover .folder { display: none; }
+.projectRow .chevron {
+  display: none;
+}
+.projectRow:hover .chevron {
+  display: inline-flex;
+}
+.projectRow:hover .folder {
+  display: none;
+}
 
 /* Expand arrow (filled triangle): points right closed, rotates to point down open. */
 .arrow {
@@ -253,7 +260,7 @@
 
 .sessionRow.dropBefore::before,
 .sessionRow.dropAfter::after {
-  content: '';
+  content: "";
   position: absolute;
   z-index: 1;
   left: 0;
@@ -261,20 +268,20 @@
   height: 12px;
   background:
     linear-gradient(
-      55deg,
-      transparent calc(50% - 1px),
-      var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
-      transparent calc(50% + 1px)
-    ) 0 0 / 5px 7px no-repeat,
+        55deg,
+        transparent calc(50% - 1px),
+        var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      )
+      0 0 / 5px 7px no-repeat,
     linear-gradient(
-      125deg,
-      transparent calc(50% - 1px),
-      var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
-      transparent calc(50% + 1px)
-    ) 0 5px / 5px 7px no-repeat,
-    linear-gradient(
-      var(--dsw-alias-state-business-primary) 0 0
-    ) 4px 5px / calc(100% - 4px) 2px no-repeat;
+        125deg,
+        transparent calc(50% - 1px),
+        var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      )
+      0 5px / 5px 7px no-repeat,
+    linear-gradient(var(--dsw-alias-state-business-primary) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat;
   pointer-events: none;
 }
 
@@ -296,21 +303,21 @@
 .hoverTitle {
   font-size: 14px;
   line-height: 20px;
-  color: #FFFFFF;
+  color: #ffffff;
   overflow-wrap: break-word;
 }
 
 .hoverPath {
   font-size: 12px;
   line-height: 16px;
-  color: #CFD3D6;
+  color: #cfd3d6;
   word-break: break-all;
 }
 
 .hoverTime {
   font-size: 12px;
   line-height: 16px;
-  color: #CFD3D6;
+  color: #cfd3d6;
 }
 
 .hoverStatus {
@@ -319,7 +326,7 @@
   gap: 8px;
   font-size: 12px;
   line-height: 20px;
-  color: #ADB2B8;
+  color: #adb2b8;
 }
 
 .iconButton {

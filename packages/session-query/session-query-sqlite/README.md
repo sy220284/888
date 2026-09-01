@@ -24,16 +24,16 @@ The database is disposable but reset is guarded: every recognized schema version
 
 ## Configuration
 
-| Key | Default | Contract |
-|---|---:|---|
-| `path` | required | Dedicated derived-index SQLite path; `:memory:` is supported. Missing filesystem paths are created owner-only on POSIX filesystems. |
-| `openAt` | `startup` | `startup` opens before service activation completes; `first-search` defers the SQLite module and handle until search; `never` disables full-text search (typed `SESSION_QUERY_SEARCH_DISABLED` failures) while inherited reads stay available. |
-| `journalMode` | `wal` | `wal`, `delete`, `truncate`, or `persist`. |
-| `defaultLimit` | `20` | Page size when a request omits `limit`; at most `Number.MAX_SAFE_INTEGER - 1`. |
-| `maxLimit` | `100` | Largest accepted request page size; at most `Number.MAX_SAFE_INTEGER - 1`. |
-| `snippetChars` | `240` | Maximum snippet length in Unicode code points. |
-| `readWindowMax` | `50` | Maximum `before` or `after` raw-event count for inherited `readEvent()`. |
-| `persistedInspectConcurrency` | `4` | Maximum concurrent persisted-log inspections for inherited batch reads; must be a positive safe integer. |
+| Key                           |   Default | Contract                                                                                                                                                                                                                                       |
+| ----------------------------- | --------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`                        |  required | Dedicated derived-index SQLite path; `:memory:` is supported. Missing filesystem paths are created owner-only on POSIX filesystems.                                                                                                            |
+| `openAt`                      | `startup` | `startup` opens before service activation completes; `first-search` defers the SQLite module and handle until search; `never` disables full-text search (typed `SESSION_QUERY_SEARCH_DISABLED` failures) while inherited reads stay available. |
+| `journalMode`                 |     `wal` | `wal`, `delete`, `truncate`, or `persist`.                                                                                                                                                                                                     |
+| `defaultLimit`                |      `20` | Page size when a request omits `limit`; at most `Number.MAX_SAFE_INTEGER - 1`.                                                                                                                                                                 |
+| `maxLimit`                    |     `100` | Largest accepted request page size; at most `Number.MAX_SAFE_INTEGER - 1`.                                                                                                                                                                     |
+| `snippetChars`                |     `240` | Maximum snippet length in Unicode code points.                                                                                                                                                                                                 |
+| `readWindowMax`               |      `50` | Maximum `before` or `after` raw-event count for inherited `readEvent()`.                                                                                                                                                                       |
+| `persistedInspectConcurrency` |       `4` | Maximum concurrent persisted-log inspections for inherited batch reads; must be a positive safe integer.                                                                                                                                       |
 
 ## Tokenizer and limits
 

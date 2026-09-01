@@ -6,12 +6,12 @@ File-backed settings provider. One YAML or JSON document carries every namespace
 
 ## Config
 
-| Field | Meaning | Default |
-|---|---|---|
-| `path` | Settings document path; extension picks the format (`.yaml`/`.yml`/`.json`) | `settings.yaml` under the harness home |
-| `dshHome` | Harness home used when `path` is omitted | `$DSH_HOME` or `~/.dsh` |
-| `watch` | Watch the document and hot-publish external edits | `true` |
-| `debounceMs` | Watcher write-settle window in milliseconds | `100` |
+| Field        | Meaning                                                                     | Default                                |
+| ------------ | --------------------------------------------------------------------------- | -------------------------------------- |
+| `path`       | Settings document path; extension picks the format (`.yaml`/`.yml`/`.json`) | `settings.yaml` under the harness home |
+| `dshHome`    | Harness home used when `path` is omitted                                    | `$DSH_HOME` or `~/.dsh`                |
+| `watch`      | Watch the document and hot-publish external edits                           | `true`                                 |
+| `debounceMs` | Watcher write-settle window in milliseconds                                 | `100`                                  |
 
 Defaulting is one explicit `resolveSpec(config)` step; an unsupported extension fails at load.
 

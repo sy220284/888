@@ -326,7 +326,9 @@
 }
 
 @keyframes wide-in {
-  from { opacity: 0; }
+  from {
+    opacity: 0;
+  }
 }
 
 /* List: the only scrolling region. Block children keep their design heights
@@ -341,9 +343,8 @@
   margin-right: var(--dsh-session-list-scrollbar-offset);
   padding-left: 4px;
   padding-right: calc(
-    var(--dsh-session-list-edge-inset)
-    - var(--dsh-session-list-scrollbar-width)
-    - var(--dsh-session-list-scrollbar-offset)
+    var(--dsh-session-list-edge-inset) - var(--dsh-session-list-scrollbar-width) -
+      var(--dsh-session-list-scrollbar-offset)
   );
   /* Clears the compact bottom fade overlay: at scroll end the last row sits
      above the gradient instead of under it. */
@@ -352,7 +353,7 @@
 }
 
 .flatList > * + *,
-.searchTree > [role='treeitem'] + [role='treeitem'],
+.searchTree > [role="treeitem"] + [role="treeitem"],
 .groupSection > * + * {
   margin-top: 2px;
 }
@@ -381,7 +382,7 @@
 .listTopDropIndicator,
 .workspaceDropBefore::before,
 .workspaceDropAfter::after {
-  content: '';
+  content: "";
   position: absolute;
   z-index: 1;
   left: 0;
@@ -389,20 +390,20 @@
   height: 12px;
   background:
     linear-gradient(
-      55deg,
-      transparent calc(50% - 1px),
-      var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
-      transparent calc(50% + 1px)
-    ) 0 0 / 5px 7px no-repeat,
+        55deg,
+        transparent calc(50% - 1px),
+        var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      )
+      0 0 / 5px 7px no-repeat,
     linear-gradient(
-      125deg,
-      transparent calc(50% - 1px),
-      var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
-      transparent calc(50% + 1px)
-    ) 0 5px / 5px 7px no-repeat,
-    linear-gradient(
-      var(--dsw-alias-state-business-primary) 0 0
-    ) 4px 5px / calc(100% - 4px) 2px no-repeat;
+        125deg,
+        transparent calc(50% - 1px),
+        var(--dsw-alias-state-business-primary) calc(50% - 1px) calc(50% + 1px),
+        transparent calc(50% + 1px)
+      )
+      0 5px / 5px 7px no-repeat,
+    linear-gradient(var(--dsw-alias-state-business-primary) 0 0) 4px 5px / calc(100% - 4px) 2px no-repeat;
   pointer-events: none;
 }
 

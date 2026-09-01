@@ -14,9 +14,7 @@
                 "description": "The bash command to run. Relative path is preferred in the command."
               }
             },
-            "required": [
-              "command"
-            ]
+            "required": ["command"]
           }
         }
       },
@@ -31,12 +29,7 @@
               "command": {
                 "type": "string",
                 "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`.",
-                "enum": [
-                  "view",
-                  "create",
-                  "str_replace",
-                  "insert"
-                ]
+                "enum": ["view", "create", "str_replace", "insert"]
               },
               "path": {
                 "type": "string",
@@ -66,10 +59,7 @@
                 }
               }
             },
-            "required": [
-              "command",
-              "path"
-            ]
+            "required": ["command", "path"]
           }
         }
       }
@@ -100,9 +90,7 @@
                 "description": "The bash command to run. Relative path is preferred in the command."
               }
             },
-            "required": [
-              "command"
-            ]
+            "required": ["command"]
           }
         }
       },
@@ -117,12 +105,7 @@
               "command": {
                 "type": "string",
                 "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`.",
-                "enum": [
-                  "view",
-                  "create",
-                  "str_replace",
-                  "insert"
-                ]
+                "enum": ["view", "create", "str_replace", "insert"]
               },
               "path": {
                 "type": "string",
@@ -152,10 +135,7 @@
                 }
               }
             },
-            "required": [
-              "command",
-              "path"
-            ]
+            "required": ["command", "path"]
           }
         }
       }
@@ -200,9 +180,7 @@
                 "description": "The bash command to run. Relative path is preferred in the command."
               }
             },
-            "required": [
-              "command"
-            ]
+            "required": ["command"]
           }
         }
       },
@@ -217,12 +195,7 @@
               "command": {
                 "type": "string",
                 "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`.",
-                "enum": [
-                  "view",
-                  "create",
-                  "str_replace",
-                  "insert"
-                ]
+                "enum": ["view", "create", "str_replace", "insert"]
               },
               "path": {
                 "type": "string",
@@ -252,10 +225,7 @@
                 }
               }
             },
-            "required": [
-              "command",
-              "path"
-            ]
+            "required": ["command", "path"]
           }
         }
       }
@@ -314,9 +284,7 @@
                 "description": "The bash command to run. Relative path is preferred in the command."
               }
             },
-            "required": [
-              "command"
-            ]
+            "required": ["command"]
           }
         }
       },
@@ -331,12 +299,7 @@
               "command": {
                 "type": "string",
                 "description": "The commands to run. Allowed options are: `view`, `create`, `str_replace`, `insert`.",
-                "enum": [
-                  "view",
-                  "create",
-                  "str_replace",
-                  "insert"
-                ]
+                "enum": ["view", "create", "str_replace", "insert"]
               },
               "path": {
                 "type": "string",
@@ -366,10 +329,7 @@
                 }
               }
             },
-            "required": [
-              "command",
-              "path"
-            ]
+            "required": ["command", "path"]
           }
         }
       }

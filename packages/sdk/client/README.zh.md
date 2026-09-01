@@ -9,16 +9,16 @@
 ## DeepSeekHarness
 
 ```ts
-import { DeepSeekHarness } from '@deepseek-ai/dsh-sdk-client'
+import { DeepSeekHarness } from "@deepseek-ai/dsh-sdk-client";
 
 await using harness = new DeepSeekHarness({
-  launch: { command: 'node', args: ['lib/bin.js', 'cordis.yml'] },
-  provider: 'deepseek-official',
-  model: 'deepseek-v4-flash',
+  launch: { command: "node", args: ["lib/bin.js", "cordis.yml"] },
+  provider: "deepseek-official",
+  model: "deepseek-v4-flash",
   maxTokens: 49_152,
-})
-const result = await harness.run('say hi')
-console.log(result.finalResponse)
+});
+const result = await harness.run("say hi");
+console.log(result.finalResponse);
 ```
 
 子进程在首次使用时惰性启动，并在多次 `run()` 之间持续归实例所有；必须 `close()`（或 `await using`），子进程才总能被回收。`start()` 记忆化 `initialize` 握手（工作区 cwd——在通过协议传输之前解析为绝对路径——加 provider/model 路由和可选的正整数 `maxTokens` 输出上限）；握手失败会回收运行时并换入全新客户端，后续调用用新子进程重试（直到终结性的 `close()`）。该上限作用于根 agent（智能体）的每次请求，并由进程内后代继承；压缩（compaction）插件单独持有摘要上限。`session(id?)` 打开具名或全新的会话句柄。

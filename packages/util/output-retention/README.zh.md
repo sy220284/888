@@ -4,31 +4,33 @@
 
 一个轻依赖的**保留**库：为必须限制返回上下文量的工具提供有界的面向模型输出。调用方将项或文本分片送入有界对象，然后取回保留的内容和精确的省略元数据。
 
-该库**只**负责这个机制问题：*「我们保留了什么，又省略了什么？」*。工具专用代码保留其业务语义：文件分组、行号、退出码、提供方错误状态、每行预览截断、spill 文件以及面向模型的文案。这就是 [Agent Note](../../../.agents/notes/implemented/architecture/2026-07-06-tool-result-retention-library.zh.md) 划定的边界。
+该库**只**负责这个机制问题：_「我们保留了什么，又省略了什么？」_。工具专用代码保留其业务语义：文件分组、行号、退出码、提供方错误状态、每行预览截断、spill 文件以及面向模型的文案。这就是 [Agent Note](../../../.agents/notes/implemented/architecture/2026-07-06-tool-result-retention-library.zh.md) 划定的边界。
 
 它是**库，而非服务或插件**：没有 `ctx`，不注册任何内容，不发出任何事件。状态只存在于每个 retainer（一次累积）中，绝不跨调用。工具包直接导入它。
 
 ## 对外接口
 
 ```ts
-import {
-  ItemRetainer, TextRetainer,
-  describeOmitted, formatRetentionNotice,
-} from '@deepseek-ai/dsh-output-retention'
+import { ItemRetainer, TextRetainer, describeOmitted, formatRetentionNotice } from "@deepseek-ai/dsh-output-retention";
 import type {
-  Omitted, PushDecision, RetainedItems, RetainedText,
-  ItemRetentionStrategy, TextRetentionStrategy, RetentionNotice,
-} from '@deepseek-ai/dsh-output-retention'
+  Omitted,
+  PushDecision,
+  RetainedItems,
+  RetainedText,
+  ItemRetentionStrategy,
+  TextRetentionStrategy,
+  RetentionNotice,
+} from "@deepseek-ai/dsh-output-retention";
 ```
 
-| 导出项 | 职责 |
-|---|---|
-| `ItemRetainer<T>` | 限制有序逻辑单元（路径、grep 匹配项、来源）。只支持 `head`。`push()` → `PushDecision`；`finish()` → `RetainedItems<T>`。 |
-| `TextRetainer` | 限制面向字节的文本流。`head` / `tail` / `headTail`，并在 `finish()` 时保留 UTF-8 边界。`push()` → `PushDecision`；`finish()` → `RetainedText`。 |
-| `describeOmitted(omitted, unit)` | 标准化的省略子句（`exact` 输出数量；`unknown` 不输出）。 |
-| `formatRetentionNotice(notice, recovery)` | 将标准化的省略子句与工具自有的恢复指引连接起来。 |
-| `Omitted` | `none` / `exact` / `unknown`：省略了多少内容。 |
-| `PushDecision` | `{ kept, truncated }`：每次 push 的保留结果。 |
+| 导出项                                    | 职责                                                                                                                                            |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ItemRetainer<T>`                         | 限制有序逻辑单元（路径、grep 匹配项、来源）。只支持 `head`。`push()` → `PushDecision`；`finish()` → `RetainedItems<T>`。                        |
+| `TextRetainer`                            | 限制面向字节的文本流。`head` / `tail` / `headTail`，并在 `finish()` 时保留 UTF-8 边界。`push()` → `PushDecision`；`finish()` → `RetainedText`。 |
+| `describeOmitted(omitted, unit)`          | 标准化的省略子句（`exact` 输出数量；`unknown` 不输出）。                                                                                        |
+| `formatRetentionNotice(notice, recovery)` | 将标准化的省略子句与工具自有的恢复指引连接起来。                                                                                                |
+| `Omitted`                                 | `none` / `exact` / `unknown`：省略了多少内容。                                                                                                  |
+| `PushDecision`                            | `{ kept, truncated }`：每次 push 的保留结果。                                                                                                   |
 
 ## 资源模式
 
@@ -49,13 +51,13 @@ import type {
 
 当前的保留机制消费方采用以下映射：
 
-| 工具 | Retainer 与策略 | 说明 |
-|---|---|---|
-| `glob` | `ItemRetainer<FsGlobEntry>`，`head` | 收集完整的已排序路径列表用于 spill 文件，同时在内联位置保留第一页。路径映射、已跳过候选项和 `incomplete` 保留在外部。 |
-| `grep` | `ItemRetainer<FlatGrepMatch>`，`head` | 收集匹配项用于 spill 文件，同时在内联位置保留第一页。每个匹配项的预览截断、分组、排序和 `incomplete` 保留在外部。 |
-| `bash` | `TextRetainer`，`tail` 或 `headTail` | 执行器仍负责 spill 文件、退出状态、信号、超时和后台任务。 |
-| `web_fetch` | `TextRetainer`，`head` 或 `headTail` | 提供方/资源上限保留为提供方事实；retainer 只提供保留文本和省略元数据。 |
-| `web_search` | `ItemRetainer<WebSearchSource>`，`head` | 当提供方返回的来源超过面向模型的结果应包含的数量时，标准化「来源已达上限」通知。 |
+| 工具         | Retainer 与策略                         | 说明                                                                                                                  |
+| ------------ | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `glob`       | `ItemRetainer<FsGlobEntry>`，`head`     | 收集完整的已排序路径列表用于 spill 文件，同时在内联位置保留第一页。路径映射、已跳过候选项和 `incomplete` 保留在外部。 |
+| `grep`       | `ItemRetainer<FlatGrepMatch>`，`head`   | 收集匹配项用于 spill 文件，同时在内联位置保留第一页。每个匹配项的预览截断、分组、排序和 `incomplete` 保留在外部。     |
+| `bash`       | `TextRetainer`，`tail` 或 `headTail`    | 执行器仍负责 spill 文件、退出状态、信号、超时和后台任务。                                                             |
+| `web_fetch`  | `TextRetainer`，`head` 或 `headTail`    | 提供方/资源上限保留为提供方事实；retainer 只提供保留文本和省略元数据。                                                |
+| `web_search` | `ItemRetainer<WebSearchSource>`，`head` | 当提供方返回的来源超过面向模型的结果应包含的数量时，标准化「来源已达上限」通知。                                      |
 
 `read` 仍不属于这个通用库。其 `read-render` 辅助工具负责文件专用的分页约定：`offset`/`limit`、行号、`totalLines`、偏移越界错误、每行预览截断，以及所选窗口的字节上限。该辅助工具是一个行窗口渲染器。单个 `Omitted` 数量无法表示该窗口两侧。
 
@@ -63,24 +65,26 @@ import type {
 
 ```ts ignore-check
 // glob: keep the first page inline while still collecting the full list for spill.
-const retainer = new ItemRetainer<FsGlobEntry>({ kind: 'head', maxItems: globMaxResults })
-const allEntries: FsGlobEntry[] = []
+const retainer = new ItemRetainer<FsGlobEntry>({ kind: "head", maxItems: globMaxResults });
+const allEntries: FsGlobEntry[] = [];
 for await (const entry of candidates) {
-  allEntries.push(entry)
-  retainer.push(entry)
+  allEntries.push(entry);
+  retainer.push(entry);
 }
-const { items, truncated, omitted } = retainer.finish()
+const { items, truncated, omitted } = retainer.finish();
 
 // bash: keep a head + tail, read to process exit.
-const out = new TextRetainer({ kind: 'headTail', headBytes: headCap, tailBytes: tailCap })
-child.stdout.on('data', (chunk: Buffer) => { out.push(chunk) })
-const { text, omittedBytes } = out.finish()
+const out = new TextRetainer({ kind: "headTail", headBytes: headCap, tailBytes: tailCap });
+child.stdout.on("data", (chunk: Buffer) => {
+  out.push(chunk);
+});
+const { text, omittedBytes } = out.finish();
 
 // A footer: the library standardizes the omission clause; the tool owns recovery words.
 const footer = formatRetentionNotice(
-  { scope: 'grep', strategy: 'head', unit: 'items', limit: grepMaxMatches, kept: items.length, omitted },
+  { scope: "grep", strategy: "head", unit: "items", limit: grepMaxMatches, kept: items.length, omitted },
   ({ kept }) => `Results capped at ${kept}. Narrow the pattern, path, or include to see more.`,
-)
+);
 ```
 
 ## 模型体验

@@ -5,11 +5,7 @@
     "outDir": "lib/types",
     "tsBuildInfoFile": "lib/tsconfig.client.tsbuildinfo"
   },
-  "files": [
-    "src/client/index.ts",
-    "src/remote-events.ts",
-    "src/types.ts"
-  ],
+  "files": ["src/client/index.ts", "src/remote-events.ts", "src/types.ts"],
   "references": [
     {
       "path": "../../../vendor/cordis"
@@ -22,7 +18,6 @@
     },
     {
       "path": "../../credentials/credentials"
-
     },
     {
       "path": "../../context/file-reference"

@@ -8,17 +8,17 @@
 
 ## 配置
 
-| 配置键 | 默认值 | 含义 |
-|---|---|---|
-| `apiKey` | `$EXA_API_KEY` | Exa API 密钥。为空或缺失时提供方不可用。 |
-| `baseURL` | `https://api.exa.ai` | 端点基址；追加 `/search`。无法解析时提供方不可用。 |
-| `searchType` | `auto` | 以 Exa `type` 发送的检索模式：`auto`（由 Exa 决定）、`keyword` 或 `neural`。 |
-| `numResults` | （未设置） | 请求不含 `maxResults` 时使用的默认结果数。未设置时不发送默认值。必须是正整数。 |
-| `highlightsPerResult` | `1` | 每个结果请求的 highlight 句子数（Exa `highlightsPerUrl`）。必须是正整数。 |
+| 配置键                | 默认值               | 含义                                                                           |
+| --------------------- | -------------------- | ------------------------------------------------------------------------------ |
+| `apiKey`              | `$EXA_API_KEY`       | Exa API 密钥。为空或缺失时提供方不可用。                                       |
+| `baseURL`             | `https://api.exa.ai` | 端点基址；追加 `/search`。无法解析时提供方不可用。                             |
+| `searchType`          | `auto`               | 以 Exa `type` 发送的检索模式：`auto`（由 Exa 决定）、`keyword` 或 `neural`。   |
+| `numResults`          | （未设置）           | 请求不含 `maxResults` 时使用的默认结果数。未设置时不发送默认值。必须是正整数。 |
+| `highlightsPerResult` | `1`                  | 每个结果请求的 highlight 句子数（Exa `highlightsPerUrl`）。必须是正整数。      |
 
 ```yaml
 - id: web-search-exa
-  name: '@deepseek-ai/dsh-web-search-exa'
+  name: "@deepseek-ai/dsh-web-search-exa"
   config:
     apiKey: !!js process.env.EXA_API_KEY
 ```

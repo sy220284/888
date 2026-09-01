@@ -28,7 +28,7 @@ Complete and blocked also accept the exact current goal round: a goal-sourced `u
 
 ```yaml
 - id: tool-goal
-  name: '@deepseek-ai/dsh-tool-goal'
+  name: "@deepseek-ai/dsh-tool-goal"
   config:
     blockedAfterConsecutiveRounds: 3
 ```

@@ -1,8 +1,4 @@
-exclude = [
-  ".agents/notes/archived/**",
-  "native/landlock-run/**",
-  "vendor/**",
-]
+exclude = [ ".agents/notes/archived/**", "native/landlock-run/**", "vendor/**" ]
 
 [formatting]
 align_entries = false

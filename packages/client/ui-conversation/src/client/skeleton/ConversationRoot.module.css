@@ -33,7 +33,7 @@
 }
 
 .header::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0;
   bottom: 1px;
@@ -161,7 +161,7 @@
 }
 
 .tab::after {
-  content: '';
+  content: "";
   position: absolute;
   right: 0;
   bottom: 1px;
@@ -219,11 +219,11 @@
 /* Active phase: header is ordinary column chrome above the scrollport (not
    sticky). The scroll body holds the transcript and the sticky composer seat
    so wheel over the footer moves the flow. */
-.root[data-phase='active'] {
+.root[data-phase="active"] {
   overflow: hidden;
 }
 
-.root[data-phase='active'] .header {
+.root[data-phase="active"] .header {
   flex: none;
 }
 
@@ -248,12 +248,12 @@
   scrollbar-gutter: stable;
 }
 
-.root[data-phase='active'] .viewArea {
+.root[data-phase="active"] .viewArea {
   flex: 1 0 auto;
   min-height: auto;
 }
 
-.root[data-phase='active'] .composerSeat {
+.root[data-phase="active"] .composerSeat {
   position: sticky;
   bottom: 0;
   /* Above markdown CodeBlock sticky banners (z-index 6) so the footer never
@@ -290,7 +290,7 @@
   scrollbar-gutter: auto;
 }
 
-.scrollBody:has([data-conversation-composer-overlay]) > :global([data-slot='conversation.session']) > .viewArea {
+.scrollBody:has([data-conversation-composer-overlay]) > :global([data-slot="conversation.session"]) > .viewArea {
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
@@ -358,13 +358,13 @@
 
 /* Hero: the composer sits inside the session scroll body; center there so
    the tree seat matches active (sticky footer) without a Root remount. */
-.root[data-phase='hero'] .scrollBody {
+.root[data-phase="hero"] .scrollBody {
   justify-content: center;
   overflow-y: auto;
 }
 
 /* Settling (session replaying, hero/docked unknown): keep the composer seat
    mounted but invisible so no wrong layout flashes before the phase lands. */
-.root[data-phase='settling'] .composerSeat {
+.root[data-phase="settling"] .composerSeat {
   visibility: hidden;
 }

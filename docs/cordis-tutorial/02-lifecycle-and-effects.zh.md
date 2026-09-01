@@ -11,41 +11,41 @@ Cordis 插件可能因修改配置、热重载、显式资源释放或所需服�
 创建 `lifecycle.ts`，将它放在 `tmp/cordis-tutorial` 中：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from "@deepseek-ai/cordis";
 
-export const name = 'lifecycle-demo'
+export const name = "lifecycle-demo";
 
 function heartbeat(ctx: Context) {
-  console.log('heartbeat plugin loading')
+  console.log("heartbeat plugin loading");
   ctx.effect(() => {
-    const timer = setInterval(() => console.log('tick'), 200)
+    const timer = setInterval(() => console.log("tick"), 200);
     return () => {
-      clearInterval(timer)
-      console.log('heartbeat cleaned up')
-    }
-  })
+      clearInterval(timer);
+      console.log("heartbeat cleaned up");
+    };
+  });
 }
 
 export function apply(ctx: Context) {
   // Mount a child plugin and keep its fiber to dispose it later.
-  const fiber = ctx.plugin(heartbeat)
+  const fiber = ctx.plugin(heartbeat);
   // The demo timer is itself an effect: if THIS plugin is unloaded first,
   // the pending callback is cancelled instead of firing on a dead app.
   ctx.effect(() => {
     const timer = setTimeout(async () => {
-      await fiber.dispose()
-      console.log('disposed')
-      process.exit(0)
-    }, 700)
-    return () => clearTimeout(timer)
-  })
+      await fiber.dispose();
+      console.log("disposed");
+      process.exit(0);
+    }, 700);
+    return () => clearTimeout(timer);
+  });
 }
 ```
 
 让 `cordis.yml` 指向该文件：
 
 ```yaml
-- name: './lifecycle.ts'
+- name: "./lifecycle.ts"
 ```
 
 运行（`node --import tsx ../../vendor/cordis/bin.js`）后会得到：

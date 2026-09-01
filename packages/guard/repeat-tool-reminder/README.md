@@ -8,12 +8,12 @@ An advisory loop-breaker, not a model-facing tool: it never appears in the tool 
 
 ```yaml
 - id: repeat-tool-reminder
-  name: '@deepseek-ai/dsh-repeat-tool-reminder'
+  name: "@deepseek-ai/dsh-repeat-tool-reminder"
   config:
-    thresholds: [3, 5, 8]        # default; consecutive counts that trigger a reminder
-    include: []                  # tool-name patterns to track; empty ⇒ all tools
-    exclude: [todo_write]        # tool-name patterns transparent to the chain
-    argumentsPreviewChars: 500   # default; cap on arguments quoted in the detailed reminder
+    thresholds: [3, 5, 8] # default; consecutive counts that trigger a reminder
+    include: [] # tool-name patterns to track; empty ⇒ all tools
+    exclude: [todo_write] # tool-name patterns transparent to the chain
+    argumentsPreviewChars: 500 # default; cap on arguments quoted in the detailed reminder
 ```
 
 `thresholds` fails loud at plugin load: an empty list, a non-integer, a value below 2, or a duplicate throws, never a silent fall-back to defaults; `argumentsPreviewChars` equally rejects anything but an integer >= 1. The list is normalized to ascending order; the FIRST threshold delivers a short generic nudge, every later threshold delivers the detailed form naming the tool, the run length, and the canonical arguments — head-truncated at `argumentsPreviewChars` with an omitted-count marker, so a looping `write`/`edit` payload cannot ride into the next request unbounded (the chain key always compares the FULL canonical string; the cap bounds the reminder, never the detection).
@@ -66,10 +66,11 @@ A later threshold receives the detailed reminder template below. A capped argume
 
 ```markdown
 Repeated tool call detected:
+
 - tool: <toolName>
 - consecutive_calls: <count>
 - arguments: <canonicalArguments>
-The repeated calls are not making progress. Do not call this tool with these exact arguments again. Inspect the latest result and choose a different action, different arguments, or finish the task if enough evidence has been gathered.
+  The repeated calls are not making progress. Do not call this tool with these exact arguments again. Inspect the latest result and choose a different action, different arguments, or finish the task if enough evidence has been gathered.
 ```
 
 #### Token effect

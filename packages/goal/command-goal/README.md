@@ -6,14 +6,14 @@ Human-facing `/goal` control over [`ctx.goals`](../goal/README.md). The plugin r
 
 ## Command contract
 
-| Input | Result |
-|---|---|
-| `/goal` | Show the current objective, durable phase, round count/cap, process-local activation, and valid next commands; a blocked goal also shows its policy code and explanation, while no goal shows usage. |
-| `/goal <objective>` | Create and arm a goal, or replace a completed goal with a fresh identity. An unfinished goal is never replaced without an explicit clear. |
-| `/goal edit <objective>` | Edit the current objective without changing its phase or activation. Editing a completed goal creates a fresh active goal. |
-| `/goal pause` | Pause an active goal and disarm continuation. |
-| `/goal resume` | Resume a stopped goal or rearm an active goal after session resume/fork, subject to its remaining round cap. |
-| `/goal clear` | Clear the current pointer while retaining its durable history and tombstone. |
+| Input                    | Result                                                                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/goal`                  | Show the current objective, durable phase, round count/cap, process-local activation, and valid next commands; a blocked goal also shows its policy code and explanation, while no goal shows usage. |
+| `/goal <objective>`      | Create and arm a goal, or replace a completed goal with a fresh identity. An unfinished goal is never replaced without an explicit clear.                                                            |
+| `/goal edit <objective>` | Edit the current objective without changing its phase or activation. Editing a completed goal creates a fresh active goal.                                                                           |
+| `/goal pause`            | Pause an active goal and disarm continuation.                                                                                                                                                        |
+| `/goal resume`           | Resume a stopped goal or rearm an active goal after session resume/fork, subject to its remaining round cap.                                                                                         |
+| `/goal clear`            | Clear the current pointer while retaining its durable history and tombstone.                                                                                                                         |
 
 Control words are case-insensitive only when they occupy the complete input. Every other non-empty suffix is an objective, so `/goal pause after verification` creates that literal objective. The goal domain trims and validates objectives. Because the generic command plane has no modal editor or confirmation primitive, `edit` takes its replacement inline and an unfinished replacement returns a direct error instructing the user to edit or clear.
 
@@ -27,11 +27,11 @@ The producer injects `commands` and `goals`. A custom app mounts their owners pl
 
 ```yaml
 - id: commands
-  name: '@deepseek-ai/dsh-commands'
+  name: "@deepseek-ai/dsh-commands"
 - id: goal
-  name: '@deepseek-ai/dsh-goal'
+  name: "@deepseek-ai/dsh-goal"
 - id: command-goal
-  name: '@deepseek-ai/dsh-command-goal'
+  name: "@deepseek-ai/dsh-command-goal"
 ```
 
 The shipped `dsh` base enables the persisted-goal stack and this command; the Web client provides its interactive adapter. The ACP automation app enables the domain and model tools without a command adapter; `goals: false` removes that stack. The UI-less `agent-spine-demo` requires an explicit `goals: {}` so headless one-shot callers do not silently change from one physical turn to a multi-round operation.

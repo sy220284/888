@@ -3,8 +3,23 @@
     "kind": "chunks",
     "chunks": [
       { "type": "block-start", "index": 0, "blockType": "tool-call" },
-      { "type": "tool-call-delta", "index": 0, "id": "call_ralph", "name": "ralph", "argumentsDelta": "{\"objective\":\"Prove two fresh Ralph rounds through the shipped headless app.\",\"maxRounds\":2}" },
-      { "type": "block-end", "index": 0, "block": { "type": "tool-call", "id": "call_ralph", "name": "ralph", "arguments": "{\"objective\":\"Prove two fresh Ralph rounds through the shipped headless app.\",\"maxRounds\":2}" } },
+      {
+        "type": "tool-call-delta",
+        "index": 0,
+        "id": "call_ralph",
+        "name": "ralph",
+        "argumentsDelta": "{\"objective\":\"Prove two fresh Ralph rounds through the shipped headless app.\",\"maxRounds\":2}"
+      },
+      {
+        "type": "block-end",
+        "index": 0,
+        "block": {
+          "type": "tool-call",
+          "id": "call_ralph",
+          "name": "ralph",
+          "arguments": "{\"objective\":\"Prove two fresh Ralph rounds through the shipped headless app.\",\"maxRounds\":2}"
+        }
+      },
       { "type": "usage", "usage": { "inputTokens": 20, "outputTokens": 8 } },
       { "type": "finish", "reason": { "kind": "tool-calls" } }
     ]
