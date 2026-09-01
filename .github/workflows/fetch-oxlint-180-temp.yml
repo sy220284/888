@@ -12,22 +12,24 @@ jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - name: Download and verify Oxlint
+      - name: Build npm-equivalent Oxlint payload
         shell: bash
         run: |
           set -euo pipefail
-          curl -fL --retry 3 -o /tmp/oxlint.tar.gz https://github.com/oxc-project/oxc/releases/download/apps_v1.80.0/oxlint-x86_64-unknown-linux-gnu.tar.gz
-          echo '5215500640e696b833736c401591b9a00326a3fb10f59d5c3bb3014410ad56e9  /tmp/oxlint.tar.gz' | sha256sum -c -
-          mkdir -p /tmp/oxlint-180
-          tar -xzf /tmp/oxlint.tar.gz -C /tmp/oxlint-180
-          find /tmp/oxlint-180 -maxdepth 2 -type f -print
-          bin="$(find /tmp/oxlint-180 -type f -perm -u+x | head -n 1)"
-          test -n "$bin"
-          "$bin" --version
-          cp "$bin" /tmp/oxlint
+          rm -rf /tmp/oxlint-npm
+          mkdir -p /tmp/oxlint-npm
+          cd /tmp/oxlint-npm
+          npm init -y >/dev/null 2>&1
+          npm install --ignore-scripts --no-audit --no-fund oxlint@1.80.0 @oxlint/binding-linux-x64-gnu@1.80.0
+          node node_modules/oxlint/bin/oxlint --version
+          test -f node_modules/@oxlint/binding-linux-x64-gnu/oxlint.linux-x64-gnu.node
+          tar -czf /tmp/oxlint-npm-1.80.0.tar.gz node_modules/oxlint node_modules/@oxlint/binding-linux-x64-gnu
+          sha256sum /tmp/oxlint-npm-1.80.0.tar.gz > /tmp/oxlint-npm-1.80.0.tar.gz.sha256
       - uses: actions/upload-artifact@v4
         with:
-          name: oxlint-1.80.0-linux-x64
-          path: /tmp/oxlint
+          name: oxlint-npm-1.80.0-linux-x64
+          path: |
+            /tmp/oxlint-npm-1.80.0.tar.gz
+            /tmp/oxlint-npm-1.80.0.tar.gz.sha256
           if-no-files-found: error
           retention-days: 1
