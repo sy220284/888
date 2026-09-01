@@ -5,39 +5,48 @@
  * @module @deepseek-ai/dsh-session-persistence
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import { SessionPreparation } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionId, SessionHeader } from '@deepseek-ai/dsh-session'
-import type { SessionPersistenceRevision } from './revision.ts'
+import { Context, Service } from "@deepseek-ai/cordis";
+import { SessionPreparation } from "@deepseek-ai/dsh-session";
+import type {
+  SessionEvent,
+  SessionId,
+  SessionHeader,
+} from "@deepseek-ai/dsh-session";
+import type { SessionPersistenceRevision } from "./revision.ts";
 
 // Re-export the metadata vocabulary so Consumers import it from the Service Definition.
-export type { SessionHeader } from '@deepseek-ai/dsh-session'
-export { SessionPersistenceRevision } from './revision.ts'
+export type { SessionHeader } from "@deepseek-ai/dsh-session";
+export { SessionPersistenceRevision } from "./revision.ts";
+export { SessionFormatMigrationRegistry } from "./migration.ts";
+export type {
+  SessionFormatMigration,
+  SessionFormatSnapshot,
+} from "./migration.ts";
 
 /** Lightweight immutable source identity returned without loading a full log. */
 export interface SessionPersistenceSnapshot {
   /** Detached metadata for one materialized session. */
-  header: SessionHeader
+  header: SessionHeader;
   /** Opaque source-qualified token that changes whenever this stored log changes. */
-  revision: SessionPersistenceRevision
+  revision: SessionPersistenceRevision;
 }
 
 /** Immutable logical session prepared from persistence or a live owner. */
 export interface SessionInspection {
   /** Validated immutable session metadata. */
-  readonly meta: SessionHeader
+  readonly meta: SessionHeader;
   /** Validated contiguous logical event log. */
-  readonly events: readonly SessionEvent[]
+  readonly events: readonly SessionEvent[];
 }
 
 /** A backend's own raw artifact text for one session, verbatim. */
 export interface SessionRawArtifact {
   /** The session header parsed from the artifact's own first line. */
-  readonly meta: SessionHeader
+  readonly meta: SessionHeader;
   /** The artifact's base filename on disk, without any physical encoding suffix. */
-  readonly filename: string
+  readonly filename: string;
   /** The artifact's full text content, decoded from the backend's physical encoding. */
-  readonly content: string
+  readonly content: string;
 }
 
 // The backend-agnostic write-path orchestration first-party backends compose.
@@ -49,17 +58,17 @@ export {
   SessionFormatUnsupportedError,
   SessionPersistenceCorruptionError,
   sessionFormatVersionRefusal,
-} from './coordinator.ts'
+} from "./coordinator.ts";
 export type {
   PersistenceBackend,
   PersistenceCoordinatorOptions,
   StoredPrefix,
   StoredSuffix,
-} from './coordinator.ts'
+} from "./coordinator.ts";
 
-declare module '@deepseek-ai/cordis' {
+declare module "@deepseek-ai/cordis" {
   interface Context {
-    sessionPersistence: SessionPersistence
+    sessionPersistence: SessionPersistence;
   }
 }
 
@@ -70,9 +79,9 @@ declare module '@deepseek-ai/cordis' {
  */
 export interface SessionLocation {
   /** Backend-specific artifact kind, for example `jsonl`. */
-  readonly kind: string
+  readonly kind: string;
   /** Absolute path to this session's backend-owned artifact. */
-  readonly path: string
+  readonly path: string;
 }
 
 /**
@@ -83,7 +92,7 @@ export interface SessionLocation {
  */
 export abstract class SessionPersistence extends Service {
   constructor(ctx: Context) {
-    super(ctx, 'sessionPersistence')
+    super(ctx, "sessionPersistence");
   }
 
   /**
@@ -93,13 +102,13 @@ export abstract class SessionPersistence extends Service {
    * @param meta - the immutable session header whose artifact is requested.
    * @returns the backend-specific absolute location, when one exists.
    */
-  abstract locate(meta: SessionHeader): SessionLocation | undefined
+  abstract locate(meta: SessionHeader): SessionLocation | undefined;
 
   /**
    * Whether this backend exposes one verbatim raw artifact per session.
    * A backend that declares `true` must override {@link readRaw}.
    */
-  abstract readonly supportsRawArtifacts: boolean
+  abstract readonly supportsRawArtifacts: boolean;
 
   /**
    * Read a session's backend-owned artifact text verbatim — the exact durable
@@ -116,11 +125,20 @@ export abstract class SessionPersistence extends Service {
    * session is absent.
    * @throws when this backend does not expose per-session raw artifacts.
    */
-  readRaw(_id: SessionId, signal?: AbortSignal): Promise<SessionRawArtifact | undefined> {
+  readRaw(
+    _id: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SessionRawArtifact | undefined> {
     if (signal?.aborted === true) {
-      return Promise.reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'))
+      return Promise.reject(
+        signal.reason instanceof Error ? signal.reason : new Error("aborted"),
+      );
     }
-    return Promise.reject(new Error('this session persistence backend does not expose raw artifacts'))
+    return Promise.reject(
+      new Error(
+        "this session persistence backend does not expose raw artifacts",
+      ),
+    );
   }
 
   /**
@@ -130,7 +148,7 @@ export abstract class SessionPersistence extends Service {
    * — abandoned sessions leave nothing behind.
    * @param meta - the immutable header (id, version, cwd, lineage) to record.
    */
-  abstract create(meta: SessionHeader): Promise<void>
+  abstract create(meta: SessionHeader): Promise<void>;
 
   /**
    * Durably persist a batch of events. Honors the append-only and contiguous-
@@ -140,7 +158,10 @@ export abstract class SessionPersistence extends Service {
    * @param id - the session the batch belongs to.
    * @param events - the contiguous batch to persist, in seq order.
    */
-  abstract append(id: SessionId, events: readonly SessionEvent[]): Promise<void>
+  abstract append(
+    id: SessionId,
+    events: readonly SessionEvent[],
+  ): Promise<void>;
 
   /**
    * Prepare the exact unpublished Session used by resume. Implementations may
@@ -152,19 +173,26 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for preparation work.
    * @returns one owned unpublished Session preparation.
    */
-  async prepare(id: SessionId, signal?: AbortSignal): Promise<SessionPreparation> {
-    signal?.throwIfAborted()
-    const loaded = await this.load(id)
-    signal?.throwIfAborted()
-    const sessions = this.ctx.get('sessions')
+  async prepare(
+    id: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SessionPreparation> {
+    signal?.throwIfAborted();
+    const loaded = await this.load(id);
+    signal?.throwIfAborted();
+    const sessions = this.ctx.get("sessions");
     if (sessions === undefined) {
-      throw new Error('cannot prepare a session: SessionStore is not configured')
+      throw new Error(
+        "cannot prepare a session: SessionStore is not configured",
+      );
     }
-    return SessionPreparation.create(sessions.prepare(id, {
-      seed: loaded.events.map(event => structuredClone(event)),
-      meta: structuredClone(loaded.meta),
-      seedSource: 'persistence',
-    }))
+    return SessionPreparation.create(
+      sessions.prepare(id, {
+        seed: loaded.events.map((event) => structuredClone(event)),
+        meta: structuredClone(loaded.meta),
+        seedSource: "persistence",
+      }),
+    );
   }
 
   /**
@@ -180,7 +208,7 @@ export abstract class SessionPersistence extends Service {
    * @param id - the persisted session to reload.
    * @returns the header and a log ending on a balanced `turn/end`.
    */
-  abstract load(id: SessionId): Promise<SessionInspection>
+  abstract load(id: SessionId): Promise<SessionInspection>;
 
   /**
    * Inspect an immutable logical session without committing recovery or
@@ -197,7 +225,10 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for queued and backend read work.
    * @returns the validated header and current logical event log.
    */
-  abstract inspect(id: SessionId, signal?: AbortSignal): Promise<SessionInspection>
+  abstract inspect(
+    id: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SessionInspection>;
 
   /**
    * Read the stored events from `fromSeq` onward — the read-from-seq
@@ -217,15 +248,18 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for queued and backend read work.
    * @returns the header and the stored events with `seq >= fromSeq`.
    */
-  abstract readFrom(id: SessionId, fromSeq: number, signal?: AbortSignal):
-  Promise<{ meta: SessionHeader; events: SessionEvent[] }>
+  abstract readFrom(
+    id: SessionId,
+    fromSeq: number,
+    signal?: AbortSignal,
+  ): Promise<{ meta: SessionHeader; events: SessionEvent[] }>;
 
   /**
    * Lightweight listing from metadata, without a full-log parse.
    * @param signal - optional cancellation for backend listing work.
    * @returns one header per materialized session.
    */
-  abstract list(signal?: AbortSignal): Promise<SessionHeader[]>
+  abstract list(signal?: AbortSignal): Promise<SessionHeader[]>;
 
   /**
    * List materialized sessions with cheap per-log change tokens.
@@ -237,7 +271,9 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for backend snapshot-listing work.
    * @returns one header and opaque revision per materialized session without loading full logs.
    */
-  abstract listSnapshots(signal?: AbortSignal): Promise<SessionPersistenceSnapshot[]>
+  abstract listSnapshots(
+    signal?: AbortSignal,
+  ): Promise<SessionPersistenceSnapshot[]>;
 }
 
-export default SessionPersistence
+export default SessionPersistence;

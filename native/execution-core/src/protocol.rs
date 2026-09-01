@@ -22,12 +22,32 @@ pub enum RequestKind {
         stdout_mode: OutputMode,
         stderr_mode: OutputMode,
     },
+    SpawnTerminal {
+        process_id: String,
+        argv: Vec<String>,
+        cwd: String,
+        #[serde(default)]
+        env: HashMap<String, String>,
+        rows: u16,
+        cols: u16,
+    },
     WriteStdin {
         process_id: String,
         data_b64: String,
     },
     CloseStdin {
         process_id: String,
+    },
+    WriteTerminal {
+        process_id: String,
+        data_b64: String,
+    },
+    InspectTerminal {
+        process_id: String,
+    },
+    SignalForeground {
+        process_id: String,
+        signal: String,
     },
     SignalTree {
         process_id: String,
@@ -103,9 +123,16 @@ pub enum Event {
         process_id: String,
         data_b64: String,
     },
+    TerminalOutput {
+        process_id: String,
+        data_b64: String,
+    },
     StreamClosed {
         process_id: String,
         stream: &'static str,
+    },
+    TerminalClosed {
+        process_id: String,
     },
     Exit {
         process_id: String,
@@ -143,4 +170,20 @@ pub struct ExecutableResult {
 #[derive(Debug, Serialize)]
 pub struct AliveResult {
     pub alive: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ForegroundResult {
+    pub process_group_id: i32,
+    pub input_waiting: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct InspectTerminalResult {
+    pub foreground: Option<ForegroundResult>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SignalForegroundResult {
+    pub process_group_id: i32,
 }
