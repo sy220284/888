@@ -47,7 +47,7 @@ Windows PowerShell：
 
 `./dev format` 写入格式化结果；`./dev format --check` 只检查。可用 `--only prettier,python,shell,toml,rust` 限定范围。仓库不自动安装提交钩子，是否执行格式化由开发者或显式检查命令决定。
 
-默认跳过 `vendor/`、`native/landlock-run/`、归档 Agent Notes、生成目录和依赖锁文件，避免改写上游代码、生成物及锁文件。
+默认跳过 `vendor/`、`native/landlock-run/`、`.agents/notes/`、生成目录和依赖锁文件，避免改写上游代码、历史设计记录、符号链接、生成物及锁文件。
 
 ## 项目工具工作流
 

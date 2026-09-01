@@ -47,7 +47,7 @@ Windows PowerShell:
 
 `./dev format` writes formatting changes; `./dev format --check` checks without writing. Use `--only prettier,python,shell,toml,rust` to limit scopes. The repository does not install an automatic pre-commit hook; formatting is run explicitly by developers or validation commands.
 
-The root formatter skips `vendor/`, `native/landlock-run/`, archived Agent Notes, generated directories, and dependency lock files so upstream code, generated output, and lock files keep their own ownership.
+The root formatter skips `vendor/`, `native/landlock-run/`, `.agents/notes/`, generated directories, and dependency lock files so upstream code, historical design records, symlinks, generated output, and lock files keep their own ownership.
 
 ## Project-tools workflow
 
