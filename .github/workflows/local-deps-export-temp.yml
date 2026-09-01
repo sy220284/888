@@ -1,0 +1,45 @@
+name: Local dependency cache export (temporary)
+
+on:
+  push:
+    branches:
+      - tmp/local-main-export-20260901
+
+permissions:
+  contents: read
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+      - name: Install pnpm
+        run: npm install --global pnpm@11.7.0
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Fetch Rust dependencies
+        run: cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.12.0
+      - name: Prepare Python SDK dependencies
+        working-directory: python/sdk
+        run: uv sync --locked --group test
+      - name: Pack dependency caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/local-deps
+          tar --zstd -cf /tmp/local-deps/node-modules.tar.zst $(find . -type d -name node_modules -prune -print)
+          tar --zstd -cf /tmp/local-deps/cargo-home.tar.zst -C "$HOME" .cargo/registry .cargo/git 2>/dev/null || tar --zstd -cf /tmp/local-deps/cargo-home.tar.zst -C "$HOME" .cargo/registry
+          tar --zstd -cf /tmp/local-deps/python-sdk-venv.tar.zst python/sdk/.venv
+          sha256sum /tmp/local-deps/*.tar.zst > /tmp/local-deps/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 888-local-dependency-cache
+          path: /tmp/local-deps
+          if-no-files-found: error
+          retention-days: 1
