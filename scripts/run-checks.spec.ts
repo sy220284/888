@@ -14,6 +14,14 @@ describe('local check groups', () => {
     }
   })
 
+  it('does not gate changes on bilingual translation maintenance', () => {
+    for (const mode of ['check-all', 'doc-sync'] as const) {
+      expect(checksForMode(mode).map(check => check.script)).not.toEqual(
+        expect.arrayContaining(['verify-translation-pairing', 'verify-translation-prompt']),
+      )
+    }
+  })
+
   it('runs the broad group in dependency order', () => {
     const checks = checksForMode('check-all').map(check => check.script)
 
