@@ -1,70 +1,27 @@
-name: Project tools and dependency bundles
+name: Project tools final audit
 
 on:
   push:
     branches:
-      - main
-      - chore/complete-format-tooling
-    paths:
-      - '.github/workflows/project-tools.yml'
-      - '.prettierignore'
-      - '.prettierrc.json'
-      - '.taplo.toml'
-      - 'ruff.toml'
-      - 'devtools/manifest.json'
-      - 'devtools/profiles.json'
-      - 'devtools/checksums.json'
-      - 'devtools/project-tools.json'
-      - 'scripts/devtools/build-project-tools.mjs'
-      - 'scripts/devtools/dev.mjs'
-      - 'scripts/devtools/format.mjs'
-      - 'scripts/devtools/install-shfmt.mjs'
-      - 'scripts/devtools/tool-paths.mjs'
-      - 'scripts/devtools/verify-download-policy.mjs'
-      - 'scripts/devtools/*.sh'
-      - 'dev'
-  workflow_dispatch:
-    inputs:
-      profile:
-        description: Development profile used to prepare dependencies
-        required: true
-        type: choice
-        options: [test, full]
-        default: test
-      include_dependencies:
-        description: Build lock-resolved pnpm/Cargo/uv dependency cache artifact
-        required: true
-        type: choice
-        options: ['yes', 'no']
-        default: 'yes'
-      run_checks:
-        description: Run the selected development profile checks after packaging
-        required: true
-        type: choice
-        options: ['yes', 'no']
-        default: 'no'
+      - audit/project-tools-final
 
 permissions:
   contents: read
 
 concurrency:
-  group: project-tools-${{ github.ref }}-${{ github.event_name }}
+  group: project-tools-final-audit
   cancel-in-progress: true
 
 env:
-  DSH_TOOL_PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'test' }}
-  DSH_INCLUDE_DEPENDENCIES: ${{ github.event_name == 'workflow_dispatch' && inputs.include_dependencies || 'no' }}
-  DSH_RUN_CHECKS: ${{ github.event_name == 'workflow_dispatch' && inputs.run_checks || 'no' }}
   DSH_RUST_VERSION: '1.98.0'
   DSH_PNPM_VERSION: '11.7.0'
-  DSH_UV_VERSION: '0.12.0'
   DSH_ACTIONLINT_VERSION: '1.7.12'
   DSH_SHELLCHECK_VERSION: '0.11.0'
   DSH_SHELLCHECK_URL: 'https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz'
   DSH_SHELLCHECK_SHA256: '8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198'
 
 jobs:
-  validate-tooling:
+  audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +44,6 @@ jobs:
           const checks = [
             ['DSH_RUST_VERSION', manifest.tools.rust.version],
             ['DSH_PNPM_VERSION', manifest.tools.pnpm.version],
-            ['DSH_UV_VERSION', manifest.tools.uv.version],
             ['DSH_ACTIONLINT_VERSION', projectTools.tools.actionlint.version],
             ['DSH_SHELLCHECK_VERSION', projectTools.tools.shellcheck.version],
             ['DSH_SHELLCHECK_URL', projectTools.tools.shellcheck.url],
@@ -109,129 +65,30 @@ jobs:
           GOBIN="$RUNNER_TEMP/project-tools-bin" go install "github.com/rhysd/actionlint/cmd/actionlint@v${DSH_ACTIONLINT_VERSION}"
           "$RUNNER_TEMP/project-tools-bin/shellcheck" --version | grep -F "version: $DSH_SHELLCHECK_VERSION"
           "$RUNNER_TEMP/project-tools-bin/actionlint" -version | grep -F "$DSH_ACTIONLINT_VERSION"
-      - name: Validate development-tool shell entry points
+      - name: Validate shell and workflow syntax
         shell: bash
         run: |
           mapfile -t shell_files < <(git ls-files 'dev' 'scripts/devtools/*.sh')
           if [ "${#shell_files[@]}" -gt 0 ]; then
             "$RUNNER_TEMP/project-tools-bin/shellcheck" "${shell_files[@]}"
           fi
-      - name: Validate GitHub Actions workflows
-        shell: bash
-        run: |
           "$RUNNER_TEMP/project-tools-bin/actionlint"
-
-  bundle:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22.19.0'
-      - uses: actions/setup-go@v6
-        with:
-          go-version: stable
-          cache: false
-      - uses: actions/setup-python@v6
-        if: env.DSH_TOOL_PROFILE == 'full' && (env.DSH_INCLUDE_DEPENDENCIES == 'yes' || env.DSH_RUN_CHECKS == 'yes')
-        with:
-          python-version: '3.12'
-
-      - name: Pin Rust toolchain on Unix
-        if: runner.os != 'Windows'
+      - name: Pin Rust toolchain
         shell: bash
         run: |
           rustup toolchain install "$DSH_RUST_VERSION" --profile minimal --component rustfmt --component clippy
           rustup override set "$DSH_RUST_VERSION"
-
-      - name: Pin Rust toolchain on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          rustup toolchain install $env:DSH_RUST_VERSION --profile minimal --component rustfmt --component clippy
-          rustup override set $env:DSH_RUST_VERSION
-
-      - name: Build portable project utility bundle
+      - name: Build portable utility bundle
         run: node scripts/devtools/build-project-tools.mjs .artifacts/project-tools
-
-      - name: Activate pinned pnpm for dependency cache
-        if: env.DSH_INCLUDE_DEPENDENCIES == 'yes'
+      - name: Prepare test profile
         shell: bash
-        run: |
-          corepack enable
-          corepack prepare "pnpm@$DSH_PNPM_VERSION" --activate
-          pnpm --version
-
-      - name: Install pinned uv for full dependency cache
-        if: env.DSH_INCLUDE_DEPENDENCIES == 'yes' && env.DSH_TOOL_PROFILE == 'full'
+        run: sh ./dev setup test
+      - name: Verify dependency locks
         shell: bash
-        run: python -m pip install "uv==$DSH_UV_VERSION"
-
-      - name: Prepare lock-resolved dependency caches on Unix
-        if: runner.os != 'Windows' && env.DSH_INCLUDE_DEPENDENCIES == 'yes'
+        run: sh ./dev deps verify
+      - name: Check repository formatting
         shell: bash
-        run: |
-          mkdir -p .artifacts/dependency-cache/pnpm .artifacts/dependency-cache/cargo
-          pnpm fetch --frozen-lockfile --store-dir "$PWD/.artifacts/dependency-cache/pnpm"
-          CARGO_HOME="$PWD/.artifacts/dependency-cache/cargo" cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
-          if [ "$DSH_TOOL_PROFILE" = 'full' ]; then
-            mkdir -p .artifacts/dependency-cache/uv
-            UV_CACHE_DIR="$PWD/.artifacts/dependency-cache/uv" uv sync --frozen --project python/sdk --group test
-          fi
-          node scripts/devtools/checksums.mjs .artifacts/dependency-cache
-
-      - name: Prepare lock-resolved dependency caches on Windows
-        if: runner.os == 'Windows' && env.DSH_INCLUDE_DEPENDENCIES == 'yes'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path '.artifacts/dependency-cache/pnpm' | Out-Null
-          New-Item -ItemType Directory -Force -Path '.artifacts/dependency-cache/cargo' | Out-Null
-          pnpm fetch --frozen-lockfile --store-dir "$PWD/.artifacts/dependency-cache/pnpm"
-          $env:CARGO_HOME = "$PWD/.artifacts/dependency-cache/cargo"
-          cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
-          if ($env:DSH_TOOL_PROFILE -eq 'full') {
-            New-Item -ItemType Directory -Force -Path '.artifacts/dependency-cache/uv' | Out-Null
-            $env:UV_CACHE_DIR = "$PWD/.artifacts/dependency-cache/uv"
-            uv sync --frozen --project python/sdk --group test
-          }
-          node scripts/devtools/checksums.mjs .artifacts/dependency-cache
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: dsh-project-tools-${{ runner.os }}-${{ runner.arch }}
-          path: .artifacts/project-tools
-          if-no-files-found: error
-          retention-days: 30
-
-      - uses: actions/upload-artifact@v7
-        if: env.DSH_INCLUDE_DEPENDENCIES == 'yes'
-        with:
-          name: dsh-project-dependencies-${{ env.DSH_TOOL_PROFILE }}-${{ runner.os }}-${{ runner.arch }}
-          path: .artifacts/dependency-cache
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Prepare selected project profile for checks on Unix
-        if: runner.os != 'Windows' && env.DSH_RUN_CHECKS == 'yes'
+        run: sh ./dev format --check
+      - name: Run project test profile
         shell: bash
-        run: sh ./dev setup "$DSH_TOOL_PROFILE"
-
-      - name: Prepare selected project profile for checks on Windows
-        if: runner.os == 'Windows' && env.DSH_RUN_CHECKS == 'yes'
-        shell: pwsh
-        run: .\dev.ps1 setup $env:DSH_TOOL_PROFILE
-
-      - name: Run selected project checks on Unix
-        if: runner.os != 'Windows' && env.DSH_RUN_CHECKS == 'yes'
-        shell: bash
-        run: sh ./dev check "$DSH_TOOL_PROFILE"
-
-      - name: Run selected project checks on Windows
-        if: runner.os == 'Windows' && env.DSH_RUN_CHECKS == 'yes'
-        shell: pwsh
-        run: .\dev.ps1 check $env:DSH_TOOL_PROFILE
+        run: sh ./dev check test
