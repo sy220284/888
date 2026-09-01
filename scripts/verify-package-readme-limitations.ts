@@ -1,8 +1,7 @@
 /**
- * Doc-sync gate for the canonical package-README limitations section. It scans
- * package manifests, rejects missing or variant sections, and requires one
- * top-level bullet; audited packages in {@link NO_LIMITATIONS} must omit it.
- * See the [limitations Agent Note](../.agents/notes/implemented/process/2026-07-10-readme-known-limitations-gate.md).
+ * 中文包 README 的限制章节门禁。中文 README 是文档权威来源；英文 README
+ * 与翻译侧车不参与该检查。每个非白名单包必须有且只有一个二级“已知限制”
+ * 章节，并至少包含一个顶层条目。
  */
 
 import { existsSync, globSync, readFileSync } from 'node:fs'
@@ -11,23 +10,18 @@ import { markdownHeadingLines, markdownProseLines } from './markdown.ts'
 
 const root = resolve(import.meta.dirname, '..')
 
-/** The one canonical section heading, required verbatim as an h2. */
-const CANONICAL = '## Known Limitations and Deferred Work'
+/** 推荐的新文档标题；历史中文近义标题继续接受，避免无价值的大规模改名。 */
+const RECOMMENDED = '## 已知限制与暂缓事项'
 
 /** Packages audited as having no limitations section, keyed by repo-relative directory. */
 const NO_LIMITATIONS: Readonly<Record<string, string>> = {
   'packages/util/brand': 'Type-only nominal-branding primitive with no runtime behavior or deferred work.',
 }
 
-/** A heading that reads as a limitations section — canonical or drifted. */
+/** 中文限制章节标题。 */
 function isLimitationsLike(headingText: string): boolean {
-  return (
-    /\blimitations?\b/i.test(headingText)
-    || /deferred work/i.test(headingText)
-    || /what is not here/i.test(headingText)
-    || /^deferred\b/i.test(headingText)
-    || /^non-goals?\b/i.test(headingText)
-  )
+  const normalized = headingText.trim().replaceAll(/\s+/g, '')
+  return normalized.startsWith('已知限制') || normalized.startsWith('已知局限') || normalized.startsWith('限制与')
 }
 
 const packageJsons = globSync('packages/*/*/package.json', { cwd: root }).map(path => path.split(sep).join('/')).sort()
@@ -44,9 +38,9 @@ for (const [entry, reason] of Object.entries(NO_LIMITATIONS)) {
 }
 
 for (const pkg of scannedPackages) {
-  const readme = `${pkg}/README.md`
+  const readme = `${pkg}/README.zh.md`
   if (!existsSync(resolve(root, readme))) {
-    failures.push(`${readme}: package manifest has no sibling README with the \`${CANONICAL}\` section`)
+    failures.push(`${readme}: 包清单缺少同目录中文 README（推荐标题 ${JSON.stringify(RECOMMENDED)}）`)
     continue
   }
   const source = readFileSync(resolve(root, readme), 'utf8')
@@ -56,22 +50,22 @@ for (const pkg of scannedPackages) {
 
   if (Object.hasOwn(NO_LIMITATIONS, pkg)) {
     for (const heading of limitations) {
-      failures.push(`${readme}:${heading.index}: whitelisted as having no known limitations, but carries ${JSON.stringify(heading.raw)} — drop the section or remove the package from NO_LIMITATIONS`)
+      failures.push(`${readme}:${heading.index}: 已声明为无已知限制，但仍包含 ${JSON.stringify(heading.raw)}；删除该章节或移出 NO_LIMITATIONS`)
     }
     continue
   }
 
   const heading = limitations.at(0)
   if (heading === undefined) {
-    failures.push(`${readme}: missing the \`${CANONICAL}\` section (a package with genuinely nothing to declare joins NO_LIMITATIONS in scripts/verify-package-readme-limitations.ts instead)`)
+    failures.push(`${readme}: 缺少中文已知限制章节（推荐标题 ${JSON.stringify(RECOMMENDED)}；确实没有限制的包应加入 NO_LIMITATIONS）`)
     continue
   }
   if (limitations.length > 1) {
-    failures.push(`${readme}: ${limitations.length} limitations-like headings (lines ${limitations.map(line => line.index).join(', ')}) — keep exactly one \`${CANONICAL}\` section`)
+    failures.push(`${readme}: 发现 ${limitations.length} 个已知限制类章节（行 ${limitations.map(line => line.index).join(', ')}）；只保留一个`)
     continue
   }
-  if (heading.depth !== 2 || heading.raw.trimEnd() !== CANONICAL) {
-    failures.push(`${readme}:${heading.index}: non-canonical heading ${JSON.stringify(heading.raw)} — use \`${CANONICAL}\``)
+  if (heading.depth !== 2) {
+    failures.push(`${readme}:${heading.index}: 已知限制章节必须使用二级标题；推荐 ${JSON.stringify(RECOMMENDED)}`)
     continue
   }
   const headingAt = lines.findIndex(line => line.index === heading.index)
@@ -80,7 +74,7 @@ for (const pkg of scannedPackages) {
   const end = body.findIndex(line => headingLines.has(line.index))
   const section = end === -1 ? body : body.slice(0, end)
   if (!section.some(line => /^- /.test(line.raw))) {
-    failures.push(`${readme}:${heading.index}: the \`${CANONICAL}\` section has no top-level \`- \` bullet — state the limitations, or whitelist the package if there are genuinely none`)
+    failures.push(`${readme}:${heading.index}: 已知限制章节没有顶层 "- " 条目；请写明限制，确实没有限制则加入 NO_LIMITATIONS`)
   }
 }
 
@@ -90,4 +84,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log(`verify-package-readme-limitations: ${scannedPackages.size} package READMEs checked (${Object.keys(NO_LIMITATIONS).length} whitelisted), all conform.`)
+console.log(`verify-package-readme-limitations: ${scannedPackages.size} 中文包 README 已检查 (${Object.keys(NO_LIMITATIONS).length} whitelisted), all conform.`)
