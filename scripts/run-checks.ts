@@ -12,6 +12,9 @@ interface Check {
 const root = resolve(import.meta.dirname, '..')
 
 const hygieneChecks: Check[] = [
+  { script: 'verify-session-event-types' },
+  { script: 'verify-client-catalog' },
+  { script: 'verify-scoped-events' },
   { script: 'rescope-vendor:check' },
   { script: 'knip' },
   { script: 'publint' },
