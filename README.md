@@ -21,3 +21,5 @@ pnpm run test
 pnpm run build
 pnpm run check:all
 ```
+
+GitHub Actions 使用同一套安装、代码检查、类型检查、测试和构建命令验证提交与拉取请求。
