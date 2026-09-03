@@ -41,6 +41,13 @@ fn main() {
             }
         };
         let id = request.id;
+        // Hold the protocol writer across request execution and its response.
+        // Spawned output/exit threads may start immediately, but they cannot
+        // publish an event until the matching spawn response is on stdout.
+        let mut response_writer = match writer.lock() {
+            Ok(guard) => guard,
+            Err(_) => break,
+        };
         let result = handle(
             request,
             writer.clone(),
@@ -49,10 +56,14 @@ fn main() {
         );
         match result {
             Ok(value) => {
-                let _ = process::write_json(&writer, &Response::success(id, value));
+                let _ =
+                    process::write_json_to(&mut **response_writer, &Response::success(id, value));
             }
             Err(error) => {
-                let _ = process::write_json(&writer, &Response::<Value>::failure(id, error));
+                let _ = process::write_json_to(
+                    &mut **response_writer,
+                    &Response::<Value>::failure(id, error),
+                );
             }
         }
     }
@@ -63,7 +74,7 @@ fn main() {
     }
     if let Ok(registry) = terminals.lock() {
         for terminal in registry.values() {
-            let _ = terminal::signal_session(terminal.pid, "SIGKILL");
+            let _ = terminal.signal_tree("SIGKILL");
         }
     };
 }
@@ -195,7 +206,7 @@ fn handle(
             if let Ok(process) = lookup_process(&processes, &process_id) {
                 process::signal_tree(process.pid, &signal)?;
             } else if let Ok(terminal) = lookup_terminal(&terminals, &process_id) {
-                terminal::signal_session(terminal.pid, &signal)?;
+                terminal.signal_tree(&signal)?;
             }
             Ok(json!({}))
         }
@@ -203,7 +214,7 @@ fn handle(
             let alive = if let Ok(process) = lookup_process(&processes, &process_id) {
                 process::tree_alive(process.pid)
             } else if let Ok(terminal) = lookup_terminal(&terminals, &process_id) {
-                terminal::session_alive(terminal.pid)
+                terminal.tree_alive()?
             } else {
                 false
             };

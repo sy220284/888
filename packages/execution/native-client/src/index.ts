@@ -257,20 +257,46 @@ class SidecarHandle implements NativeProcessHandle {
 class SidecarTerminalHandle implements NativeTerminalHandle {
   readonly output = new PassThrough();
   readonly done: Promise<NativeProcessOutcome>;
+  private readonly started = Promise.withResolvers<number>();
   private readonly settled = Promise.withResolvers<NativeProcessOutcome>();
+  private readonly outputSettled = Promise.withResolvers<void>();
+  private remotePid = -1;
   private outputClosed = false;
   private exited = false;
 
   constructor(
     readonly processId: string,
-    readonly pid: number,
     private readonly client: NativeExecutionClient,
   ) {
     this.done = this.settled.promise;
     void this.done.catch(() => {});
+    void this.started.promise.catch(() => {});
+  }
+
+  get pid(): number {
+    return this.remotePid;
+  }
+
+  onStarted(pid: number): void {
+    if (this.remotePid !== -1) return;
+    this.remotePid = pid;
+    this.started.resolve(pid);
+  }
+
+  onStartFailure(error: Error): void {
+    this.started.reject(error);
+    if (!this.exited) {
+      this.exited = true;
+      this.settled.reject(error);
+    }
+    if (!this.outputClosed) {
+      this.outputClosed = true;
+      this.output.destroy(error);
+    }
   }
 
   async write(data: string): Promise<void> {
+    await this.started.promise;
     await this.client.request({
       op: "write_terminal",
       process_id: this.processId,
@@ -279,6 +305,7 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   }
 
   async inspectForeground(): Promise<NativeTerminalForeground | undefined> {
+    await this.started.promise;
     const result = await this.client.request<{
       foreground?: { process_group_id: number; input_waiting: boolean } | null;
     }>({ op: "inspect_terminal", process_id: this.processId });
@@ -292,6 +319,7 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   }
 
   async signalForeground(signal: NativeExecutionSignal): Promise<number> {
+    await this.started.promise;
     const result = await this.client.request<{ process_group_id: number }>({
       op: "signal_foreground",
       process_id: this.processId,
@@ -301,6 +329,11 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   }
 
   async signalTree(signal: NativeExecutionSignal): Promise<void> {
+    try {
+      await this.started.promise;
+    } catch {
+      return;
+    }
     await this.client.request({
       op: "signal_tree",
       process_id: this.processId,
@@ -309,6 +342,11 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   }
 
   async treeAlive(): Promise<boolean> {
+    try {
+      await this.started.promise;
+    } catch {
+      return false;
+    }
     const result = await this.client.request<{ alive: boolean }>({
       op: "tree_alive",
       process_id: this.processId,
@@ -324,6 +362,11 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
     if (this.outputClosed) return;
     this.outputClosed = true;
     this.output.end();
+    this.outputSettled.resolve();
+  }
+
+  waitForOutput(): Promise<void> {
+    return this.outputSettled.promise;
   }
 
   onExit(outcome: NativeProcessOutcome): void {
@@ -336,7 +379,9 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   onTransportFailure(error: Error): void {
     if (this.exited) return;
     this.exited = true;
+    this.started.reject(error);
     this.outputClosed = true;
+    this.outputSettled.resolve();
     this.output.destroy(error);
     this.settled.reject(error);
   }
@@ -451,36 +496,42 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     const signal = spec.signal;
     signal?.throwIfAborted();
     const processId = randomUUID();
+    const handle = new SidecarTerminalHandle(processId, this);
+    // Publish local ownership before the remote spawn can emit output/exit.
+    // PassThrough buffers pre-return output until the caller attaches, and an
+    // early exit settles the already-owned handle instead of disappearing.
+    this.terminalHandles.set(processId, handle);
     let aborted = false;
     const onAbort = (): void => {
       aborted = true;
     };
     signal?.addEventListener("abort", onAbort, { once: true });
     if (signal?.aborted === true) aborted = true;
-    const pending = this.request<{ process_id: string; pid: number }>({
-      op: "spawn_terminal",
-      process_id: processId,
-      argv: [...spec.argv],
-      cwd: spec.cwd,
-      env: { ...(spec.env ?? {}) },
-      rows: spec.rows,
-      cols: spec.cols,
-    });
     try {
-      const result = await pending;
+      const result = await this.request<{ process_id: string; pid: number }>({
+        op: "spawn_terminal",
+        process_id: processId,
+        argv: [...spec.argv],
+        cwd: spec.cwd,
+        env: { ...(spec.env ?? {}) },
+        rows: spec.rows,
+        cols: spec.cols,
+      });
+      handle.onStarted(result.pid);
       if (aborted) {
-        await this.request({
-          op: "signal_tree",
-          process_id: processId,
-          signal: "SIGKILL",
-        }).catch(() => undefined);
+        await handle.signalTree("SIGKILL").catch(() => undefined);
         throw signal === undefined
           ? new Error("native terminal allocation aborted")
           : abortError(signal);
       }
-      const handle = new SidecarTerminalHandle(processId, result.pid, this);
-      this.terminalHandles.set(processId, handle);
       return handle;
+    } catch (error: unknown) {
+      const failure = asError(error);
+      if (handle.pid === -1) {
+        handle.onStartFailure(failure);
+        this.terminalHandles.delete(processId);
+      }
+      throw failure;
     } finally {
       signal?.removeEventListener("abort", onAbort);
     }
@@ -608,17 +659,20 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     })();
   }
 
-  /** Release one terminal after its complete OS session and output stream quiesce. */
+  /** Release one terminal only after the sidecar proves its complete owned tree quiescent. */
   releaseTerminalWhenQuiescent(handle: SidecarTerminalHandle): void {
     void (async () => {
-      try {
-        while (await handle.treeAlive())
-          await new Promise((resolve) => setTimeout(resolve, 15));
-      } catch {
-        /* sidecar failure owns the remaining cleanup */
+      while (this.failed === undefined) {
+        const alive = await handle.treeAlive().catch(() => undefined);
+        if (alive === false) {
+          await handle.waitForOutput();
+          this.terminalHandles.delete(handle.processId);
+          return;
+        }
+        // An inspection failure is unknown, not dead. Keep ownership and retry;
+        // failAll() is the only path that may abandon the registry on transport loss.
+        await new Promise((resolve) => setTimeout(resolve, 15));
       }
-      handle.onOutputClosed();
-      this.terminalHandles.delete(handle.processId);
     })();
   }
 

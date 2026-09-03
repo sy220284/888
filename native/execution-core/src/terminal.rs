@@ -2,18 +2,50 @@ use crate::process::{signal_number, write_json, Writer};
 use crate::protocol::{Event, ForegroundResult};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::{read_dir, read_to_string, File};
-use std::io::{Read, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::os::fd::{AsRawFd, FromRawFd, RawFd};
 use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+struct ProcessIdentity {
+    pid: u32,
+    starttime: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct ProcStat {
+    pid: u32,
+    ppid: u32,
+    pgrp: i32,
+    session: i32,
+    state: char,
+    starttime: u64,
+}
+
+impl ProcStat {
+    fn identity(self) -> ProcessIdentity {
+        ProcessIdentity {
+            pid: self.pid,
+            starttime: self.starttime,
+        }
+    }
+
+    fn live(self) -> bool {
+        !matches!(self.state, 'Z' | 'X' | 'x')
+    }
+}
+
 pub struct ManagedTerminal {
     pub pid: u32,
+    root: ProcessIdentity,
+    session_id: i32,
     master: Mutex<File>,
+    tracked: Mutex<HashSet<ProcessIdentity>>,
 }
 
 impl ManagedTerminal {
@@ -33,6 +65,7 @@ impl ManagedTerminal {
     pub fn foreground(&self) -> Result<Option<ForegroundResult>, String> {
         #[cfg(target_os = "linux")]
         {
+            self.refresh_tracked()?;
             let guard = self
                 .master
                 .lock()
@@ -47,13 +80,94 @@ impl ManagedTerminal {
             }
             Ok(Some(ForegroundResult {
                 process_group_id: pgid,
-                input_waiting: process_group_waits_on_stdin(pgid),
+                input_waiting: process_group_waits_on_stdin(pgid)?,
             }))
         }
         #[cfg(not(target_os = "linux"))]
         {
             Ok(None)
         }
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn signal_tree(&self, signal: &str) -> Result<(), String> {
+        let sig = signal_number(signal)?;
+        let members = self.refresh_tracked()?;
+        let mut first_error = None;
+        // Descendants first: if the root exits and reparents children during
+        // cleanup, every already-observed identity remains fenced and owned.
+        for identity in members
+            .iter()
+            .copied()
+            .filter(|identity| *identity != self.root)
+            .chain(std::iter::once(self.root))
+        {
+            if let Err(error) = signal_identity(identity, sig) {
+                if first_error.is_none() {
+                    first_error = Some(error);
+                }
+            }
+        }
+        match first_error {
+            Some(error) => Err(format!("signal terminal tree failed: {error}")),
+            None => Ok(()),
+        }
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    pub fn signal_tree(&self, _signal: &str) -> Result<(), String> {
+        Err("native terminal is currently implemented only on Linux".to_string())
+    }
+
+    #[cfg(target_os = "linux")]
+    pub fn tree_alive(&self) -> Result<bool, String> {
+        Ok(!self.refresh_tracked()?.is_empty())
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    pub fn tree_alive(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    #[cfg(target_os = "linux")]
+    fn refresh_tracked(&self) -> Result<Vec<ProcessIdentity>, String> {
+        let stats = proc_stats()?;
+        let by_pid: HashMap<u32, ProcStat> =
+            stats.iter().copied().map(|stat| (stat.pid, stat)).collect();
+        let root_current = by_pid
+            .get(&self.root.pid)
+            .copied()
+            .filter(|stat| stat.starttime == self.root.starttime);
+        let root_verified = root_current.is_some();
+
+        let mut tracked = self
+            .tracked
+            .lock()
+            .map_err(|_| "terminal descendant registry lock poisoned".to_string())?;
+        tracked.retain(|identity| {
+            by_pid
+                .get(&identity.pid)
+                .is_some_and(|stat| stat.starttime == identity.starttime && stat.live())
+        });
+
+        if root_verified {
+            for stat in stats.iter().copied().filter(|stat| stat.live()) {
+                if stat.pid == self.root.pid {
+                    continue;
+                }
+                if stat.session == self.session_id
+                    || is_descendant_of(stat.pid, self.root.pid, &by_pid)
+                {
+                    tracked.insert(stat.identity());
+                }
+            }
+        }
+
+        let mut live = tracked.iter().copied().collect::<Vec<_>>();
+        if root_current.is_some_and(ProcStat::live) {
+            live.push(self.root);
+        }
+        Ok(live)
     }
 }
 
@@ -136,19 +250,37 @@ pub fn spawn_terminal(
         .map_err(|e| format!("terminal spawn failed: {e}"))?;
     drop(slave);
     let pid = child.id();
+    // The child is not reaped yet, so even an immediately-exited command still
+    // has a /proc identity here as a zombie. Capture starttime before any wait.
+    let root_stat = read_proc_stat(pid)?
+        .ok_or_else(|| format!("terminal root identity disappeared before publication: {pid}"))?;
     let reader = master
         .try_clone()
         .map_err(|e| format!("clone terminal master failed: {e}"))?;
     let managed = Arc::new(ManagedTerminal {
         pid,
+        root: root_stat.identity(),
+        session_id: root_stat.session,
         master: Mutex::new(master),
+        tracked: Mutex::new(HashSet::new()),
     });
+    // Prime ownership while the root identity is still known, then keep a
+    // background observer adopting descendants even when they call setsid().
+    managed.refresh_tracked()?;
     registry
         .lock()
         .map_err(|_| "terminal registry lock poisoned".to_string())?
         .insert(process_id.clone(), managed.clone());
 
+    let tracker = managed.clone();
+    thread::spawn(move || {
+        while let Ok(true) | Err(_) = tracker.tree_alive() {
+            thread::sleep(Duration::from_millis(10));
+        }
+    });
+
     stream_terminal(process_id.clone(), reader, writer.clone());
+    let completion_terminal = managed.clone();
     thread::spawn(move || {
         let status = child.wait();
         let (exit_code, signal) = match status {
@@ -172,8 +304,13 @@ pub fn spawn_terminal(
                 signal,
             },
         );
-        while session_alive(pid) {
-            thread::sleep(Duration::from_millis(15));
+        // Failure to inspect /proc is fail-closed: retain ownership and retry
+        // instead of declaring the tree dead without proof.
+        loop {
+            match completion_terminal.tree_alive() {
+                Ok(false) => break,
+                Ok(true) | Err(_) => thread::sleep(Duration::from_millis(15)),
+            }
         }
         if let Ok(mut guard) = registry.lock() {
             guard.remove(&process_id);
@@ -303,107 +440,117 @@ pub fn signal_foreground(_terminal: &ManagedTerminal, _signal: &str) -> Result<i
 }
 
 #[cfg(target_os = "linux")]
-pub fn signal_session(pid: u32, signal: &str) -> Result<(), String> {
-    let sig = signal_number(signal)?;
-    let members = session_members(pid);
-    if members.is_empty() {
-        return Ok(());
-    }
-    let mut first_error = None;
-    for member in members {
-        if unsafe { libc::kill(member as i32, sig) } == -1 {
-            let error = std::io::Error::last_os_error();
-            if error.raw_os_error() != Some(libc::ESRCH) && first_error.is_none() {
-                first_error = Some(error);
-            }
-        }
-    }
-    match first_error {
-        Some(error) => Err(format!("signal terminal session failed: {error}")),
-        None => Ok(()),
-    }
-}
-
-#[cfg(not(target_os = "linux"))]
-pub fn signal_session(_pid: u32, _signal: &str) -> Result<(), String> {
-    Err("native terminal is currently implemented only on Linux".to_string())
-}
-
-#[cfg(target_os = "linux")]
-pub fn session_alive(pid: u32) -> bool {
-    !session_members(pid).is_empty()
-}
-
-#[cfg(not(target_os = "linux"))]
-pub fn session_alive(_pid: u32) -> bool {
-    false
-}
-
-#[derive(Clone, Copy)]
-struct ProcStat {
-    pid: u32,
-    pgrp: i32,
-    session: i32,
-    state: char,
-}
-
-#[cfg(target_os = "linux")]
 fn parse_proc_stat(text: &str) -> Option<ProcStat> {
     let open = text.find('(')?;
     let close = text.rfind(')')?;
     let pid = text[..open].trim().parse::<u32>().ok()?;
     let rest: Vec<&str> = text[close + 1..].split_whitespace().collect();
     let state = rest.first()?.chars().next()?;
+    let ppid = rest.get(1)?.parse::<u32>().ok()?;
     let pgrp = rest.get(2)?.parse::<i32>().ok()?;
     let session = rest.get(3)?.parse::<i32>().ok()?;
+    let starttime = rest.get(19)?.parse::<u64>().ok()?;
     Some(ProcStat {
         pid,
+        ppid,
         pgrp,
         session,
         state,
+        starttime,
     })
 }
 
 #[cfg(target_os = "linux")]
-fn proc_stats() -> Vec<ProcStat> {
-    let Ok(entries) = read_dir("/proc") else {
-        return Vec::new();
-    };
-    entries
-        .flatten()
-        .filter_map(|entry| entry.file_name().to_string_lossy().parse::<u32>().ok())
-        .filter_map(|pid| read_to_string(format!("/proc/{pid}/stat")).ok())
-        .filter_map(|text| parse_proc_stat(&text))
-        .collect()
+fn read_proc_stat(pid: u32) -> Result<Option<ProcStat>, String> {
+    match read_to_string(format!("/proc/{pid}/stat")) {
+        Ok(text) => parse_proc_stat(&text)
+            .map(Some)
+            .ok_or_else(|| format!("invalid /proc/{pid}/stat")),
+        Err(error) if error.kind() == ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(format!("read /proc/{pid}/stat failed: {error}")),
+    }
 }
 
 #[cfg(target_os = "linux")]
-fn session_members(session_id: u32) -> Vec<u32> {
-    proc_stats()
-        .into_iter()
-        .filter(|stat| stat.session == session_id as i32 && !matches!(stat.state, 'Z' | 'X' | 'x'))
-        .map(|stat| stat.pid)
-        .collect()
-}
-
-#[cfg(target_os = "linux")]
-fn process_group_waits_on_stdin(pgid: i32) -> bool {
-    for stat in proc_stats().into_iter().filter(|stat| stat.pgrp == pgid) {
-        let Ok(tasks) = read_dir(format!("/proc/{}/task", stat.pid)) else {
+fn proc_stats() -> Result<Vec<ProcStat>, String> {
+    let entries = read_dir("/proc").map_err(|error| format!("read /proc failed: {error}"))?;
+    let mut stats = Vec::new();
+    for entry in entries {
+        let entry = entry.map_err(|error| format!("iterate /proc failed: {error}"))?;
+        let Ok(pid) = entry.file_name().to_string_lossy().parse::<u32>() else {
             continue;
         };
-        for task in tasks.flatten() {
+        if let Some(stat) = read_proc_stat(pid)? {
+            stats.push(stat);
+        }
+    }
+    Ok(stats)
+}
+
+#[cfg(target_os = "linux")]
+fn is_descendant_of(pid: u32, root_pid: u32, by_pid: &HashMap<u32, ProcStat>) -> bool {
+    let mut current = pid;
+    let mut seen = HashSet::new();
+    while current != 0 && seen.insert(current) {
+        let Some(stat) = by_pid.get(&current) else {
+            return false;
+        };
+        if stat.ppid == root_pid {
+            return true;
+        }
+        current = stat.ppid;
+    }
+    false
+}
+
+#[cfg(target_os = "linux")]
+fn signal_identity(identity: ProcessIdentity, signal: i32) -> Result<(), String> {
+    let Some(current) = read_proc_stat(identity.pid)? else {
+        return Ok(());
+    };
+    if current.starttime != identity.starttime || !current.live() {
+        return Ok(());
+    }
+    if unsafe { libc::kill(identity.pid as i32, signal) } == 0 {
+        return Ok(());
+    }
+    let error = std::io::Error::last_os_error();
+    if error.raw_os_error() == Some(libc::ESRCH) {
+        Ok(())
+    } else {
+        Err(error.to_string())
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn process_group_waits_on_stdin(pgid: i32) -> Result<bool, String> {
+    for stat in proc_stats()?.into_iter().filter(|stat| stat.pgrp == pgid) {
+        let tasks = match read_dir(format!("/proc/{}/task", stat.pid)) {
+            Ok(tasks) => tasks,
+            Err(error) if error.kind() == ErrorKind::NotFound => continue,
+            Err(error) => {
+                return Err(format!("read /proc/{}/task failed: {error}", stat.pid));
+            }
+        };
+        for task in tasks {
+            let task = task.map_err(|error| format!("iterate process tasks failed: {error}"))?;
             let tid = task.file_name().to_string_lossy().into_owned();
-            let Ok(syscall) = read_to_string(format!("/proc/{}/task/{tid}/syscall", stat.pid))
-            else {
-                continue;
+            let syscall = match read_to_string(format!("/proc/{}/task/{tid}/syscall", stat.pid)) {
+                Ok(syscall) => syscall,
+                Err(error) if error.kind() == ErrorKind::NotFound => continue,
+                Err(error) => {
+                    return Err(format!(
+                        "read /proc/{}/task/{tid}/syscall failed: {error}",
+                        stat.pid
+                    ));
+                }
             };
             if syscall_waits_on_stdin(&syscall) {
-                return true;
+                return Ok(true);
             }
         }
     }
-    false
+    Ok(false)
 }
 
 #[cfg(target_os = "linux")]
@@ -428,17 +575,56 @@ fn syscall_waits_on_stdin(text: &str) -> bool {
 #[cfg(test)]
 mod tests {
     #[cfg(target_os = "linux")]
-    use super::{parse_proc_stat, syscall_waits_on_stdin};
+    use super::{is_descendant_of, parse_proc_stat, syscall_waits_on_stdin, ProcStat};
+    #[cfg(target_os = "linux")]
+    use std::collections::HashMap;
 
     #[test]
     #[cfg(target_os = "linux")]
-    fn parses_linux_proc_stat_with_parenthesized_name() {
-        let stat =
-            parse_proc_stat("42 (a tricky) S 1 77 42 0 -1 0 0 0 0 0 0 0 0 0 0 0 0 1 0 999 0")
-                .unwrap();
+    fn parses_linux_proc_stat_with_parenthesized_name_and_identity() {
+        let padding = vec!["0"; 15].join(" ");
+        let text = format!("42 (a tricky) S 1 77 42 {padding} 999");
+        let stat = parse_proc_stat(&text).unwrap();
         assert_eq!(stat.pid, 42);
+        assert_eq!(stat.ppid, 1);
         assert_eq!(stat.pgrp, 77);
         assert_eq!(stat.session, 42);
+        assert_eq!(stat.starttime, 999);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn follows_descendants_across_session_changes() {
+        let root = ProcStat {
+            pid: 10,
+            ppid: 1,
+            pgrp: 10,
+            session: 10,
+            state: 'S',
+            starttime: 1,
+        };
+        let child = ProcStat {
+            pid: 11,
+            ppid: 10,
+            pgrp: 11,
+            session: 11,
+            state: 'S',
+            starttime: 2,
+        };
+        let grandchild = ProcStat {
+            pid: 12,
+            ppid: 11,
+            pgrp: 12,
+            session: 12,
+            state: 'S',
+            starttime: 3,
+        };
+        let map = [root, child, grandchild]
+            .into_iter()
+            .map(|stat| (stat.pid, stat))
+            .collect::<HashMap<_, _>>();
+        assert!(is_descendant_of(11, 10, &map));
+        assert!(is_descendant_of(12, 10, &map));
     }
 
     #[test]

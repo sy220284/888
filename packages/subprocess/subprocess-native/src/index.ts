@@ -195,6 +195,7 @@ class NativeSubprocessTerminalHandle implements SubprocessTerminalHandle {
   readonly done: NativeTerminalHandle["done"];
   private cleanup: Promise<void> | undefined;
   private closing = false;
+  private readonly operations = new Set<Promise<unknown>>();
 
   constructor(
     private readonly native: NativeTerminalHandle,
@@ -206,47 +207,69 @@ class NativeSubprocessTerminalHandle implements SubprocessTerminalHandle {
     void this.done.catch(() => {});
   }
 
-  async write(data: string): Promise<void> {
-    if (this.closing) throw new Error("subprocess-native: terminal is closing");
-    await this.native.write(data);
+  write(data: string): Promise<void> {
+    return this.trackOperation(() => this.native.write(data));
   }
 
-  async inspectForeground(): Promise<SubprocessTerminalForeground | undefined> {
-    if (this.closing) return undefined;
-    return await this.native.inspectForeground();
+  inspectForeground(): Promise<SubprocessTerminalForeground | undefined> {
+    return this.trackOperation(() => this.native.inspectForeground());
   }
 
-  async signalForeground(signal: SubprocessTerminalSignal): Promise<number> {
-    if (this.closing) throw new Error("subprocess-native: terminal is closing");
-    return await this.native.signalForeground(signal);
+  signalForeground(signal: SubprocessTerminalSignal): Promise<number> {
+    return this.trackOperation(() => this.native.signalForeground(signal));
   }
 
   terminate(): Promise<void> {
-    this.cleanup ??= this.closeOnce();
-    return this.cleanup;
+    if (this.cleanup !== undefined) return this.cleanup;
+    this.closing = true;
+    const cleanup = this.closeAfterOperations();
+    this.cleanup = cleanup;
+    // A failed cleanup must remain retryable. Keep the handle closed to new
+    // operations, but let a later terminate() run the cleanup transaction again.
+    void cleanup.catch(() => {
+      this.cleanup = undefined;
+    });
+    return cleanup;
+  }
+
+  private trackOperation<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.closing) {
+      return Promise.reject(new Error("subprocess-native: terminal is closing"));
+    }
+    const pending = operation();
+    this.operations.add(pending);
+    void pending.then(
+      () => { this.operations.delete(pending); },
+      () => { this.operations.delete(pending); },
+    );
+    return pending;
+  }
+
+  private async closeAfterOperations(): Promise<void> {
+    await Promise.allSettled([...this.operations]);
+    await this.closeOnce();
   }
 
   private async closeOnce(): Promise<void> {
-    this.closing = true;
     await this.native.signalTree("SIGTERM").catch(() => undefined);
     const until = Date.now() + this.graceMs;
     while (
       Date.now() < until &&
-      (await this.native.treeAlive().catch(() => false))
+      (await this.native.treeAlive().catch(() => true))
     ) {
       await waitMs(Math.min(15, Math.max(1, until - Date.now())));
     }
-    if (await this.native.treeAlive().catch(() => false)) {
+    if (await this.native.treeAlive().catch(() => true)) {
       await this.native.signalTree("SIGKILL").catch(() => undefined);
     }
     const killUntil = Date.now() + this.graceMs;
     while (
       Date.now() < killUntil &&
-      (await this.native.treeAlive().catch(() => false))
+      (await this.native.treeAlive().catch(() => true))
     ) {
       await waitMs(Math.min(15, Math.max(1, killUntil - Date.now())));
     }
-    if (await this.native.treeAlive().catch(() => false)) {
+    if (await this.native.treeAlive().catch(() => true)) {
       throw new Error(
         `subprocess-native: terminal cleanup failed; surviving session ${this.pid}`,
       );
@@ -402,9 +425,14 @@ export class NativeSubprocessRuntime extends SubprocessRuntime {
     this.terminals.add(handle);
     const release = async (): Promise<void> => {
       await handle.done.catch(() => undefined);
+      // Direct shell exit is not ownership release: terminate() proves the
+      // complete terminal tree/session quiescent and drains in-flight calls.
+      await handle.terminate();
       this.terminals.delete(handle);
     };
-    void release();
+    void release().catch(() => {
+      // Retain failed cleanup so service disposal can retry it.
+    });
     return handle;
   }
 }

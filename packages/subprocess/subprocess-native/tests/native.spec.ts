@@ -44,11 +44,14 @@ class FakeTerminalHandle implements NativeTerminalHandle {
   done = this.doneState.promise;
   alive = true;
   writes: string[] = [];
+  writeGate: Promise<void> | undefined;
   foregroundSignals: NativeExecutionSignal[] = [];
   treeSignals: NativeExecutionSignal[] = [];
+  killStopsTree = true;
   foreground = { processGroupId: 5253, inputWaiting: true };
   async write(data: string): Promise<void> {
     this.writes.push(data);
+    await this.writeGate;
   }
   async inspectForeground(): Promise<{
     processGroupId: number;
@@ -62,7 +65,7 @@ class FakeTerminalHandle implements NativeTerminalHandle {
   }
   async signalTree(signal: NativeExecutionSignal): Promise<void> {
     this.treeSignals.push(signal);
-    if (signal === "SIGKILL") this.alive = false;
+    if (signal === "SIGKILL" && this.killStopsTree) this.alive = false;
   }
   async treeAlive(): Promise<boolean> {
     return this.alive;
@@ -252,6 +255,93 @@ describe("NativeSubprocessRuntime", () => {
         });
         f.native.terminalHandle.output.end();
         await handle.terminate();
+      } finally {
+        f.native.terminalHandle.alive = false;
+        await f.dispose();
+      }
+    },
+  );
+
+
+
+  it.skipIf(process.platform !== "linux")(
+    "waits for in-flight terminal operations before cleanup and rejects new ones",
+    async () => {
+      const f = await fixture();
+      f.native.terminalSupported = true;
+      try {
+        const handle = await f.ctx.subprocess.spawnTerminal({
+          argv: ["/bin/bash"],
+          cwd: "/workspace",
+          rows: 24,
+          cols: 80,
+          graceMs: 5,
+        });
+        const gate = Promise.withResolvers<void>();
+        f.native.terminalHandle.writeGate = gate.promise;
+        const writing = handle.write("pending\n");
+        const terminating = handle.terminate();
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        expect(f.native.terminalHandle.treeSignals).toEqual([]);
+        await expect(handle.write("late\n")).rejects.toThrow("terminal is closing");
+        gate.resolve();
+        await writing;
+        f.native.terminalHandle.alive = false;
+        f.native.terminalHandle.doneState.resolve({ exitCode: 0, signal: null });
+        await terminating;
+        expect(f.native.terminalHandle.treeSignals).toContain("SIGTERM");
+      } finally {
+        f.native.terminalHandle.alive = false;
+        await f.dispose();
+      }
+    },
+  );
+
+  it.skipIf(process.platform !== "linux")(
+    "allows terminal cleanup to be retried after a failed termination",
+    async () => {
+      const f = await fixture();
+      f.native.terminalSupported = true;
+      try {
+        const handle = await f.ctx.subprocess.spawnTerminal({
+          argv: ["/bin/bash"],
+          cwd: "/workspace",
+          rows: 24,
+          cols: 80,
+          graceMs: 1,
+        });
+        f.native.terminalHandle.killStopsTree = false;
+        await expect(handle.terminate()).rejects.toThrow("terminal cleanup failed");
+        const attempts = f.native.terminalHandle.treeSignals.length;
+        f.native.terminalHandle.alive = false;
+        f.native.terminalHandle.doneState.resolve({ exitCode: 0, signal: null });
+        await expect(handle.terminate()).resolves.toBeUndefined();
+        expect(f.native.terminalHandle.treeSignals.length).toBeGreaterThan(attempts);
+      } finally {
+        f.native.terminalHandle.alive = false;
+        await f.dispose();
+      }
+    },
+  );
+
+  it.skipIf(process.platform !== "linux")(
+    "keeps terminal ownership after the top-level shell exits until cleanup proves quiescence",
+    async () => {
+      const f = await fixture();
+      f.native.terminalSupported = true;
+      try {
+        await f.ctx.subprocess.spawnTerminal({
+          argv: ["/bin/bash"],
+          cwd: "/workspace",
+          rows: 24,
+          cols: 80,
+          graceMs: 5,
+        });
+        f.native.terminalHandle.doneState.resolve({ exitCode: 0, signal: null });
+        await new Promise((resolve) => setTimeout(resolve, 2));
+        expect(f.native.terminalHandle.treeSignals).toContain("SIGTERM");
+        f.native.terminalHandle.alive = false;
+        await new Promise((resolve) => setTimeout(resolve, 8));
       } finally {
         f.native.terminalHandle.alive = false;
         await f.dispose();

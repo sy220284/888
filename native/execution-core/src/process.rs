@@ -311,12 +311,19 @@ pub fn write_json<T: serde::Serialize>(writer: &Writer, value: &T) -> Result<(),
     let mut guard = writer
         .lock()
         .map_err(|_| "protocol writer lock poisoned".to_string())?;
-    serde_json::to_writer(&mut *guard, value)
+    write_json_to(&mut **guard, value)
+}
+
+pub fn write_json_to<T: serde::Serialize, W: Write + ?Sized>(
+    writer: &mut W,
+    value: &T,
+) -> Result<(), String> {
+    serde_json::to_writer(&mut *writer, value)
         .map_err(|e| format!("serialize response failed: {e}"))?;
-    guard
+    writer
         .write_all(b"\n")
         .map_err(|e| format!("write response failed: {e}"))?;
-    guard
+    writer
         .flush()
         .map_err(|e| format!("flush response failed: {e}"))
 }
