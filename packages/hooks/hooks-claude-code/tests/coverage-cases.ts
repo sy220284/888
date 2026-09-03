@@ -415,9 +415,9 @@ export function defineCoverageCases(group: CoverageGroup): void {
   })
 
   if (group === 'context') describe('hooks-claude-code coverage — continue:false, context arm, no-cwd', () => {
-    it('a {"continue":false} hook is RECORDED as decision "stop" but does not halt the run (TODO(hook-continue-false))', async () => {
-    // The extension points cannot yet honor `continue:false` as a hard halt. The log must still record the
-    // stop decision while execution and the turn continue normally.
+    it('a {"continue":false} PreToolUse hook is recorded and halts before tool execution', async () => {
+    // P5A gives `continue:false` a real run-level effect. The hook result is
+    // persisted, then the pending tool is denied before any side effect begins.
       const d = dir()
       const s = sh(d, 'stop.sh', '#!/usr/bin/env bash\necho \'{"continue":false,"stopReason":"halt"}\'\n')
       const path = hooks(d, { PreToolUse: [{ hooks: [{ type: 'command', command: s }] }] })
@@ -430,9 +430,9 @@ export function defineCoverageCases(group: CoverageGroup): void {
       await waitForIdle(ctx, agent)
       const res = events(agent).find(e => e.type === 'hook/result')
       expect(res?.type === 'hook/result' && res.data.decision).toBe('stop') // recorded
-      expect(ran).toBe(true) // NOT honored: the tool still ran (halt is deferred)
+      expect(ran).toBe(false)
       const turnEnd = events(agent).findLast(e => e.type === 'turn/end')
-      expect(turnEnd?.type === 'turn/end' && turnEnd.data.reason.kind).toBe('completed') // ran to completion
+      expect(turnEnd?.type === 'turn/end' && turnEnd.data.reason.kind).not.toBe('completed')
     })
 
     it('a PostToolUse hook that BOTH blocks AND attaches additionalContext', async () => {

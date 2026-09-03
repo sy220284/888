@@ -67,6 +67,8 @@ export interface Config {
   defaultTimeoutMs?: number
   /** Character cap for the `hook/result` event's persisted stderr summary. */
   stderrSummaryMaxChars?: number
+  /** Maximum consecutive Stop-hook forced continuations in one turn. */
+  maxStopContinuations?: number
 }
 
 export const Config: z<Config> = z.object({
@@ -75,6 +77,7 @@ export const Config: z<Config> = z.object({
   projectDir: z.string(),
   defaultTimeoutMs: z.number().default(DEFAULT_HOOK_TIMEOUT_MS),
   stderrSummaryMaxChars: z.number().default(DEFAULT_STDERR_SUMMARY_MAX_CHARS),
+  maxStopContinuations: z.number().default(8),
 })
 
 /** A stable per-handler id so an invoked/result pair correlates in the log. */
@@ -98,6 +101,8 @@ export function apply(ctx: Context, config: Config): void {
   const stderrSummaryMaxChars = config.stderrSummaryMaxChars ?? DEFAULT_STDERR_SUMMARY_MAX_CHARS
   assertPositiveInteger('stderrSummaryMaxChars', stderrSummaryMaxChars)
   const defaultTimeoutMs = config.defaultTimeoutMs ?? DEFAULT_HOOK_TIMEOUT_MS
+  const maxStopContinuations = config.maxStopContinuations ?? 8
+  assertPositiveInteger('maxStopContinuations', maxStopContinuations)
   // Parse once at load. A read or parse failure logs and registers nothing.
   let parsed: ClaudeCodeHookConfig = {}
   try {
@@ -123,6 +128,11 @@ export function apply(ctx: Context, config: Config): void {
   // handle unregisters the agent. Every retained entry relies on that paired
   // end; a producer that can omit it must provide another release edge.
   const subagentChildren = new Map<SubagentRunId, Agent>()
+  const sessionStartGates = new WeakMap<Agent, Promise<UserMessage | undefined>>()
+  const sessionStartConsumed = new WeakSet<Agent>()
+  const sessionStartWaiting = new WeakSet<Agent>()
+  const deferredStops = new WeakMap<Agent, string>()
+  const stopContinuations = new WeakMap<Agent, { turn: number; count: number }>()
   ctx.effect(() => () => detached.drain(), 'hooks-claude-code: drain detached hook runs')
 
   /**
@@ -186,7 +196,12 @@ export function apply(ctx: Context, config: Config): void {
     return mergeHookOutputs(outputs)
   }
 
-  // TODO(hook-continue-false): `merged.stop` is logged but needs a run-level halt mechanism.
+  /** Record a hook-requested halt for the next safe agent boundary. */
+  function deferStop(agent: Agent | undefined, merged: MergedHookOutcome, point: string): boolean {
+    if (!merged.stop || agent === undefined) return false
+    deferredStops.set(agent, merged.stopReason ?? `stopped by ${point} hook`)
+    return true
+  }
 
   /** Build additional model context from hook output, or return undefined when empty. */
   function contextFrom(merged: MergedHookOutcome): UserMessage | undefined {
@@ -200,37 +215,73 @@ export function apply(ctx: Context, config: Config): void {
     return [ours, ...theirs ?? []]
   }
 
-  // SessionStart injects context when its detached hook resolves; a slow hook
-  // may miss the first request.
-  // TODO(session-start-gating): add a startup gate before promising first-turn delivery.
+  // SessionStart remains an emit-shaped lifecycle event, but its bridge run is
+  // published as a per-agent gate. Context is buffered until the first pre-step
+  // instead of calling agent.inject(), which would create a second next-step
+  // occurrence after the user prompt has already been claimed.
   ctx.on('agent/session-start', ({ agent, source }) => {
-    detached.track(runPoint('SessionStart', source, sessionStartPayload(ctx, agent, source), { agent, signal: detached.signal })
+    sessionStartConsumed.delete(agent)
+    const gate = runPoint('SessionStart', source, sessionStartPayload(ctx, agent, source), { agent, signal: detached.signal })
       .then((merged) => {
+        deferStop(agent, merged, 'SessionStart')
         const context = contextFrom(merged)
-        if (context) agent.inject(context)
+        // Preserve the historical idle-session behavior: when no first pre-step
+        // is already waiting, publish startup context through the ordinary inbox.
+        // An immediate user prompt marks itself as waiting before awaiting this
+        // gate, so that path receives the same context in its first request and
+        // never creates a second next-step occurrence.
+        if (context !== undefined && !sessionStartWaiting.has(agent)) {
+          agent.inject(context)
+          return undefined
+        }
+        return context
       })
       .catch((error: unknown) => {
         ctx.logger.warn(`hooks-claude-code: SessionStart hook failed: ${String(error)}`)
-      }))
+        return undefined
+      })
+    sessionStartGates.set(agent, gate)
+    detached.track(gate)
   })
 
   // --- UserPromptSubmit → PreStepDecision. The prompt text is the payload; no
   // matcher subject (CC ignores matchers for this event). ---
   ctx.on('agent/pre-step', async ({ agent, messages, turn, signal }, next): Promise<PreStepDecision> => {
-    if (messages.length === 0) return next()
+    let startupContext: UserMessage | undefined
+    if (!sessionStartConsumed.has(agent)) {
+      sessionStartWaiting.add(agent)
+      try {
+        startupContext = await sessionStartGates.get(agent)
+      } finally {
+        sessionStartWaiting.delete(agent)
+        sessionStartConsumed.add(agent)
+      }
+    }
+    signal.throwIfAborted()
+    if (deferredStops.delete(agent)) return { kind: 'reject' }
+    if (messages.length === 0) {
+      const downstream = await next()
+      if (!startupContext || downstream.kind !== 'enter') return downstream
+      return { kind: 'enter', messages: [...downstream.messages, startupContext] }
+    }
     const content = messages.flatMap(message => message.content)
     const merged = await runPoint('UserPromptSubmit', '', promptPayload(ctx, agent, content), { agent, turn, signal })
+    if (merged.stop) return { kind: 'reject' }
     if (merged.decision === 'deny') {
       return { kind: 'reject' }
     }
-    // Delegate so later listeners may still rewrite or reject, then prepend our
-    // context only to a downstream enter decision.
+    // Delegate so later listeners may still rewrite or reject, then append the
+    // gated SessionStart context followed by this prompt hook's context.
     const downstream = await next()
+    if (downstream.kind !== 'enter') return downstream
     const ours = contextFrom(merged)
-    if (!ours || downstream.kind !== 'enter') return downstream
     return {
       kind: 'enter',
-      messages: [...downstream.messages, ours],
+      messages: [
+        ...downstream.messages,
+        ...startupContext ? [startupContext] : [],
+        ...ours ? [ours] : [],
+      ],
     }
   })
 
@@ -238,18 +289,25 @@ export function apply(ctx: Context, config: Config): void {
   ctx.on('tools/pre-execute', async (exec, next): Promise<PreToolDecision> => {
     const turn = lastTurn(exec.agent)
     const merged = await runPoint('PreToolUse', exec.name, preToolPayload(ctx, exec), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    if (deferStop(exec.agent, merged, 'PreToolUse')) {
+      return { kind: 'deny', reason: merged.stopReason ?? 'stopped by PreToolUse hook' }
+    }
     if (merged.decision === 'deny') return { kind: 'deny', reason: merged.reason ?? 'blocked by PreToolUse hook' }
     if (merged.decision === 'ask') return { kind: 'ask', ...merged.reason !== undefined ? { reason: merged.reason } : {} }
     return next()
   })
 
-  // --- PostToolUse → PostToolDecision. Matcher subject is the tool name. ---
+  // --- PostToolUse / PostToolUseFailure → PostToolDecision. The canonical
+  // execution result decides which Claude event fires; failures never pass
+  // through the success event.
   ctx.on('tools/post-execute', async (exec, result, next): Promise<PostToolDecision> => {
     const turn = lastTurn(exec.agent)
-    const merged = await runPoint('PostToolUse', exec.name, postToolPayload(ctx, exec, result), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    const point = result.isError ? 'PostToolUseFailure' : 'PostToolUse'
+    const merged = await runPoint(point, exec.name, postToolPayload(ctx, point, exec, result), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    deferStop(exec.agent, merged, point)
     const context = contextFrom(merged)
     if (merged.decision === 'deny') {
-      return { kind: 'block', feedback: [{ type: 'text', text: merged.reason ?? 'blocked by PostToolUse hook' }], ...context ? { additionalContexts: [context] } : {} }
+      return { kind: 'block', feedback: [{ type: 'text', text: merged.reason ?? `blocked by ${point} hook` }], ...context ? { additionalContexts: [context] } : {} }
     }
     // Our hooks did not block. DELEGATE so a later listener can still block/replace,
     // then fold our context onto its decision (a downstream block carries it too).
@@ -265,15 +323,29 @@ export function apply(ctx: Context, config: Config): void {
   })
 
   // A blocking Stop hook steers at the stopping boundary, which makes the
-  // machine observe pending input and run another step.
-  // TODO(stop-loop-guard): cap consecutive forced continuations; hooks must self-limit meanwhile.
+  // machine observe pending input and run another step. Bound consecutive
+  // continuations so an unconditional hook cannot create an infinite turn.
   ctx.on('agent/turn-stopping', async ({ agent, turn, signal }): Promise<void> => {
-    const merged = await runPoint('Stop', '', stopPayload(ctx, agent), { agent, turn, signal })
-    if (merged.decision === 'deny') {
-      // A blocking Stop hook forces continuation.
-      const text = merged.reason ?? 'continue: blocked by Stop hook'
-      agent.steer(createUserMessage({ content: [{ type: 'text', text }], source: PLUGIN_SOURCE }))
+    const previous = stopContinuations.get(agent)
+    const active = previous?.turn === turn && previous.count > 0
+    const merged = await runPoint('Stop', '', stopPayload(ctx, agent, active), { agent, turn, signal })
+    if (merged.stop) {
+      stopContinuations.delete(agent)
+      return
     }
+    if (merged.decision !== 'deny') {
+      stopContinuations.delete(agent)
+      return
+    }
+    const count = previous?.turn === turn ? previous.count + 1 : 1
+    if (count > maxStopContinuations) {
+      stopContinuations.delete(agent)
+      ctx.logger.warn(`hooks-claude-code: Stop hook continuation limit (${maxStopContinuations}) reached for turn ${turn}; allowing turn to stop`)
+      return
+    }
+    stopContinuations.set(agent, { turn, count })
+    const text = merged.reason ?? 'continue: blocked by Stop hook'
+    agent.steer(createUserMessage({ content: [{ type: 'text', text }], source: PLUGIN_SOURCE }))
   })
 
   // SubagentStart may inject child context; SubagentStop only observes. Both
@@ -339,11 +411,14 @@ function promptPayload(ctx: Context, agent: Agent, content: ContentBlock[]): Rec
 function preToolPayload(ctx: Context, exec: ToolExecution): Record<string, unknown> {
   return { ...base(ctx, exec.agent, 'PreToolUse'), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }
 }
-function postToolPayload(ctx: Context, exec: ToolExecution, result: ToolExecutionResult): Record<string, unknown> {
-  return { ...base(ctx, exec.agent, 'PostToolUse'), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId, tool_response: blocksToText(result.content) }
+function postToolPayload(ctx: Context, point: 'PostToolUse' | 'PostToolUseFailure', exec: ToolExecution, result: ToolExecutionResult): Record<string, unknown> {
+  const common = { ...base(ctx, exec.agent, point), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }
+  return result.isError
+    ? { ...common, error: result.error.message, is_interrupt: exec.signal.aborted }
+    : { ...common, tool_response: blocksToText(result.content) }
 }
-function stopPayload(ctx: Context, agent: Agent): Record<string, unknown> {
-  return { ...base(ctx, agent, 'Stop'), stop_hook_active: false }
+function stopPayload(ctx: Context, agent: Agent, stopHookActive: boolean): Record<string, unknown> {
+  return { ...base(ctx, agent, 'Stop'), stop_hook_active: stopHookActive }
 }
 /**
  * Build a SubagentStart/SubagentStop payload from the CC base (the child's
