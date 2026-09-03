@@ -178,6 +178,10 @@ export function apply(ctx: Context, config: Config): void {
   // handle unregisters the agent. Every retained entry relies on that paired
   // end; a producer that can omit it must provide another release edge.
   const subagentChildren = new Map<SubagentRunId, Agent>()
+  // Capture the compatibility type at the same start edge. A local child may
+  // leave the registry before SubagentStop; the paired end must still match the
+  // same type and payload that SubagentStart exposed.
+  const subagentTypes = new Map<SubagentRunId, string>()
   const sessionStartGates = new WeakMap<Agent, Promise<UserMessage | undefined>>()
   const sessionStartConsumed = new WeakSet<Agent>()
   const sessionStartWaiting = new WeakSet<Agent>()
@@ -398,12 +402,15 @@ export function apply(ctx: Context, config: Config): void {
     agent.steer(createUserMessage({ content: [{ type: 'text', text }], source: PLUGIN_SOURCE }))
   })
 
-  // SubagentStart may inject child context; SubagentStop only observes. Both
-  // use the live child's workspace and the generic agent-type matcher subject.
+  // SubagentStart may inject child context; SubagentStop only observes. A
+  // local child's persisted agent preset is the compatibility agent_type;
+  // children without one (and remote children) keep Claude's default.
   ctx.on('subagent/start', (info) => {
     const child = ctx.get('agents')?.get(info.id)
     if (child !== undefined) subagentChildren.set(info.runId, child)
-    detached.track(runPoint('SubagentStart', SUBAGENT_TYPE, subagentPayload(ctx, 'SubagentStart', info, child), { ...child ? { agent: child } : {}, signal: detached.signal })
+    const agentType = subagentType(child)
+    subagentTypes.set(info.runId, agentType)
+    detached.track(runPoint('SubagentStart', agentType, subagentPayload(ctx, 'SubagentStart', info, child, agentType), { ...child ? { agent: child } : {}, signal: detached.signal })
       .then((merged) => {
         const context = contextFrom(merged)
         if (context && child) child.inject(context)
@@ -413,17 +420,25 @@ export function apply(ctx: Context, config: Config): void {
   ctx.on('subagent/end', (info) => {
     const child = subagentChildren.get(info.runId) ?? ctx.get('agents')?.get(info.id)
     subagentChildren.delete(info.runId)
-    detached.track(runPoint('SubagentStop', SUBAGENT_TYPE, subagentPayload(ctx, 'SubagentStop', info, child), { ...child ? { agent: child } : {}, signal: detached.signal }))
+    const agentType = subagentTypes.get(info.runId) ?? subagentType(child)
+    subagentTypes.delete(info.runId)
+    detached.track(runPoint('SubagentStop', agentType, subagentPayload(ctx, 'SubagentStop', info, child, agentType), { ...child ? { agent: child } : {}, signal: detached.signal }))
   })
 }
 
+/** Claude Code's fallback `agent_type` when Harness has no stable local preset. */
+const DEFAULT_SUBAGENT_TYPE = 'general-purpose'
+
 /**
- * The `agent_type` value the bridge reports for SubagentStart/Stop. The harness
- * subagent seam carries no per-kind label, so the bridge uses Claude Code's own
- * Task-tool default — a hooks.json with a default/`*`/empty `agent_type` matcher
- * fires; a config matching a specific kind (e.g. `code-reviewer`) does not.
+ * Map a local Harness child to Claude's `agent_type` vocabulary without adding
+ * a Claude-only field to the native subagent seam. `agentPreset` is durable
+ * session metadata because it identifies the child's actual tool/prompt
+ * composition. Remote or untyped children retain Claude's own default.
  */
-const SUBAGENT_TYPE = 'general-purpose'
+function subagentType(child: Agent | undefined): string {
+  const preset = child?.session.header.agentPreset
+  return preset !== undefined && preset.length > 0 ? preset : DEFAULT_SUBAGENT_TYPE
+}
 
 // --- Per-event stdin payloads (the CC DIALECT shape). Field names match CC's
 // hook input schema; this is the part a bridge owns. ---
@@ -473,14 +488,21 @@ function stopPayload(ctx: Context, agent: Agent, stopHookActive: boolean): Recor
 /**
  * Build a SubagentStart/SubagentStop payload from the CC base (the child's
  * `session_id`/`cwd` when the child agent is available) plus the subagent-hook
- * fields. `agent_type` is the CC-default {@link SUBAGENT_TYPE}; `stop_hook_active`
- * is present on SubagentStop only (the loop-guard flag, always false).
+ * fields. `agent_type` is the captured Harness preset or Claude fallback;
+ * `stop_hook_active` is present on SubagentStop only (the loop-guard flag,
+ * always false).
  */
-function subagentPayload(ctx: Context, event: 'SubagentStart' | 'SubagentStop', info: { id: string }, child: Agent | undefined): Record<string, unknown> {
+function subagentPayload(
+  ctx: Context,
+  event: 'SubagentStart' | 'SubagentStop',
+  info: { id: string },
+  child: Agent | undefined,
+  agentType: string,
+): Record<string, unknown> {
   return {
     ...base(ctx, child, event),
     agent_id: info.id,
-    agent_type: SUBAGENT_TYPE,
+    agent_type: agentType,
     ...event === 'SubagentStop' ? { stop_hook_active: false } : {},
   }
 }
