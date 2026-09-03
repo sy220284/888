@@ -56,4 +56,31 @@ describe("ModelRouter model registry", () => {
       }),
     ).toThrow(/contextWindow/);
   });
+  it("restores shadowed registrations across disposal order", () => {
+    const models = router();
+    const disposeA = models.registerModel({
+      id: "stable", provider: "base", model: "base-model",
+    });
+    const disposeB = models.registerModel({
+      id: "stable", provider: "plugin-b", model: "b-model",
+    });
+    const disposeC = models.registerModel({
+      id: "stable", provider: "plugin-c", model: "c-model",
+    });
+    expect(models.getModel("stable")).toMatchObject({ provider: "plugin-c" });
+
+    disposeB();
+    expect(models.getModel("stable")).toMatchObject({ provider: "plugin-c" });
+    disposeC();
+    expect(models.getModel("stable")).toEqual({
+      id: "stable", provider: "base", model: "base-model",
+    });
+
+    disposeB();
+    disposeC();
+    expect(models.getModel("stable")).toMatchObject({ provider: "base" });
+    disposeA();
+    expect(models.getModel("stable")).toBeUndefined();
+  });
+
 });

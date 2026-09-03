@@ -141,7 +141,7 @@ export class ModelRouter extends Service {
   static Config = Config;
 
   private readonly rules = new Map<string, Rule>();
-  private readonly catalog = new Map<string, ModelDescriptor>();
+  private readonly catalog = new Map<string, ModelDescriptor[]>();
   private readonly fallbackCodes: ReadonlySet<string>;
 
   constructor(ctx: Context, config: Config = {}) {
@@ -194,27 +194,42 @@ export class ModelRouter extends Service {
     );
   }
 
-  /** Register or replace one model descriptor and return a disposer that restores no prior entry. */
+  /**
+   * Register one runtime model layer. Later registrations temporarily shadow
+   * earlier layers with the same stable id; disposing any layer removes only
+   * that owner's contribution, revealing the next surviving layer below it.
+   */
   registerModel(model: ModelDescriptor): () => void {
     const normalized = this.normalizeModel(model, "model-router.registerModel");
-    this.catalog.set(normalized.id, normalized);
+    const stack = this.catalog.get(normalized.id) ?? [];
+    stack.push(normalized);
+    this.catalog.set(normalized.id, stack);
+    let active = true;
     return () => {
-      if (this.catalog.get(normalized.id) === normalized)
-        this.catalog.delete(normalized.id);
+      if (!active) return;
+      active = false;
+      const current = this.catalog.get(normalized.id);
+      if (current === undefined) return;
+      const index = current.indexOf(normalized);
+      if (index < 0) return;
+      current.splice(index, 1);
+      if (current.length === 0) this.catalog.delete(normalized.id);
     };
   }
 
   /** Read one detached model descriptor by stable catalog id. */
   getModel(id: string): ModelDescriptor | undefined {
-    const model = this.catalog.get(id.trim());
+    const model = this.catalog.get(id.trim())?.at(-1);
     return model === undefined ? undefined : structuredClone(model);
   }
 
   /** Enumerate the deterministic detached model catalog. */
   listModels(): readonly ModelDescriptor[] {
-    return [...this.catalog.values()]
-      .sort((left, right) => left.id.localeCompare(right.id))
-      .map((model) => structuredClone(model));
+    return [...this.catalog.entries()]
+      .map(([id, stack]) => [id, stack.at(-1)] as const)
+      .filter((entry): entry is readonly [string, ModelDescriptor] => entry[1] !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([, model]) => structuredClone(model));
   }
 
   private addModel(model: ModelDescriptor, path: string): void {
@@ -223,7 +238,7 @@ export class ModelRouter extends Service {
       throw new Error(
         `${path}: duplicate model id ${JSON.stringify(normalized.id)}`,
       );
-    this.catalog.set(normalized.id, normalized);
+    this.catalog.set(normalized.id, [normalized]);
   }
 
   private normalizeModel(
