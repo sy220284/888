@@ -3,7 +3,8 @@
  * extension points. It supports SessionStart, prompt/tool pre/post, Stop, and subagent
  * start/stop. It owns Claude payloads, environment, substitution, and decision
  * mapping; shared execution and parsing live in `dsh-hook-protocol`.
- * `updatedInput` is logged and warned but not honored. Bespoke behavior should
+ * `updatedInput` is honored only through the agent's pre-persistence tool-call
+ * rewrite seam, then re-enters the ordinary Harness validation and permission path. Bespoke behavior should
  * use typed native plugins on the same extension points; see the
  * [hook-bridges Agent Note](../../../../.agents/notes/implemented/feature/2026-06-30-hook-bridges.md).
  * @module @deepseek-ai/dsh-hooks-claude-code
@@ -187,6 +188,10 @@ export function apply(ctx: Context, config: Config): void {
   const sessionStartWaiting = new WeakSet<Agent>()
   const deferredStops = new WeakMap<Agent, string>()
   const stopContinuations = new WeakMap<Agent, { turn: number; count: number }>()
+  // Model-direct PreToolUse runs before assistant/message persistence so updatedInput
+  // can become the canonical call. Cache its merged gate for tools/pre-execute;
+  // nested/non-model calls have no such edge and continue through the legacy gate.
+  const preToolOutcomes = new WeakMap<Agent, Map<string, MergedHookOutcome>>()
   ctx.effect(() => () => detached.drain(), 'hooks-claude-code: drain detached hook runs')
 
   /**
@@ -204,6 +209,7 @@ export function apply(ctx: Context, config: Config): void {
     payload: unknown,
     opts: { agent?: Agent; turn?: number; readonly signal: AbortSignal },
   ): Promise<MergedHookOutcome> {
+    let currentPayload = payload
     // Run the hook in the agent's session workspace (the `session/new` cwd on the session
     // header), not the executor or entry-point process's launch dir.
     const workdir = opts.agent?.session.header.cwd
@@ -225,7 +231,7 @@ export function apply(ctx: Context, config: Config): void {
           })
         }
         const { output, durationMs } = await runHook(ctx.shell, hook, {
-          payload,
+          payload: currentPayload,
           defaultTimeoutMs,
           ...hookEnv ? { env: hookEnv } : {},
           ...workdir !== undefined ? { cwd: workdir } : {},
@@ -237,7 +243,11 @@ export function apply(ctx: Context, config: Config): void {
         }, () => performance.now())
         outputs.push(output)
         if (output.updatedInput !== undefined) {
-          ctx.logger.warn(`hooks-claude-code: ${point} hook requested updatedInput, which is not yet honored (ignored)`)
+          if (point === 'PreToolUse' && typeof currentPayload === 'object' && currentPayload !== null && !Array.isArray(currentPayload)) {
+            currentPayload = { ...(currentPayload as Record<string, unknown>), tool_input: output.updatedInput }
+          } else {
+            ctx.logger.warn(`hooks-claude-code: ${point} hook requested updatedInput outside the safe PreToolUse rewrite seam (ignored)`)
+          }
         }
         if (output.systemMessage !== undefined) {
           ctx.logger.warn(`hooks-claude-code: ${point} hook emitted a systemMessage, which is not yet surfaced (ignored)`)
@@ -339,10 +349,42 @@ export function apply(ctx: Context, config: Config): void {
     }
   })
 
-  // --- PreToolUse → PreToolDecision. Matcher subject is the tool name. ---
+  // --- PreToolUse safe rewrite + decision mapping. Model-direct calls first
+  // pass this pre-persistence agent seam. The returned block is the canonical
+  // assistant/tool-call input, while the merged permission decision is cached
+  // and consumed exactly once by tools/pre-execute.
+  ctx.on('agent/tool-call-input', async ({ agent, turn, call: _call, signal }, next) => {
+    const downstream = await next()
+    signal.throwIfAborted()
+    const input = parseToolInput(downstream.arguments)
+    const merged = await runPoint(
+      'PreToolUse', downstream.name,
+      preToolPayloadValues(ctx, agent, downstream.name, input, downstream.id),
+      { agent, turn, signal },
+    )
+    let calls = preToolOutcomes.get(agent)
+    if (calls === undefined) {
+      calls = new Map()
+      preToolOutcomes.set(agent, calls)
+    }
+    calls.set(String(downstream.id), merged)
+    if (merged.updatedInput === undefined) return downstream
+    return { ...downstream, arguments: JSON.stringify(merged.updatedInput) }
+  })
+
   ctx.on('tools/pre-execute', async (exec, next): Promise<PreToolDecision> => {
     const turn = lastTurn(exec.agent)
-    const merged = await runPoint('PreToolUse', exec.name, preToolPayload(ctx, exec), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    const key = String(exec.callId)
+    const calls = exec.agent === undefined ? undefined : preToolOutcomes.get(exec.agent)
+    const cached = calls?.get(key)
+    if (cached !== undefined) {
+      calls?.delete(key)
+      if (calls?.size === 0 && exec.agent !== undefined) preToolOutcomes.delete(exec.agent)
+    }
+    const merged = cached ?? await runPoint('PreToolUse', exec.name, preToolPayload(ctx, exec), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    if (cached === undefined && merged.updatedInput !== undefined) {
+      ctx.logger.warn('hooks-claude-code: PreToolUse updatedInput was produced for a non-model/nested tool call and cannot be durably rewritten (ignored)')
+    }
     if (deferStop(exec.agent, merged, 'PreToolUse')) {
       return { kind: 'deny', reason: merged.stopReason ?? 'stopped by PreToolUse hook' }
     }
@@ -473,8 +515,18 @@ function sessionStartPayload(ctx: Context, agent: Agent, source: string): Record
 function promptPayload(ctx: Context, agent: Agent, content: ContentBlock[]): Record<string, unknown> {
   return { ...base(ctx, agent, 'UserPromptSubmit'), prompt: blocksToText(content) }
 }
+function parseToolInput(raw: string): unknown {
+  try {
+    return raw.length > 0 ? JSON.parse(raw) : {}
+  } catch {
+    return raw
+  }
+}
+function preToolPayloadValues(ctx: Context, agent: Agent | undefined, name: string, input: unknown, callId: unknown): Record<string, unknown> {
+  return { ...base(ctx, agent, 'PreToolUse'), tool_name: name, tool_input: input, tool_use_id: callId }
+}
 function preToolPayload(ctx: Context, exec: ToolExecution): Record<string, unknown> {
-  return { ...base(ctx, exec.agent, 'PreToolUse'), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }
+  return preToolPayloadValues(ctx, exec.agent, exec.name, exec.arguments, exec.callId)
 }
 function postToolPayload(ctx: Context, point: 'PostToolUse' | 'PostToolUseFailure', exec: ToolExecution, result: ToolExecutionResult): Record<string, unknown> {
   const common = { ...base(ctx, exec.agent, point), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }

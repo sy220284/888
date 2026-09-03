@@ -33,6 +33,16 @@ describe('mergeHookOutputs — permission precedence deny > ask > allow', () => 
   })
 })
 
+describe('mergeHookOutputs — updatedInput', () => {
+  it('keeps the last updatedInput in hook order', () => {
+    const m = mergeHookOutputs([
+      out({ updatedInput: { value: 'first' } }),
+      out({ updatedInput: { value: 'second' } }),
+    ])
+    expect(m.updatedInput).toEqual({ value: 'second' })
+  })
+})
+
 describe('mergeHookOutputs — reasons, stop, context, systemMessages accumulate', () => {
   it('joins block/deny reasons with a blank line (only from blocking hooks)', () => {
     const m = mergeHookOutputs([

@@ -7,7 +7,7 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type { Scoped } from '@deepseek-ai/dsh-scope'
-import type { LlmCallConfig, LlmFailure, ResolvedRetryPolicy } from '@deepseek-ai/dsh-llm'
+import type { LlmCallConfig, LlmFailure, ResolvedRetryPolicy, ToolCallBlock } from '@deepseek-ai/dsh-llm'
 import type { AgentCancelCause, EpochHeader, Session, SessionId, StepSnapshotRefs, UserMessage } from '@deepseek-ai/dsh-session'
 export type { AgentCancelCause } from '@deepseek-ai/dsh-session'
 import type { Inbox } from './inbox.ts'
@@ -229,6 +229,22 @@ declare module '@deepseek-ai/cordis' {
      * @mode waterfall
      */
     'agent/pre-step'(this: Scoped<Agent>, payload: { agent: Agent; messages: UserMessage[]; turn: number; step: number; signal: AbortSignal }, next: () => Promise<PreStepDecision>): Promise<PreStepDecision>
+    /**
+     * Rewrite one model-produced tool call before the canonical assistant message
+     * is committed. `next()` returns the downstream candidate. Listeners may
+     * replace arguments, but the machine rejects changes to call id/name/type.
+     * The returned call becomes the durable `assistant/message` / `tool/call`
+     * input and therefore passes through the ordinary tool parser, schema checks,
+     * permission policy and scheduler afterwards.
+     * @param payload.agent - the agent that received the model tool call.
+     * @param payload.call - the model-produced call before durable persistence.
+     * @param payload.turn - owning turn.
+     * @param payload.step - owning step.
+     * @param payload.signal - current turn cancellation signal.
+     * Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.
+     * @mode waterfall
+     */
+    'agent/tool-call-input'(this: Scoped<Agent>, payload: { agent: Agent; call: ToolCallBlock; turn: number; step: number; signal: AbortSignal }, next: () => Promise<ToolCallBlock>): Promise<ToolCallBlock>
     /**
      * Replace the frozen call configuration. `await next()` yields the config
      * the machine would use (agent options on the first request, the logged

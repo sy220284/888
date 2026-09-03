@@ -29,6 +29,8 @@ export interface MergedHookOutcome {
   additionalContext: string[]
   /** Every hook's `systemMessage`, in hook order. */
   systemMessages: string[]
+  /** Last tool-input rewrite requested by the matched hook chain, when any. */
+  updatedInput?: Record<string, unknown>
 }
 
 /** Rank a single hook's decision for the deny>ask>allow precedence (higher = stricter). */
@@ -67,6 +69,7 @@ export function mergeHookOutputs(outputs: HookOutput[]): MergedHookOutcome {
   let stopReason: string | undefined
   const additionalContext: string[] = []
   const systemMessages: string[] = []
+  let updatedInput: Record<string, unknown> | undefined
 
   for (const out of outputs) {
     const r = rank(out.decision)
@@ -86,6 +89,7 @@ export function mergeHookOutputs(outputs: HookOutput[]): MergedHookOutcome {
     if (out.systemMessage !== undefined && out.systemMessage.length > 0) {
       systemMessages.push(out.systemMessage)
     }
+    if (out.updatedInput !== undefined) updatedInput = out.updatedInput
   }
 
   const reasons = reasonsByRank.get(maxRank) ?? []
@@ -96,5 +100,6 @@ export function mergeHookOutputs(outputs: HookOutput[]): MergedHookOutcome {
     ...stopReason !== undefined ? { stopReason } : {},
     additionalContext,
     systemMessages,
+    ...updatedInput !== undefined ? { updatedInput } : {},
   }
 }
