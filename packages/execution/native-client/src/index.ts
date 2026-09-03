@@ -61,6 +61,55 @@ function abortError(signal: AbortSignal): Error {
     : asError(signal.reason)
 }
 
+async function signalStartedTree(
+  started: Promise<number>,
+  client: NativeExecutionClient,
+  processId: string,
+  signal: NativeExecutionSignal,
+): Promise<void> {
+  try {
+    await started
+  } catch {
+    return
+  }
+  await client.request({ op: 'signal_tree', process_id: processId, signal })
+}
+
+async function startedTreeAlive(
+  started: Promise<number>,
+  client: NativeExecutionClient,
+  processId: string,
+): Promise<boolean> {
+  try {
+    await started
+  } catch {
+    return false
+  }
+  const result = await client.request<{ alive: boolean }>({
+    op: 'tree_alive',
+    process_id: processId,
+  })
+  return result.alive
+}
+
+/** Shared process-tree controls for pipe and PTY handles. */
+abstract class SidecarTreeHandle {
+  protected abstract readonly started: Deferred<number>
+
+  constructor(
+    readonly processId: string,
+    protected readonly client: NativeExecutionClient,
+  ) {}
+
+  async signalTree(signal: NativeExecutionSignal): Promise<void> {
+    await signalStartedTree(this.started.promise, this.client, this.processId, signal)
+  }
+
+  async treeAlive(): Promise<boolean> {
+    return await startedTreeAlive(this.started.promise, this.client, this.processId)
+  }
+}
+
 function sidecarEnvironment(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {}
   for (const [key, value] of Object.entries(process.env)) {
@@ -106,12 +155,12 @@ class DeferredStdin extends Writable {
   }
 }
 
-class SidecarHandle implements NativeProcessHandle {
+class SidecarHandle extends SidecarTreeHandle implements NativeProcessHandle {
   readonly stdout: PassThrough | undefined
   readonly stderr: PassThrough | undefined
   readonly stdin: Writable | undefined
   readonly done: Promise<NativeProcessOutcome>
-  private readonly started = Promise.withResolvers<number>()
+  protected readonly started = Promise.withResolvers<number>()
   private readonly settled = Promise.withResolvers<NativeProcessOutcome>()
   private readonly streamsSettled = Promise.withResolvers<void>()
   private remotePid = -1
@@ -120,10 +169,11 @@ class SidecarHandle implements NativeProcessHandle {
   private stderrClosed: boolean
 
   constructor(
-    readonly processId: string,
-    private readonly client: NativeExecutionClient,
+    processId: string,
+    client: NativeExecutionClient,
     private readonly spec: NativeProcessSpawnSpec,
   ) {
+    super(processId, client)
     this.stdout = spec.stdout === 'pipe' ? new PassThrough() : undefined
     this.stderr = spec.stderr === 'pipe' ? new PassThrough() : undefined
     this.stdoutClosed = spec.stdout !== 'pipe'
@@ -198,31 +248,6 @@ class SidecarHandle implements NativeProcessHandle {
       process_id: this.processId,
     })
   }
-  async signalTree(signal: NativeExecutionSignal): Promise<void> {
-    try {
-      await this.started.promise
-    } catch {
-      return
-    }
-    await this.client.request({
-      op: 'signal_tree',
-      process_id: this.processId,
-      signal,
-    })
-  }
-  async treeAlive(): Promise<boolean> {
-    try {
-      await this.started.promise
-    } catch {
-      return false
-    }
-    const result = await this.client.request<{ alive: boolean }>({
-      op: 'tree_alive',
-      process_id: this.processId,
-    })
-    return result.alive
-  }
-
   onOutput(stream: 'stdout' | 'stderr', data: Buffer): void {
     (stream === 'stdout' ? this.stdout : this.stderr)?.write(data)
   }
@@ -254,10 +279,10 @@ class SidecarHandle implements NativeProcessHandle {
   }
 }
 
-class SidecarTerminalHandle implements NativeTerminalHandle {
+class SidecarTerminalHandle extends SidecarTreeHandle implements NativeTerminalHandle {
   readonly output = new PassThrough()
   readonly done: Promise<NativeProcessOutcome>
-  private readonly started = Promise.withResolvers<number>()
+  protected readonly started = Promise.withResolvers<number>()
   private readonly settled = Promise.withResolvers<NativeProcessOutcome>()
   private readonly outputSettled = Promise.withResolvers<void>()
   private remotePid = -1
@@ -265,9 +290,10 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   private exited = false
 
   constructor(
-    readonly processId: string,
-    private readonly client: NativeExecutionClient,
+    processId: string,
+    client: NativeExecutionClient,
   ) {
+    super(processId, client)
     this.done = this.settled.promise
     void this.done.catch(() => {})
     void this.started.promise.catch(() => {})
@@ -326,34 +352,6 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
       signal,
     })
     return result.process_group_id
-  }
-
-  // oxlint-disable-next-line sonarjs/no-identical-functions -- process and terminal handles intentionally share tree control semantics
-  async signalTree(signal: NativeExecutionSignal): Promise<void> {
-    try {
-      await this.started.promise
-    } catch {
-      return
-    }
-    await this.client.request({
-      op: 'signal_tree',
-      process_id: this.processId,
-      signal,
-    })
-  }
-
-  // oxlint-disable-next-line sonarjs/no-identical-functions -- process and terminal handles intentionally share tree liveness semantics
-  async treeAlive(): Promise<boolean> {
-    try {
-      await this.started.promise
-    } catch {
-      return false
-    }
-    const result = await this.client.request<{ alive: boolean }>({
-      op: 'tree_alive',
-      process_id: this.processId,
-    })
-    return result.alive
   }
 
   onOutput(data: Buffer): void {

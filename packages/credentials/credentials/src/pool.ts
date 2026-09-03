@@ -97,21 +97,15 @@ export class CredentialPool {
 
   /** Mark a successful operation; stale out-of-order success cannot erase a newer failure. */
   reportSuccess(lease: CredentialLease | CredentialRef): void {
-    const settled = this.settle(lease)
-    if (settled === undefined) return
-    const { ref, leaseId } = settled
-    if (leaseId < (this.lastOutcomeLeaseIds.get(ref) ?? 0)) return
-    this.lastOutcomeLeaseIds.set(ref, leaseId)
+    const ref = this.acceptOutcome(lease)
+    if (ref === undefined) return
     this.health.delete(ref)
   }
 
   /** Mark a credential-scoped failure; repeated failures put the reference into cooldown. */
   reportFailure(lease: CredentialLease | CredentialRef): void {
-    const settled = this.settle(lease)
-    if (settled === undefined) return
-    const { ref, leaseId } = settled
-    if (leaseId < (this.lastOutcomeLeaseIds.get(ref) ?? 0)) return
-    this.lastOutcomeLeaseIds.set(ref, leaseId)
+    const ref = this.acceptOutcome(lease)
+    if (ref === undefined) return
     const current = this.health.get(ref) ?? {
       failures: 0,
       cooldownUntil: 0,
@@ -200,6 +194,16 @@ export class CredentialPool {
     this.activeLeases.delete(lease.leaseId)
     this.decrementInFlight(lease.ref)
     return { ref: lease.ref, leaseId: lease.leaseId }
+  }
+
+  /** Settle one health-bearing result if no newer result superseded it. */
+  private acceptOutcome(lease: CredentialLease | CredentialRef): CredentialRef | undefined {
+    const settled = this.settle(lease)
+    if (settled === undefined) return undefined
+    const { ref, leaseId } = settled
+    if (leaseId < (this.lastOutcomeLeaseIds.get(ref) ?? 0)) return undefined
+    this.lastOutcomeLeaseIds.set(ref, leaseId)
+    return ref
   }
 
   private decrementInFlight(ref: CredentialRef): void {

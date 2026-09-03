@@ -238,10 +238,7 @@ class NativeSubprocessTerminalHandle implements SubprocessTerminalHandle {
     }
     const pending = operation()
     this.operations.add(pending)
-    void pending.then(
-      () => { this.operations.delete(pending) },
-      () => { this.operations.delete(pending) },
-    )
+    void pending.finally(() => this.operations.delete(pending)).catch(() => undefined)
     return pending
   }
 
