@@ -9,7 +9,8 @@
  * @module @deepseek-ai/dsh-hooks-claude-code
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
@@ -34,25 +35,30 @@ import {
 // Pulls in the declaration-merged subagent events and the identity pairing their
 // start/end edges.
 import type { SubagentRunId } from '@deepseek-ai/dsh-subagent'
-import { parseClaudeCodeConfig, type ClaudeCodeHookConfig } from './config.ts'
+import { parseClaudeCodeConfig, type ClaudeCodeHookConfig, type SubstitutionVars } from './config.ts'
 
 export const name = 'hooks-claude-code'
 // `bash` is required to run hooks; the rest are read opportunistically via
 // ctx.get so a deployment can load this bridge without every extension point present.
 export const inject = ['shell']
 
-/** Plugin config: where the CC hook config lives + substitution roots. */
+/** Plugin config: explicit compatibility source + optional per-session project discovery. */
 export interface Config {
   /**
-   * Path to a `hooks.json` or a settings file whose `hooks` key holds the config.
-   * Process-level: read once at load, a relative path resolves against the process
-   * launch cwd, so one config applies to the whole process.
-   * TODO(per-session-hook-config): per-session discovery of a project-local
-   * `hooks.json` from each `session/new.cwd`.
+   * Optional explicit `hooks.json` or settings file whose `hooks` key holds the config.
+   * This source is parsed once at plugin load for backward compatibility.
    */
-  configPath: string
+  configPath?: string
   /**
-   * Replaces `${CLAUDE_PLUGIN_ROOT}` in command strings (the plugin's root dir).
+   * Opt in to Claude project settings discovery from each session cwd:
+   * `.claude/settings.json` then `.claude/settings.local.json`.
+   * Project files are re-read for every hook point so edits take effect without
+   * restarting the process. Disabled by default because repository hook commands
+   * are executable code and Harness has no Claude workspace-trust prompt seam yet.
+   */
+  discoverProjectHooks?: boolean
+  /**
+   * Replaces `${CLAUDE_PLUGIN_ROOT}` in command strings.
    */
   pluginRoot?: string
   /**
@@ -72,7 +78,8 @@ export interface Config {
 }
 
 export const Config: z<Config> = z.object({
-  configPath: z.string().required(),
+  configPath: z.string(),
+  discoverProjectHooks: z.boolean().default(false),
   pluginRoot: z.string(),
   projectDir: z.string(),
   defaultTimeoutMs: z.number().default(DEFAULT_HOOK_TIMEOUT_MS),
@@ -103,21 +110,64 @@ export function apply(ctx: Context, config: Config): void {
   const defaultTimeoutMs = config.defaultTimeoutMs ?? DEFAULT_HOOK_TIMEOUT_MS
   const maxStopContinuations = config.maxStopContinuations ?? 8
   assertPositiveInteger('maxStopContinuations', maxStopContinuations)
-  // Parse once at load. A read or parse failure logs and registers nothing.
-  let parsed: ClaudeCodeHookConfig = {}
-  try {
-    const raw: unknown = JSON.parse(readFileSync(config.configPath, 'utf8'))
-    const result = parseClaudeCodeConfig(raw, {
+  const discoverProjectHooks = config.discoverProjectHooks ?? false
+  const explicitConfigPath = config.configPath === undefined ? undefined : resolve(config.configPath)
+  const warned = new Set<string>()
+
+  function warnOnce(key: string, message: string): void {
+    if (warned.has(key)) return
+    warned.add(key)
+    ctx.logger.warn(message)
+  }
+
+  function loadConfigSource(path: string, vars: SubstitutionVars, optional: boolean): ClaudeCodeHookConfig {
+    if (optional && !existsSync(path)) return {}
+    try {
+      const raw: unknown = JSON.parse(readFileSync(path, 'utf8'))
+      const result = parseClaudeCodeConfig(raw, vars)
+      for (const skipped of result.skipped) {
+        warnOnce(
+          `skipped:${path}:${skipped.event}:${skipped.type}`,
+          `hooks-claude-code: skipping unsupported "${skipped.type}" hook on ${skipped.event} from "${path}" (only command hooks run)`,
+        )
+      }
+      return result.config
+    } catch (error: unknown) {
+      warnOnce(
+        `load:${path}:${String(error)}`,
+        `hooks-claude-code: could not load hook config "${path}": ${String(error)} — source ignored`,
+      )
+      return {}
+    }
+  }
+
+  const staticParsed = explicitConfigPath === undefined
+    ? {}
+    : loadConfigSource(explicitConfigPath, {
       ...config.pluginRoot !== undefined ? { pluginRoot: config.pluginRoot } : {},
       ...config.projectDir !== undefined ? { projectDir: config.projectDir } : {},
-    })
-    parsed = result.config
-    for (const s of result.skipped) {
-      ctx.logger.warn(`hooks-claude-code: skipping unsupported "${s.type}" hook on ${s.event} (only command hooks run)`)
+    }, false)
+
+  function groupsFor(point: string, workdir: string | undefined): MatcherGroup[] {
+    const groups: MatcherGroup[] = [...staticParsed[point] ?? []]
+    if (!discoverProjectHooks || workdir === undefined) return groups
+
+    const projectDir = config.projectDir ?? workdir
+    const vars: SubstitutionVars = {
+      ...config.pluginRoot !== undefined ? { pluginRoot: config.pluginRoot } : {},
+      projectDir,
     }
-  } catch (error: unknown) {
-    ctx.logger.warn(`hooks-claude-code: could not load hook config "${config.configPath}": ${String(error)} — no hooks registered`)
-    return
+    for (const path of [
+      join(workdir, '.claude', 'settings.json'),
+      join(workdir, '.claude', 'settings.local.json'),
+    ]) {
+      // Avoid double execution when an existing explicit source points at the
+      // same project settings file that discovery would otherwise re-read.
+      if (explicitConfigPath !== undefined && resolve(path) === explicitConfigPath) continue
+      const parsed = loadConfigSource(path, vars, true)
+      groups.push(...parsed[point] ?? [])
+    }
+    return groups
   }
 
   // Emit-shaped points run detached, so track their chains; disposal aborts
@@ -150,11 +200,11 @@ export function apply(ctx: Context, config: Config): void {
     payload: unknown,
     opts: { agent?: Agent; turn?: number; readonly signal: AbortSignal },
   ): Promise<MergedHookOutcome> {
-    const groups: MatcherGroup[] = parsed[point] ?? []
-    const outputs: HookOutput[] = []
     // Run the hook in the agent's session workspace (the `session/new` cwd on the session
     // header), not the executor or entry-point process's launch dir.
     const workdir = opts.agent?.session.header.cwd
+    const groups = groupsFor(point, workdir)
+    const outputs: HookOutput[] = []
     // CLAUDE_PROJECT_DIR: an explicit config value wins; otherwise default it to the session
     // workspace (the same dir the hook runs in).
     const projectDir = config.projectDir ?? workdir
