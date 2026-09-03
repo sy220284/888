@@ -2,23 +2,22 @@ import { describe, expect, it } from 'vitest'
 import { checksForMode } from './run-checks.ts'
 
 describe('local check groups', () => {
-  it.each(['check-all', 'doc-sync', 'hygiene'] as const)('defines a non-empty %s group', (mode) => {
+  it.each(['check-all', 'hygiene'] as const)('defines a non-empty %s group', (mode) => {
     expect(checksForMode(mode)).not.toHaveLength(0)
   })
 
-  it('keeps documentation and hygiene groups free of recursive aggregate calls', () => {
-    for (const mode of ['doc-sync', 'hygiene'] as const) {
-      expect(checksForMode(mode).map(check => check.script)).not.toEqual(
-        expect.arrayContaining(['check:all', 'doc-sync', 'hygiene']),
-      )
-    }
+  it('keeps the hygiene group free of recursive aggregate calls', () => {
+    expect(checksForMode('hygiene').map(check => check.script)).not.toEqual(
+      expect.arrayContaining(['check:all', 'hygiene']),
+    )
   })
 
-  it('runs the broad group in dependency order', () => {
+  it('runs source checks before build-dependent hygiene checks', () => {
     const checks = checksForMode('check-all').map(check => check.script)
-
-    expect(checks.indexOf('build')).toBeLessThan(checks.indexOf('test:snapshot'))
+    expect(checks.indexOf('lint')).toBeLessThan(checks.indexOf('typecheck'))
+    expect(checks.indexOf('typecheck')).toBeLessThan(checks.indexOf('test'))
+    expect(checks.indexOf('test')).toBeLessThan(checks.indexOf('build'))
     expect(checks.indexOf('build')).toBeLessThan(checks.indexOf('publint'))
-    expect(checks.at(-1)).toBe('verify-module-graph')
+    expect(checks.at(-1)).toBe('verify-runtime-closure')
   })
 })

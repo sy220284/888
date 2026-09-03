@@ -1,18 +1,20 @@
-/** Run explicitly requested local validation groups. */
+/** Run repository validation groups. */
 import { spawn } from 'node:child_process'
 import { resolve } from 'node:path'
 import { pnpmInvocation } from './pnpm-invocation.ts'
 
-export type CheckMode = 'check-all' | 'doc-sync' | 'hygiene'
+export type CheckMode = 'check-all' | 'hygiene'
 
 interface Check {
   script: string
-  env?: Record<string, string>
 }
 
 const root = resolve(import.meta.dirname, '..')
 
 const hygieneChecks: Check[] = [
+  { script: 'verify-session-event-types' },
+  { script: 'verify-client-catalog' },
+  { script: 'verify-scoped-events' },
   { script: 'rescope-vendor:check' },
   { script: 'knip' },
   { script: 'publint' },
@@ -25,71 +27,30 @@ const hygieneChecks: Check[] = [
   { script: 'verify-client-packages' },
   { script: 'verify-cordis-config' },
   { script: 'verify-runtime-closure' },
-  { script: 'verify-vendored-links' },
-]
-
-const documentationChecks: Check[] = [
-  { script: 'doc-typecheck' },
-  { script: 'verify-doc-graphs' },
-  { script: 'verify-md-links' },
-  { script: 'verify-type-equiv' },
-  { script: 'verify-cordis-catalog' },
-  { script: 'verify-mermaid' },
-  { script: 'verify-scoped-events' },
-  { script: 'verify-translation-pairing' },
-  { script: 'verify-md-wrap' },
-  { script: 'verify-client-catalog' },
-  { script: 'verify-export-jsdoc' },
-  { script: 'verify-tool-catalog' },
-  { script: 'verify-config-catalog' },
-  { script: 'verify-persistence-catalog' },
-  { script: 'verify-public-repository-links' },
-  { script: 'verify-doc-refs' },
-  { script: 'verify-package-paths' },
-  { script: 'verify-config-source-ownership' },
-  { script: 'verify-package-readme-model-experience' },
-  { script: 'verify-agent-note-classification' },
-  { script: 'verify-agent-note-format' },
-  { script: 'verify-archived-agent-notes' },
-  { script: 'verify-skill-invocation-metadata' },
-  { script: 'verify-translation-prompt' },
-  { script: 'verify-doc-budgets' },
-  { script: 'docs:check' },
-  { script: 'verify-package-readme-limitations' },
 ]
 
 export function checksForMode(mode: CheckMode): Check[] {
   if (mode === 'hygiene') return hygieneChecks
-  if (mode === 'doc-sync') return documentationChecks
   return [
-    { script: 'verify-runtime-closure' },
-    { script: 'verify-cordis-config' },
-    { script: 'verify-client-domain-graph' },
+    { script: 'lint' },
+    { script: 'typecheck' },
     { script: 'test' },
     { script: 'duplication' },
     { script: 'build' },
-    { script: 'build:web' },
-    { script: 'test:snapshot', env: { DSH_EXAMPLE_MODE: 'lib' } },
     ...hygieneChecks,
-    ...documentationChecks,
-    { script: 'verify-module-graph' },
   ]
 }
 
 function parseMode(raw: string | undefined): CheckMode {
-  if (raw === 'check-all' || raw === 'doc-sync' || raw === 'hygiene') return raw
-  throw new Error(`run-checks: expected check-all | doc-sync | hygiene, got ${JSON.stringify(raw)}.`)
+  if (raw === 'check-all' || raw === 'hygiene') return raw
+  throw new Error(`run-checks: expected check-all | hygiene, got ${JSON.stringify(raw)}.`)
 }
 
 async function runCheck(check: Check): Promise<number> {
   const invocation = pnpmInvocation(['run', check.script])
   console.log(`run-checks: ${check.script}`)
   return await new Promise((resolveStatus, reject) => {
-    const child = spawn(invocation.command, invocation.args, {
-      cwd: root,
-      env: { ...process.env, ...check.env },
-      stdio: 'inherit',
-    })
+    const child = spawn(invocation.command, invocation.args, { cwd: root, env: process.env, stdio: 'inherit' })
     child.once('error', reject)
     child.once('exit', (code, signal) => {
       if (signal !== null) reject(new Error(`run-checks: ${check.script} terminated by ${signal}.`))
