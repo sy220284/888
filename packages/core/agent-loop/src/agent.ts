@@ -402,9 +402,9 @@ export class ReactLoopAgent implements Agent {
           () => Promise.resolve(block),
         )
         signal.throwIfAborted()
-        if (rewritten.type !== 'tool-call' || rewritten.id !== originalId || rewritten.name !== originalName
+        if (rewritten.id !== originalId || rewritten.name !== originalName
           || typeof rewritten.arguments !== 'string') {
-          throw new TypeError('agent/tool-call-input may replace only tool-call arguments; id, name, and type are immutable')
+          throw new TypeError('agent/tool-call-input may replace only tool-call arguments; id and name are immutable')
         }
         content[index] = rewritten
       }

@@ -51,8 +51,8 @@ function prompt() {
 describe('hooks-claude-code P5D safe updatedInput rewrite', () => {
   it('chains rewrites, persists the final input, and runs each PreToolUse handler once', async () => {
     const dir = project()
-    const first = executable(dir, 'first.sh', `#!/usr/bin/env bash\nset -euo pipefail\ninput="$(cat)"\n[[ "$input" == *'"value":"original"'* ]] || exit 9\necho '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"value":"middle"}}}'\n`)
-    const second = executable(dir, 'second.sh', `#!/usr/bin/env bash\nset -euo pipefail\ninput="$(cat)"\n[[ "$input" == *'"value":"middle"'* ]] || exit 10\necho '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"value":"rewritten"}}}'\n`)
+    const first = executable(dir, 'first.sh', '#!/usr/bin/env bash\nset -euo pipefail\ninput="$(cat)"\n[[ "$input" == *\'"value":"original"\'* ]] || exit 9\necho \'{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"value":"middle"}}}\'\n')
+    const second = executable(dir, 'second.sh', '#!/usr/bin/env bash\nset -euo pipefail\ninput="$(cat)"\n[[ "$input" == *\'"value":"middle"\'* ]] || exit 10\necho \'{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"value":"rewritten"}}}\'\n')
     const adapter = new MockAdapter([toolCallResponse('c1', 'echo', { value: 'original' }), textResponse('done')])
     const ctx = await harness(dir, adapter, {
       PreToolUse: [{ matcher: 'echo', hooks: [
@@ -88,7 +88,7 @@ describe('hooks-claude-code P5D safe updatedInput rewrite', () => {
 
   it('revalidates rewritten input before the tool body', async () => {
     const dir = project()
-    const rewrite = executable(dir, 'invalid.sh', `#!/usr/bin/env bash\nset -euo pipefail\ncat >/dev/null\necho '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"value":42}}}'\n`)
+    const rewrite = executable(dir, 'invalid.sh', '#!/usr/bin/env bash\nset -euo pipefail\ncat >/dev/null\necho \'{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"value":42}}}\'\n')
     const adapter = new MockAdapter([toolCallResponse('c1', 'echo', { value: 'original' }), textResponse('done')])
     const ctx = await harness(dir, adapter, {
       PreToolUse: [{ matcher: 'echo', hooks: [{ type: 'command', command: rewrite }] }],

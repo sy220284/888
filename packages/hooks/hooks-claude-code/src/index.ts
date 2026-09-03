@@ -399,7 +399,12 @@ export function apply(ctx: Context, config: Config): void {
   ctx.on('tools/post-execute', async (exec, result, next): Promise<PostToolDecision> => {
     const turn = lastTurn(exec.agent)
     const point = result.isError ? 'PostToolUseFailure' : 'PostToolUse'
-    const merged = await runPoint(point, exec.name, postToolPayload(ctx, point, exec, result), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    const merged = await runPoint(
+      point,
+      exec.name,
+      postToolPayload(ctx, point, exec, result),
+      { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal },
+    )
     deferStop(exec.agent, merged, point)
     const context = contextFrom(merged)
     if (merged.decision === 'deny') {
@@ -522,7 +527,13 @@ function parseToolInput(raw: string): unknown {
     return raw
   }
 }
-function preToolPayloadValues(ctx: Context, agent: Agent | undefined, name: string, input: unknown, callId: unknown): Record<string, unknown> {
+function preToolPayloadValues(
+  ctx: Context,
+  agent: Agent | undefined,
+  name: string,
+  input: unknown,
+  callId: unknown,
+): Record<string, unknown> {
   return { ...base(ctx, agent, 'PreToolUse'), tool_name: name, tool_input: input, tool_use_id: callId }
 }
 function preToolPayload(ctx: Context, exec: ToolExecution): Record<string, unknown> {

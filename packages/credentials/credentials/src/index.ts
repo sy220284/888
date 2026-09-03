@@ -8,12 +8,12 @@
  * @module @deepseek-ai/dsh-credentials
  */
 
-import { Context, Service } from "@deepseek-ai/cordis";
+import { Context, Service } from '@deepseek-ai/cordis'
 import type {
   CredentialKey,
   CredentialRecord,
   CredentialRef,
-} from "./types.ts";
+} from './types.ts'
 
 export type {
   ApiKeyRecord,
@@ -21,14 +21,14 @@ export type {
   CredentialRecord,
   CredentialRef,
   GrantRecord,
-} from "./types.ts";
-export { CredentialPool } from "./pool.ts";
-export type { CredentialLease, CredentialPoolOptions, CredentialResolver } from "./pool.ts";
+} from './types.ts'
+export { CredentialPool } from './pool.ts'
+export type { CredentialLease, CredentialPoolOptions, CredentialResolver } from './pool.ts'
 
-const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
 /** Both halves of a {@link CredentialKey}; the `/` between them is what keeps it out of {@link REF_PATTERN}. */
-const KEY_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
+const KEY_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/
 
 /**
  * Brand a raw string as a {@link CredentialRef}.
@@ -39,9 +39,9 @@ export function credentialRef(value: string): CredentialRef {
   if (!isCredentialRefName(value)) {
     throw new TypeError(
       `credential ref "${value}" must match ${String(REF_PATTERN)}`,
-    );
+    )
   }
-  return value as CredentialRef;
+  return value as CredentialRef
 }
 
 /**
@@ -54,7 +54,7 @@ export function credentialRef(value: string): CredentialRef {
  * @returns true when {@link credentialRef} would accept it.
  */
 export function isCredentialRefName(value: string): boolean {
-  return REF_PATTERN.test(value);
+  return REF_PATTERN.test(value)
 }
 
 /**
@@ -67,7 +67,7 @@ export function isCredentialRefName(value: string): boolean {
  * @returns true when {@link credentialKey} would accept it as either segment.
  */
 export function isCredentialKeySegment(value: string): boolean {
-  return KEY_SEGMENT_PATTERN.test(value);
+  return KEY_SEGMENT_PATTERN.test(value)
 }
 
 /**
@@ -82,10 +82,10 @@ export function credentialKey(scope: string, id: string): CredentialKey {
     if (!KEY_SEGMENT_PATTERN.test(segment)) {
       throw new TypeError(
         `credential key segment "${segment}" must match ${String(KEY_SEGMENT_PATTERN)}`,
-      );
+      )
     }
   }
-  return `${scope}/${id}` as CredentialKey;
+  return `${scope}/${id}` as CredentialKey
 }
 
 /**
@@ -96,12 +96,12 @@ export function credentialKey(scope: string, id: string): CredentialKey {
  * @throws TypeError when the value is not exactly two valid segments.
  */
 export function parseCredentialKey(value: string): CredentialKey {
-  const segments = value.split("/");
-  const [scope, id] = segments;
+  const segments = value.split('/')
+  const [scope, id] = segments
   if (segments.length !== 2 || scope === undefined || id === undefined) {
-    throw new TypeError(`credential key "${value}" must be "<scope>/<id>"`);
+    throw new TypeError(`credential key "${value}" must be "<scope>/<id>"`)
   }
-  return credentialKey(scope, id);
+  return credentialKey(scope, id)
 }
 
 /**
@@ -114,7 +114,7 @@ export function parseCredentialKey(value: string): CredentialKey {
 export function credentialKeyScope(key: CredentialKey): string {
   // The brand's only constructors both validate two segments, so the split
   // cannot come back short here.
-  return key.slice(0, key.indexOf("/"));
+  return key.slice(0, key.indexOf('/'))
 }
 
 /**
@@ -124,25 +124,25 @@ export function credentialKeyScope(key: CredentialKey): string {
  * @returns the id segment.
  */
 export function credentialKeyId(key: CredentialKey): string {
-  return key.slice(key.indexOf("/") + 1);
+  return key.slice(key.indexOf('/') + 1)
 }
 
 /** One resolved credential value and the source layer that supplied it. */
 export interface ResolvedCredential {
   /** The non-empty secret value. */
-  value: string;
+  value: string
   /** Provider-defined source layer id (the local provider uses `env`, `file`, `project-env`, and `user-env`). */
-  source: string;
+  source: string
 }
 
 /** Source and writability facts for one reference, safe for configuration UIs — never the value. */
 export interface CredentialInfo {
   /** Whether {@link CredentialProvider.resolve} would currently return a value. */
-  configured: boolean;
+  configured: boolean
   /** Source layer currently supplying the value; absent while unconfigured. */
-  source?: string;
+  source?: string
   /** Whether {@link CredentialProvider.set} would currently succeed for this reference. */
-  writable: boolean;
+  writable: boolean
 }
 
 /** Presence and writability facts for one record, safe for configuration UIs — never the value. */
@@ -153,24 +153,24 @@ export interface CredentialRecordInfo {
    * values states that its owner confirmed ambient authentication, which is
    * configured, not blank.
    */
-  configured: boolean;
+  configured: boolean
   /** Discriminant of the stored record; absent while none is stored. */
-  kind?: CredentialRecord["kind"];
+  kind?: CredentialRecord['kind']
   /** Whether {@link CredentialProvider.modifyRecord} would currently succeed. */
-  writable: boolean;
+  writable: boolean
 }
 
 /** One stored record's address and tag, for enumeration — never its value. */
 export interface CredentialRecordEntry {
   /** The record's address. */
-  key: CredentialKey;
+  key: CredentialKey
   /** Discriminant of the stored record. */
-  kind: CredentialRecord["kind"];
+  kind: CredentialRecord['kind']
 }
 
-declare module "@deepseek-ai/cordis" {
+declare module '@deepseek-ai/cordis' {
   interface Context {
-    credentials: CredentialProvider;
+    credentials: CredentialProvider
   }
 }
 
@@ -192,7 +192,7 @@ declare module "@deepseek-ai/cordis" {
  */
 export abstract class CredentialProvider extends Service {
   constructor(ctx: Context) {
-    super(ctx, "credentials");
+    super(ctx, 'credentials')
   }
 
   /**
@@ -203,7 +203,7 @@ export abstract class CredentialProvider extends Service {
    * @param ref - the reference to resolve.
    * @returns the value and its source, or `undefined` while unconfigured.
    */
-  abstract resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined>;
+  abstract resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined>
 
   /**
    * Describe one reference for configuration surfaces without exposing the
@@ -211,7 +211,7 @@ export abstract class CredentialProvider extends Service {
    * @param ref - the reference to describe.
    * @returns configured state, supplying source, and writability.
    */
-  abstract describe(ref: CredentialRef): Promise<CredentialInfo>;
+  abstract describe(ref: CredentialRef): Promise<CredentialInfo>
 
   /**
    * Durably store one value in the provider-managed writable source. Rejects
@@ -221,7 +221,7 @@ export abstract class CredentialProvider extends Service {
    * @param ref - the reference to store.
    * @param value - the non-empty secret value.
    */
-  abstract set(ref: CredentialRef, value: string): Promise<void>;
+  abstract set(ref: CredentialRef, value: string): Promise<void>
 
   /**
    * Remove one reference from the provider-managed writable source; removing
@@ -229,7 +229,7 @@ export abstract class CredentialProvider extends Service {
    * the reference, like {@link set}.
    * @param ref - the reference to remove.
    */
-  abstract unset(ref: CredentialRef): Promise<void>;
+  abstract unset(ref: CredentialRef): Promise<void>
 
   /**
    * Read one stored record. The value is returned as its owner wrote it; a
@@ -239,14 +239,14 @@ export abstract class CredentialProvider extends Service {
    */
   abstract readRecord(
     key: CredentialKey,
-  ): Promise<CredentialRecord | undefined>;
+  ): Promise<CredentialRecord | undefined>
 
   /**
    * Describe one record for configuration surfaces without exposing its value.
    * @param key - the record to describe.
    * @returns presence, discriminant, and writability.
    */
-  abstract describeRecord(key: CredentialKey): Promise<CredentialRecordInfo>;
+  abstract describeRecord(key: CredentialKey): Promise<CredentialRecordInfo>
 
   /**
    * Enumerate every stored record's address and tag. Unlike the reference
@@ -256,7 +256,7 @@ export abstract class CredentialProvider extends Service {
    * authorized for, nor find an orphan left by an uninstalled plugin.
    * @returns every stored record, values excluded.
    */
-  abstract listRecords(): Promise<readonly CredentialRecordEntry[]>;
+  abstract listRecords(): Promise<readonly CredentialRecordEntry[]>
 
   /**
    * Serialized read-modify-write over one record — the only write path.
@@ -274,13 +274,13 @@ export abstract class CredentialProvider extends Service {
     mutate: (
       current: CredentialRecord | undefined,
     ) => Promise<CredentialRecord | undefined>,
-  ): Promise<CredentialRecord | undefined>;
+  ): Promise<CredentialRecord | undefined>
 
   /**
    * Remove one record; removing an absent record is a no-op.
    * @param key - the record to remove.
    */
-  abstract deleteRecord(key: CredentialKey): Promise<void>;
+  abstract deleteRecord(key: CredentialKey): Promise<void>
 
   /**
    * Fan `credentials/reference-updated` out with contained listener failures: every
@@ -294,7 +294,7 @@ export abstract class CredentialProvider extends Service {
    * @param ref - the reference whose stored value changed.
    */
   protected notifyUpdated(ref: CredentialRef): void {
-    this.fanOut("credentials/reference-updated", ref);
+    this.fanOut('credentials/reference-updated', ref)
   }
 
   /**
@@ -303,7 +303,7 @@ export abstract class CredentialProvider extends Service {
    * @param key - the record whose stored value changed.
    */
   protected notifyRecordUpdated(key: CredentialKey): void {
-    this.fanOut("credentials/record-updated", key);
+    this.fanOut('credentials/record-updated', key)
   }
 
   /* jscpd:ignore-start -- deliberate symmetry with the settings seam's commit
@@ -311,36 +311,36 @@ export abstract class CredentialProvider extends Service {
      contract, and extracting it would couple the two seams' event semantics. */
   /** The contained dispatch both notifications run through; see {@link notifyUpdated}. */
   private fanOut(
-    event: "credentials/reference-updated" | "credentials/record-updated",
+    event: 'credentials/reference-updated' | 'credentials/record-updated',
     subject: string,
   ): void {
-    let invariantFailure: unknown;
-    const args = [event, subject];
-    for (const listener of this.ctx.events.dispatch("emit", args) as Array<
+    let invariantFailure: unknown
+    const args = [event, subject]
+    for (const listener of this.ctx.events.dispatch('emit', args) as Array<
       (...listenerArgs: unknown[]) => unknown
     >) {
       try {
-        const returned = listener(subject);
+        const returned = listener(subject)
         if (
           returned != null &&
-          typeof (returned as PromiseLike<unknown>).then === "function"
+          typeof (returned as PromiseLike<unknown>).then === 'function'
         ) {
           void Promise.resolve(returned as PromiseLike<unknown>).then(
             undefined,
             (error: unknown) => {
-              this.warnListenerFailure(event, subject, error);
+              this.warnListenerFailure(event, subject, error)
             },
-          );
+          )
         }
       } catch (error) {
-        if ((error as { code?: unknown } | null)?.code === "INVARIANT") {
-          invariantFailure ??= error;
-          continue;
+        if ((error as { code?: unknown } | null)?.code === 'INVARIANT') {
+          invariantFailure ??= error
+          continue
         }
-        this.warnListenerFailure(event, subject, error);
+        this.warnListenerFailure(event, subject, error)
       }
     }
-    if (invariantFailure !== undefined) throw invariantFailure as Error;
+    if (invariantFailure !== undefined) throw invariantFailure as Error
   }
   /* jscpd:ignore-end */
 
@@ -354,9 +354,9 @@ export abstract class CredentialProvider extends Service {
       'credentials: a %s listener for "%s" failed',
       event,
       subject,
-    );
-    this.ctx.logger.warn(error);
+    )
+    this.ctx.logger.warn(error)
   }
 }
 
-export default CredentialProvider;
+export default CredentialProvider

@@ -300,6 +300,10 @@ function resolveModels(models: readonly DeepSeekCatalogModel[] | undefined): Dee
  */
 export function resolveAdapterOptions(config: Config, environment?: LaunchEnvironmentSnapshot): ResolvedDeepSeekOptions {
   const credentialRefs = resolveCredentialRefs(config)
+  const apiKeyEnv = credentialRefs[0]
+  if (apiKeyEnv === undefined) {
+    throw new Error('llm-deepseek: at least one credential reference is required')
+  }
   if (config.thinking === 'disabled'
     && config.reasoningEffort !== undefined
     && config.reasoningEffort !== 'off') {
@@ -382,7 +386,7 @@ export function resolveAdapterOptions(config: Config, environment?: LaunchEnviro
     throw new Error('llm-deepseek: fileQuotaCleanupBatch must be an integer from 1 through 1000')
   }
   return {
-    apiKeyEnv: credentialRefs[0]!,
+    apiKeyEnv,
     baseURL: config.baseURL
       ?? environment?.get(BASE_URL_ENV)?.value
       ?? PUBLIC_BASE_URL,
@@ -467,7 +471,7 @@ export function apply(ctx: Context, config: Config): void {
     if (lease === undefined) {
       const refs = refsByConnection.get(connection) ?? [connection.apiKeyEnv]
       if (refs.length === 1) {
-        const ref = refs[0]!
+        const ref = refs[0] ?? connection.apiKeyEnv
         throw new LlmError(
           `llm-deepseek: no API key for provider route "${PROVIDER}"; store ${ref} through the credentials`
           + ` service (the web Models page writes it), or export ${ref} in the launching environment`,
@@ -523,9 +527,10 @@ export function apply(ctx: Context, config: Config): void {
         throw error
       } finally {
         if (!exhausted) settle(state, 'release')
-        if (!exhausted && iterator.return !== undefined) {
+        const close = iterator.return?.bind(iterator)
+        if (!exhausted && close !== undefined) {
           try {
-            await runState.run(state, () => iterator.return!())
+            await runState.run(state, close)
           } catch (_teardownFailure) {
             // The model request already has its authoritative outcome.
           }
@@ -544,7 +549,7 @@ export function apply(ctx: Context, config: Config): void {
   })
 
   const baseStream = adapter.stream.bind(adapter)
-  adapter.stream = ((request) => track(baseStream(request))) as typeof adapter.stream
+  adapter.stream = (request => track(baseStream(request))) as typeof adapter.stream
   const basePrepareCall = adapter.prepareCall.bind(adapter)
   adapter.prepareCall = (async (...args) => {
     const prepared = await basePrepareCall(...args)
@@ -552,7 +557,7 @@ export function apply(ctx: Context, config: Config): void {
       ...prepared,
       stream: request => track(prepared.stream(request)),
     }
-  }) as typeof adapter.prepareCall
+  })
 
   ctx.llm.registerConfigurableProviders([
     { provider: PROVIDER, displayName: 'DeepSeek', settingsNs: NS, settingsPath: [] },
