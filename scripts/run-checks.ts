@@ -59,11 +59,13 @@ async function runCheck(check: Check): Promise<number> {
   })
 }
 
-const mode = parseMode(process.argv[2])
-for (const check of checksForMode(mode)) {
-  const status = await runCheck(check)
-  if (status !== 0) {
-    process.exitCode = status
-    break
+async function main(args: string[]): Promise<number> {
+  const mode = parseMode(args[0])
+  for (const check of checksForMode(mode)) {
+    const status = await runCheck(check)
+    if (status !== 0) return status
   }
+  return 0
 }
+
+if (import.meta.main) process.exitCode = await main(process.argv.slice(2))

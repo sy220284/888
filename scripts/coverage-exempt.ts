@@ -37,5 +37,4 @@ export const coverageExemptHeavySuites: readonly CoverageExemptSuite[] = [
   // Real child-process fixtures over scripts/ sources, which coverage never measures.
   { filter: 'scripts/oxlint-contract.spec.ts', exclude: 'scripts/oxlint-contract.spec.ts' },
   { filter: 'scripts/change-scope.spec.ts', exclude: 'scripts/change-scope.spec.ts' },
-  { filter: 'scripts/translation-pairing-merge.spec.ts', exclude: 'scripts/translation-pairing-merge.spec.ts' },
 ]
