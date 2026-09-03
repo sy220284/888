@@ -172,9 +172,9 @@
           maxExportBatchSize: 2048
           exportTimeoutMillis: 1500
 
-    # Native execution stays opt-in until P2b adds PTY and the remaining
-    # platform/sandbox capabilities. The ordinary subprocess seam above it is
-    # unchanged, so shell/LSP consumers do not learn about the sidecar.
+    # Native execution stays opt-in while it is Linux-only and does not yet
+    # provide the remaining sandbox capabilities. The ordinary subprocess seam
+    # above it is unchanged, so shell/LSP consumers do not learn about the sidecar.
     - id: native-execution
       name: '@deepseek-ai/dsh-native-client'
       disabled: !!js process.env.DSH_EXECUTION_PROVIDER !== 'native'
