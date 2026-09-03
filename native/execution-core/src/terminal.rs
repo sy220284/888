@@ -1,4 +1,4 @@
-use crate::process::{signal_number, write_json, Writer};
+use crate::process::{signal_number, signal_tree, write_json, Writer};
 use crate::protocol::{Event, ForegroundResult};
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{read_dir, read_to_string, File};
 use std::io::{ErrorKind, Read, Write};
 use std::os::fd::{AsRawFd, FromRawFd, RawFd};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -252,11 +252,22 @@ pub fn spawn_terminal(
     let pid = child.id();
     // The child is not reaped yet, so even an immediately-exited command still
     // has a /proc identity here as a zombie. Capture starttime before any wait.
-    let root_stat = read_proc_stat(pid)?
-        .ok_or_else(|| format!("terminal root identity disappeared before publication: {pid}"))?;
-    let reader = master
-        .try_clone()
-        .map_err(|e| format!("clone terminal master failed: {e}"))?;
+    let root_stat = match read_proc_stat(pid).and_then(|stat| {
+        stat.ok_or_else(|| format!("terminal root identity disappeared before publication: {pid}"))
+    }) {
+        Ok(stat) => stat,
+        Err(error) => return fail_spawned_terminal(&mut child, pid, error),
+    };
+    let reader = match master.try_clone() {
+        Ok(reader) => reader,
+        Err(error) => {
+            return fail_spawned_terminal(
+                &mut child,
+                pid,
+                format!("clone terminal master failed: {error}"),
+            )
+        }
+    };
     let managed = Arc::new(ManagedTerminal {
         pid,
         root: root_stat.identity(),
@@ -266,11 +277,21 @@ pub fn spawn_terminal(
     });
     // Prime ownership while the root identity is still known, then keep a
     // background observer adopting descendants even when they call setsid().
-    managed.refresh_tracked()?;
-    registry
-        .lock()
-        .map_err(|_| "terminal registry lock poisoned".to_string())?
-        .insert(process_id.clone(), managed.clone());
+    if let Err(error) = managed.refresh_tracked() {
+        return fail_spawned_terminal(&mut child, pid, error);
+    }
+    match registry.lock() {
+        Ok(mut guard) => {
+            guard.insert(process_id.clone(), managed.clone());
+        }
+        Err(_) => {
+            return fail_spawned_terminal(
+                &mut child,
+                pid,
+                "terminal registry lock poisoned".to_string(),
+            )
+        }
+    }
 
     let tracker = managed.clone();
     thread::spawn(move || {
@@ -318,6 +339,14 @@ pub fn spawn_terminal(
     });
 
     Ok(managed)
+}
+
+#[cfg(target_os = "linux")]
+fn fail_spawned_terminal<T>(child: &mut Child, pid: u32, error: String) -> Result<T, String> {
+    let _ = signal_tree(pid, "SIGKILL");
+    let _ = child.kill();
+    let _ = child.wait();
+    Err(error)
 }
 
 #[cfg(not(target_os = "linux"))]

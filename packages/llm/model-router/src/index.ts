@@ -14,6 +14,7 @@ import type {
   RecoveryRequest,
   RecoveryResolution,
 } from '@deepseek-ai/dsh-recovery'
+import { createCatalogAuthority } from './catalog-authority.ts'
 
 export const name = 'model-router'
 
@@ -142,6 +143,11 @@ export class ModelRouter extends Service {
 
   private readonly rules = new Map<string, Rule>()
   private readonly catalog = new Map<string, ModelDescriptor[]>()
+  private readonly catalogAuthority = createCatalogAuthority(() =>
+    [...this.catalog.values()]
+      .map(stack => stack.at(-1))
+      .filter((model): model is ModelDescriptor => model !== undefined),
+  )
   private readonly fallbackCodes: ReadonlySet<string>
 
   constructor(ctx: Context, config: Config = {}) {
@@ -342,39 +348,6 @@ export class ModelRouter extends Service {
     return Promise.resolve(this.resolveRecovery(request))
   }
 
-  private activeDescriptorForRoute(route: ModelRoute): ModelDescriptor | undefined {
-    for (const stack of this.catalog.values()) {
-      const descriptor = stack.at(-1)
-      if (
-        descriptor !== undefined &&
-        descriptor.provider === route.provider &&
-        descriptor.model === route.model
-      ) return descriptor
-    }
-    return undefined
-  }
-
-  private routeAllowedByCatalog(
-    source: ModelDescriptor | undefined,
-    route: ModelRoute,
-    failureCode: string,
-  ): boolean {
-    if (this.catalog.size === 0) return true
-    const target = this.activeDescriptorForRoute(route)
-    if (target === undefined) return false
-    if (
-      source?.capabilities !== undefined &&
-      source.capabilities.some(capability => !target.capabilities?.includes(capability))
-    ) return false
-    if (
-      failureCode === 'CONTEXT_WINDOW_EXCEEDED' &&
-      source?.contextWindow !== undefined &&
-      target.contextWindow !== undefined &&
-      target.contextWindow <= source.contextWindow
-    ) return false
-    return true
-  }
-
   private resolveRecovery(
     request: RecoveryRequest,
   ): RecoveryResolution | undefined {
@@ -410,12 +383,12 @@ export class ModelRouter extends Service {
     const availableProviders = new Set(
       this.ctx.llm.listProviders().map(provider => provider.id),
     )
-    const sourceDescriptor = this.activeDescriptorForRoute(source)
+    const sourceDescriptor = this.catalogAuthority.descriptorForRoute(source)
     const target = rule.to.find(
       route =>
         availableProviders.has(route.provider) &&
         !used.has(routeKey(route)) &&
-        this.routeAllowedByCatalog(sourceDescriptor, route, request.failure.code),
+        this.catalogAuthority.allows(sourceDescriptor, route, request.failure.code),
     )
     if (target === undefined) return undefined
 

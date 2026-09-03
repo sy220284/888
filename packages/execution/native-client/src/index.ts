@@ -242,10 +242,10 @@ class SidecarHandle implements NativeProcessHandle {
     this.client.releaseWhenQuiescent(this)
   }
   onTransportFailure(error: Error): void {
-    if (this.exited) return
+    const outcomeSettled = this.exited
     this.exited = true
     this.started.reject(error)
-    this.settled.reject(error)
+    if (!outcomeSettled) this.settled.reject(error)
     this.stdoutClosed = true
     this.stderrClosed = true
     this.streamsSettled.resolve()
@@ -379,13 +379,15 @@ class SidecarTerminalHandle implements NativeTerminalHandle {
   }
 
   onTransportFailure(error: Error): void {
-    if (this.exited) return
+    const outcomeSettled = this.exited
     this.exited = true
     this.started.reject(error)
-    this.outputClosed = true
-    this.outputSettled.resolve()
-    this.output.destroy(error)
-    this.settled.reject(error)
+    if (!this.outputClosed) {
+      this.outputClosed = true
+      this.outputSettled.resolve()
+      this.output.destroy(error)
+    }
+    if (!outcomeSettled) this.settled.reject(error)
   }
 }
 

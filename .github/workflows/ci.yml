@@ -22,9 +22,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
+          rustup override set 1.98.0
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm run typecheck
+      - run: node scripts/devtools/native-checks.mjs
+      - run: cargo build --locked --manifest-path native/execution-core/Cargo.toml
       - run: pnpm run test
       - run: pnpm run build

@@ -21,7 +21,6 @@ export interface CredentialPoolOptions {
 interface CredentialHealth {
   failures: number
   cooldownUntil: number
-  lastOutcomeLeaseId: number
 }
 
 const DEFAULT_MAX_FAILURES = 1
@@ -37,6 +36,7 @@ export class CredentialPool {
   private cursor = 0
   private nextLeaseId = 0
   private readonly health = new Map<CredentialRef, CredentialHealth>()
+  private readonly lastOutcomeLeaseIds = new Map<CredentialRef, number>()
   private readonly inFlight = new Map<CredentialRef, number>()
   private readonly activeLeases = new Map<number, CredentialRef>()
   private readonly maxFailures: number
@@ -100,8 +100,8 @@ export class CredentialPool {
     const settled = this.settle(lease)
     if (settled === undefined) return
     const { ref, leaseId } = settled
-    const current = this.health.get(ref)
-    if (leaseId < (current?.lastOutcomeLeaseId ?? 0)) return
+    if (leaseId < (this.lastOutcomeLeaseIds.get(ref) ?? 0)) return
+    this.lastOutcomeLeaseIds.set(ref, leaseId)
     this.health.delete(ref)
   }
 
@@ -110,12 +110,12 @@ export class CredentialPool {
     const settled = this.settle(lease)
     if (settled === undefined) return
     const { ref, leaseId } = settled
+    if (leaseId < (this.lastOutcomeLeaseIds.get(ref) ?? 0)) return
+    this.lastOutcomeLeaseIds.set(ref, leaseId)
     const current = this.health.get(ref) ?? {
       failures: 0,
       cooldownUntil: 0,
-      lastOutcomeLeaseId: 0,
     }
-    if (leaseId < current.lastOutcomeLeaseId) return
     const failures = current.failures + 1
     this.health.set(
       ref,
@@ -123,9 +123,8 @@ export class CredentialPool {
         ? {
           failures: 0,
           cooldownUntil: this.now() + this.cooldownMs,
-          lastOutcomeLeaseId: leaseId,
         }
-        : { failures, cooldownUntil: 0, lastOutcomeLeaseId: leaseId },
+        : { failures, cooldownUntil: 0 },
     )
   }
 

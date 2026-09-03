@@ -3,9 +3,7 @@ name: Project tools and dependency bundles
 on:
   push:
     branches:
-      - upgrade/2.0-p2b-linux-pty
-    paths:
-      - ".github/workflows/project-tools.yml"
+      - main
   workflow_dispatch:
 
 permissions:

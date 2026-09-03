@@ -129,4 +129,16 @@ describe('CredentialPool', () => {
     now = 151
     await expect(pool.acquire()).resolves.toMatchObject({ ref: a })
   })
+
+  it('keeps a newer success authoritative when the same credential settles out of order', async () => {
+    const provider = fakeCredentials()
+    const a = credentialRef('KEY_A')
+    provider.values.set(a, { value: 'a', source: 'test' })
+    const pool = new CredentialPool(provider, [a])
+    const [older, newer] = await Promise.all([pool.acquire(), pool.acquire()])
+    if (newer !== undefined) pool.reportSuccess(newer)
+    if (older !== undefined) pool.reportFailure(older)
+    expect(pool.status()[0]).toMatchObject({ coolingDown: false, inFlight: 0 })
+    await expect(pool.acquire()).resolves.toMatchObject({ ref: a })
+  })
 })
