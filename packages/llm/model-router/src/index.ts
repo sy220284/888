@@ -198,6 +198,8 @@ export class ModelRouter extends Service {
    * Register one runtime model layer. Later registrations temporarily shadow
    * earlier layers with the same stable id; disposing any layer removes only
    * that owner's contribution, revealing the next surviving layer below it.
+   * @param model - Detached model descriptor to register.
+   * @returns A disposer that removes only this registration layer.
    */
   registerModel(model: ModelDescriptor): () => void {
     const normalized = this.normalizeModel(model, "model-router.registerModel");
@@ -217,13 +219,20 @@ export class ModelRouter extends Service {
     };
   }
 
-  /** Read one detached model descriptor by stable catalog id. */
+  /**
+   * Read one detached model descriptor by stable catalog id.
+   * @param id - Stable model catalog id.
+   * @returns A detached descriptor, or `undefined` when no model is registered.
+   */
   getModel(id: string): ModelDescriptor | undefined {
     const model = this.catalog.get(id.trim())?.at(-1);
     return model === undefined ? undefined : structuredClone(model);
   }
 
-  /** Enumerate the deterministic detached model catalog. */
+  /**
+   * Enumerate the deterministic detached model catalog.
+   * @returns Detached model descriptors sorted by stable id.
+   */
   listModels(): readonly ModelDescriptor[] {
     return [...this.catalog.entries()]
       .map(([id, stack]) => [id, stack.at(-1)] as const)

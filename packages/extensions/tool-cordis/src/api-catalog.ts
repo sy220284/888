@@ -647,7 +647,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'ref', description: 'the reference to remove.' }],
       },
       {
-        signature: 'abstract readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>',
+        signature: 'abstract readRecord( key: CredentialKey, ): Promise<CredentialRecord | undefined>',
         description: 'Read one stored record. The value is returned as its owner wrote it; a GrantRecord payload is not interpreted on the way out.',
         parameters: [{ name: 'key', description: 'the record to read.' }],
         returns: 'the record, or `undefined` while none is stored.',
@@ -665,7 +665,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'every stored record, values excluded.',
       },
       {
-        signature: 'abstract modifyRecord( key: CredentialKey, mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>, ): Promise<CredentialRecord | undefined>',
+        signature: 'abstract modifyRecord( key: CredentialKey, mutate: ( current: CredentialRecord | undefined, ) => Promise<CredentialRecord | undefined>, ): Promise<CredentialRecord | undefined>',
         description: 'Serialized read-modify-write over one record — the only write path. `mutate` sees the record as it stands at the moment the write is exclusive, and returning `undefined` leaves the entry untouched. Exclusion holds across processes where the backing store supports it, which is what makes a token refresh safe: two processes rotating one refresh token concurrently would otherwise lose whichever wrote first.',
         parameters: [{ name: 'key', description: 'the record to modify.' }, { name: 'mutate', description: 'receives the current record and returns its replacement, or `undefined` to leave it.' }],
         returns: 'the record after the write, or the current one when `mutate` declined.',
@@ -1083,6 +1083,24 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     description: 'Provider/model fallback router (`ctx.models`).',
     methods: [
       {
+        signature: 'registerModel(model: ModelDescriptor): () => void',
+        description: 'Register one runtime model layer. Later registrations temporarily shadow earlier layers with the same stable id; disposing any layer removes only that owner\'s contribution, revealing the next surviving layer below it.',
+        parameters: [{ name: 'model', description: 'Detached model descriptor to register.' }],
+        returns: 'A disposer that removes only this registration layer.',
+      },
+      {
+        signature: 'getModel(id: string): ModelDescriptor | undefined',
+        description: 'Read one detached model descriptor by stable catalog id.',
+        parameters: [{ name: 'id', description: 'Stable model catalog id.' }],
+        returns: 'A detached descriptor, or `undefined` when no model is registered.',
+      },
+      {
+        signature: 'listModels(): readonly ModelDescriptor[]',
+        description: 'Enumerate the deterministic detached model catalog.',
+        parameters: [],
+        returns: 'Detached model descriptors sorted by stable id.',
+      },
+      {
         signature: 'setFallbacks(from: ModelRoute, to: readonly ModelRoute[]): void',
         description: 'Add or replace one fallback chain.',
         parameters: [{ name: 'from', description: 'Source model route.' }, { name: 'to', description: 'Ordered fallback routes.' }],
@@ -1117,6 +1135,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Spawn one native process.',
         parameters: [{ name: 'spec', description: 'Process spawn specification.' }],
         returns: 'Live native process handle.',
+      },
+      {
+        signature: 'abstract spawnTerminal( spec: NativeTerminalSpawnSpec, ): Promise<NativeTerminalHandle>',
+        description: 'Allocate one native terminal process.',
+        parameters: [{ name: 'spec', description: 'Terminal spawn specification.' }],
+        returns: 'Live terminal handle after allocation succeeds.',
       },
     ],
   },
@@ -1326,7 +1350,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [],
       },
       {
-        signature: 'readRaw(_id: SessionId, signal?: AbortSignal): Promise<SessionRawArtifact | undefined>',
+        signature: 'readRaw( _id: SessionId, signal?: AbortSignal, ): Promise<SessionRawArtifact | undefined>',
         description: 'Read a session\'s backend-owned artifact text verbatim — the exact durable bytes the backend wrote (decoded from its physical encoding, e.g. a decompressed JSONL). The returned `content` is the raw text, not a reconstruction from parsed events, so it preserves backend-specific serialization (chunk packing, key order, line breaks). Callers first test supportsRawArtifacts; `undefined` then means only that the requested session has no materialized artifact.',
         parameters: [{ name: '_id', description: 'the persisted session to read (unused by the default: no per-session artifact).' }, { name: 'signal', description: 'optional cancellation for backend read work.' }],
         returns: 'the raw artifact plus its parsed header, or `undefined` when the session is absent.',
@@ -1338,12 +1362,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'meta', description: 'the immutable header (id, version, cwd, lineage) to record.' }],
       },
       {
-        signature: 'abstract append(id: SessionId, events: readonly SessionEvent[]): Promise<void>',
+        signature: 'abstract append( id: SessionId, events: readonly SessionEvent[], ): Promise<void>',
         description: 'Durably persist a batch of events. Honors the append-only and contiguous- seq contracts: the first event\'s `seq` MUST equal the stored next-seq (after `load` has durably closed any interrupted turn). Rejects non-JSON- serializable `event.data` with an error naming the offending event type.',
         parameters: [{ name: 'id', description: 'the session the batch belongs to.' }, { name: 'events', description: 'the contiguous batch to persist, in seq order.' }],
       },
       {
-        signature: 'async prepare(id: SessionId, signal?: AbortSignal): Promise<SessionPreparation>',
+        signature: 'async prepare( id: SessionId, signal?: AbortSignal, ): Promise<SessionPreparation>',
         description: 'Prepare the exact unpublished Session used by resume. Implementations may reuse object graphs retained by an earlier inspect after confirming their durable revision is still current; disposal releases an unpublished reservation. Revision retries require the durable log to remain unchanged for one read/check round trip; continuous external writers may delay completion.',
         parameters: [{ name: 'id', description: 'persisted session to prepare.' }, { name: 'signal', description: 'optional cancellation for preparation work.' }],
         returns: 'one owned unpublished Session preparation.',
@@ -1355,13 +1379,13 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the header and a log ending on a balanced `turn/end`.',
       },
       {
-        signature: 'abstract inspect(id: SessionId, signal?: AbortSignal): Promise<SessionInspection>',
+        signature: 'abstract inspect( id: SessionId, signal?: AbortSignal, ): Promise<SessionInspection>',
         description: 'Inspect an immutable logical session without committing recovery or publishing it. A cold complete interrupted turn receives synthetic closers in memory and a torn physical tail remains untouched. An already-live Session instead yields its current immutable snapshot, which may contain an open turn and its `session/end-seed` boundary. Coordinator-backed implementations retain the exact cold unpublished Session for bounded reuse by a later prepare. A stale ready source is reloaded; a source already committing or reserved for resume remains exclusive, and inspection may borrow its immutable view. Callers borrow only the immutable header and log. Continuous external writers may delay revision convergence.',
         parameters: [{ name: 'id', description: 'the persisted session to inspect.' }, { name: 'signal', description: 'optional cancellation for queued and backend read work.' }],
         returns: 'the validated header and current logical event log.',
       },
       {
-        signature: 'abstract readFrom(id: SessionId, fromSeq: number, signal?: AbortSignal): Promise<{ meta: SessionHeader; events: SessionEvent[] }>',
+        signature: 'abstract readFrom( id: SessionId, fromSeq: number, signal?: AbortSignal, ): Promise<{ meta: SessionHeader; events: SessionEvent[] }>',
         description: 'Read the stored events from `fromSeq` onward — the read-from-seq primitive for read models that resume from a watermark (e.g. a persisted projection cache folding only the tail past its checkpoint). Unlike inspect, it is a detached physical suffix read: no preparation cache, torn-tail truncation, synthetic closers, or coordinator-state publication. Only events from the valid contiguous stored prefix are returned, so a torn fragment never reaches the caller. `fromSeq` at or beyond the stored prefix returns an empty event list (never an error). Backends whose medium can seek by seq (SQLite) read only the suffix; sequential media (JSONL, both encodings) still parse the whole artifact and skip forward — the primitive bounds what is RETURNED and refolded, not every backend\'s physical read.',
         parameters: [{ name: 'id', description: 'the persisted session to read.' }, { name: 'fromSeq', description: 'first event seq to include; a non-negative safe integer.' }, { name: 'signal', description: 'optional cancellation for queued and backend read work.' }],
         returns: 'the header and the stored events with `seq >= fromSeq`.',
@@ -1373,7 +1397,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'one header per materialized session.',
       },
       {
-        signature: 'abstract listSnapshots(signal?: AbortSignal): Promise<SessionPersistenceSnapshot[]>',
+        signature: 'abstract listSnapshots( signal?: AbortSignal, ): Promise<SessionPersistenceSnapshot[]>',
         description: 'List materialized sessions with cheap per-log change tokens.\n\nRepeated observations of an unchanged log return the same revision. A successful mutating load repair changes the next listed revision. Revisions also distinguish independently backed stores so backend-local counters cannot compare equal across different persistence sources.',
         parameters: [{ name: 'signal', description: 'optional cancellation for backend snapshot-listing work.' }],
         returns: 'one header and opaque revision per materialized session without loading full logs.',
@@ -2611,6 +2635,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'payload', description: '.signal - current turn cancellation signal. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.' }],
   },
   {
+    name: 'agent/tool-call-input',
+    mode: 'waterfall',
+    signature: '\'agent/tool-call-input\'(this: Scoped<Agent>, payload: { agent: Agent; call: ToolCallBlock; turn: number; step: number; signal: AbortSignal }, next: () => Promise<ToolCallBlock>): Promise<ToolCallBlock>',
+    summary: 'Rewrite one model-produced tool call before the canonical assistant message is committed.',
+    description: 'Rewrite one model-produced tool call before the canonical assistant message is committed. `next()` returns the downstream candidate. Listeners may replace arguments, but the machine rejects changes to call id/name/type. The returned call becomes the durable `assistant/message` / `tool/call` input and therefore passes through the ordinary tool parser, schema checks, permission policy and scheduler afterwards.',
+    parameters: [{ name: 'payload', description: '.signal - current turn cancellation signal. Scope-filtered dispatch (`@deepseek-ai/dsh-scope`): agent-scoped listeners receive only that agent.' }],
+  },
+  {
     name: 'agent/turn-stopping',
     mode: 'serial',
     signature: '\'agent/turn-stopping\'(this: Scoped<Agent>, payload: { agent: Agent; turn: number; signal: AbortSignal }): Promise<void> | void',
@@ -3392,11 +3424,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'CredentialRecordEntry',
-    declaration: 'export interface CredentialRecordEntry {\n    key: CredentialKey;\n    kind: CredentialRecord[\'kind\'];\n}',
+    declaration: 'export interface CredentialRecordEntry {\n    key: CredentialKey;\n    kind: CredentialRecord["kind"];\n}',
   },
   {
     name: 'CredentialRecordInfo',
-    declaration: 'export interface CredentialRecordInfo {\n    configured: boolean;\n    kind?: CredentialRecord[\'kind\'];\n    writable: boolean;\n}',
+    declaration: 'export interface CredentialRecordInfo {\n    configured: boolean;\n    kind?: CredentialRecord["kind"];\n    writable: boolean;\n}',
   },
   {
     name: 'CredentialRef',
@@ -3971,6 +4003,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface MessageSourceMap {\n    user: {\n        kind: \'user\';\n    };\n    plugin: {\n        kind: \'plugin\';\n        plugin: string;\n    } & ContextFormed;\n    model: ModelMessageSource;\n    tool: ToolMessageSource;\n}',
   },
   {
+    name: 'ModelDescriptor',
+    declaration: 'export interface ModelDescriptor extends ModelRoute {\n    readonly id: string;\n    readonly contextWindow?: number;\n    readonly outputLimit?: number;\n    readonly capabilities?: readonly string[];\n}',
+  },
+  {
     name: 'ModelMessageSource',
     declaration: 'export interface ModelMessageSource extends AssistantProvenance {\n    kind: \'model\';\n}',
   },
@@ -3996,15 +4032,15 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'NativeExecutionSignal',
-    declaration: 'export type NativeExecutionSignal = \'SIGINT\' | \'SIGTERM\' | \'SIGKILL\' | \'SIGTSTP\' | \'SIGHUP\';',
+    declaration: 'export type NativeExecutionSignal = "SIGINT" | "SIGTERM" | "SIGKILL" | "SIGTSTP" | "SIGHUP";',
   },
   {
     name: 'NativeInputMode',
-    declaration: 'export type NativeInputMode = \'ignore\' | \'pipe\' | {\n    readonly data: string | Uint8Array;\n};',
+    declaration: 'export type NativeInputMode = "ignore" | "pipe" | {\n    readonly data: string | Uint8Array;\n};',
   },
   {
     name: 'NativeOutputMode',
-    declaration: 'export type NativeOutputMode = \'pipe\' | \'ignore\';',
+    declaration: 'export type NativeOutputMode = "pipe" | "ignore";',
   },
   {
     name: 'NativeProcessHandle',
@@ -4017,6 +4053,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'NativeProcessSpawnSpec',
     declaration: 'export interface NativeProcessSpawnSpec {\n    readonly argv: readonly string[];\n    readonly cwd: string;\n    readonly env?: Readonly<Record<string, string>>;\n    readonly stdin: NativeInputMode;\n    readonly stdout: NativeOutputMode;\n    readonly stderr: NativeOutputMode;\n}',
+  },
+  {
+    name: 'NativeTerminalForeground',
+    declaration: 'export interface NativeTerminalForeground {\n    readonly processGroupId: number;\n    readonly inputWaiting: boolean;\n}',
+  },
+  {
+    name: 'NativeTerminalHandle',
+    declaration: 'export interface NativeTerminalHandle {\n    readonly pid: number;\n    readonly output: Readable;\n    readonly done: Promise<NativeProcessOutcome>;\n    write(data: string): Promise<void>;\n    inspectForeground(): Promise<NativeTerminalForeground | undefined>;\n    signalForeground(signal: NativeExecutionSignal): Promise<number>;\n    signalTree(signal: NativeExecutionSignal): Promise<void>;\n    treeAlive(): Promise<boolean>;\n}',
+  },
+  {
+    name: 'NativeTerminalSpawnSpec',
+    declaration: 'export interface NativeTerminalSpawnSpec {\n    readonly argv: readonly string[];\n    readonly cwd: string;\n    readonly env?: Readonly<Record<string, string>>;\n    readonly rows: number;\n    readonly cols: number;\n    readonly signal?: AbortSignal;\n}',
   },
   {
     name: 'ObjectJsonSchema',
