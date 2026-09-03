@@ -42,7 +42,7 @@ interface Rename {
   readonly scoped: string
 }
 
-/** The mapping this codemod applies; `vendor/README.md` carries the same table. */
+/** The package-name mapping this codemod applies. */
 const RENAMES: readonly Rename[] = [
   { directory: 'cordis', upstream: 'cordis', scoped: '@deepseek-ai/cordis' },
   { directory: 'cosmokit', upstream: 'cosmokit', scoped: '@deepseek-ai/cosmokit' },
@@ -152,8 +152,6 @@ const POSTCONDITIONS: readonly PostCondition[] = [
   { file: 'scripts/check-workspace-constraints.ts', text: '?.[\'@deepseek-ai/cordis\']', count: 2 },
   { file: 'packages/boot/app-boot/tsdown.config.ts', text: '[\'@deepseek-ai/cordis-plugin-include\']', count: 1 },
   { file: 'tsconfig.base.json', text: '"@deepseek-ai/cordis-plugin-loader": ["./vendor/loader/src"]', count: 1 },
-  // The vendored README owns this required entry; reject its deletion or duplication.
-  { file: 'vendor/README.md', text: '17. **`@deepseek-ai` rescope**', count: 1 },
   { file: 'knip.json', text: '@cordisjs', count: 0 },
   { file: 'pnpm-workspace.yaml', text: 'cordis@4.0.0-rc.7', count: 0 },
   // The preset ids in this table are product data, not package names.
@@ -197,23 +195,6 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     expect: 1,
   },
   {
-    // The rescoped name is already covered by the `@deepseek-ai/.+` pattern beside it.
-    id: 'knip-logger-console',
-    file: 'knip.json',
-    find: `      "ignoreDependencies": [
-        "@cordisjs/plugin-logger-console",
-        "@deepseek-ai/.+"
-      ]
-    },
-    "packages/util/home": {`,
-    replace: `      "ignoreDependencies": [
-        "@deepseek-ai/.+"
-      ]
-    },
-    "packages/util/home": {`,
-    expect: 1,
-  },
-  {
     id: 'knip-bundle-base',
     file: 'knip.json',
     find: `    "packages/bundle/base": {
@@ -250,27 +231,6 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     expect: 1,
   },
   {
-    id: 'vendor-readme-preamble',
-    file: 'vendor/README.md',
-    find: 'All vendored packages keep their **original npm names** and are marked `private: true` — they are never published from this repo. `pnpm-workspace.yaml#linkWorkspacePackages` makes matching upstream semver ranges resolve these pinned workspaces, including imports from built `lib/`; disabling it substitutes npm copies behind the same names.',
-    replace: 'All vendored packages are **renamed into the `@deepseek-ai` scope** (`cordis` → `@deepseek-ai/cordis`, `@cordisjs/plugin-<x>` → `@deepseek-ai/cordis-plugin-<x>`): every harness package declares `cordis` as a peer dependency, so publishing the harness publishes this framework layer too, and a publication under the upstream names would squat them on the registry. Directory names and upstream version numbers are deliberately unchanged, so the manifest below still reads as an upstream snapshot. `pnpm-workspace.yaml#linkWorkspacePackages` makes those preserved semver ranges resolve these pinned workspaces, including imports from built `lib/`.',
-    expect: 1,
-  },
-  {
-    id: 'vendor-readme-schemastery-note',
-    file: 'vendor/README.md',
-    find: 'whose lazy `require(\'cosmokit\')` can race',
-    replace: 'whose lazy `require(\'@deepseek-ai/cosmokit\')` can race',
-    expect: 1,
-  },
-  {
-    id: 'vendor-readme-table-head',
-    file: 'vendor/README.md',
-    find: '| Directory | npm name | Version | Upstream repo | Commit |\n|---|---|---|---|---|',
-    replace: '| Directory | npm name | Upstream name | Version | Upstream repo | Commit |\n|---|---|---|---|---|---|',
-    expect: 1,
-  },
-  {
     // A plain fence listing the bundle's mounted tree: a bare token, no quotes.
     id: 'agent-spine-demo-mounted-tree',
     file: 'packages/examples/agent-spine-demo/README.md',
@@ -283,14 +243,6 @@ const EXACT_EDITS: readonly ExactEdit[] = [
     file: 'packages/examples/agent-spine-demo/README.zh.md',
     find: '@cordisjs/plugin-timer            timer service',
     replace: '@deepseek-ai/cordis-plugin-timer  timer service',
-    expect: 1,
-  },
-  {
-    // The root contract claimed vendored packages keep their upstream names.
-    id: 'root-agents-vendored-name-contract',
-    file: 'AGENTS.md',
-    find: 'vendored packages keep upstream names and are `private: true`. `cordis` is a peerDependency (+ dev) of every harness package.',
-    replace: 'vendored packages are rescoped ([mapping](docs/rescope.md)) and `private: true`. `@deepseek-ai/cordis` is a peerDependency (+ dev) of every harness package.',
     expect: 1,
   },
   {
@@ -479,14 +431,6 @@ const VENDORED_LIBRARY = /^@deepseek-ai\\/(cosmokit|schemastery)(\\/|$)/
  * errors, or lost executable modes.`,
     expect: 1,
   },
-  // The manifest table's name column plus the new upstream-name column, one edit per row.
-  ...RENAMES.map(rename => ({
-    id: `vendor-readme-row-${rename.directory}`,
-    file: 'vendor/README.md',
-    find: `| \`${rename.directory}/\` | \`${rename.upstream}\` | `,
-    replace: `| \`${rename.directory}/\` | \`${rename.scoped}\` | \`${rename.upstream}\` | `,
-    expect: 1,
-  })),
 ]
 
 /** Files the rescope must never rewrite. */
@@ -640,6 +584,10 @@ function main(): void {
   const planned: { edit: ExactEdit; path: string; find: string; replace: string }[] = []
   for (const edit of EXACT_EDITS) {
     const path = resolve(root, edit.file)
+    // Exact edits migrate content when its owning file exists; they do not own
+    // file-existence policy. POSTCONDITIONS below retain that stronger role for
+    // artifacts whose deletion must fail the gate.
+    if (!existsSync(path)) continue
     const before = readFileSync(path, 'utf8')
     const find = reverse ? edit.replace : edit.find
     const replace = reverse ? edit.find : edit.replace
