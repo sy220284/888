@@ -54,7 +54,7 @@ describe('gen-session-event-types', () => {
   it('rejects members that cannot become stable string event keys', () => {
     expect(() => collectSessionEventTypes(fixture({
       'packages/core/session/package.json': ownerManifest,
-      'packages/core/session/src/types.ts': `export interface SessionEventMap {\n  event: { id: string }\n}\n`,
+      'packages/core/session/src/types.ts': 'export interface SessionEventMap {\n  event: { id: string }\n}\n',
     }))).toThrow(/non-literal property member/)
   })
 
