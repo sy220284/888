@@ -23,7 +23,7 @@ export type {
   GrantRecord,
 } from "./types.ts";
 export { CredentialPool } from "./pool.ts";
-export type { CredentialLease, CredentialPoolOptions } from "./pool.ts";
+export type { CredentialLease, CredentialPoolOptions, CredentialResolver } from "./pool.ts";
 
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 

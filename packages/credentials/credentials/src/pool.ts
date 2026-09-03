@@ -1,5 +1,10 @@
-import type { CredentialProvider, ResolvedCredential } from "./index.ts";
+import type { ResolvedCredential } from "./index.ts";
 import type { CredentialRef } from "./types.ts";
+
+/** Minimal resolver contract required by CredentialPool. */
+export interface CredentialResolver {
+  resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined>;
+}
 
 /** One credential selected for a single provider operation. */
 export interface CredentialLease extends ResolvedCredential {
@@ -22,19 +27,21 @@ const DEFAULT_MAX_FAILURES = 1;
 const DEFAULT_COOLDOWN_MS = 30_000;
 
 /**
- * Per-operation credential resolver with deterministic rotation and bounded
- * cooldown. Secrets are never persisted or cached: every acquisition resolves
- * the selected reference through the authoritative CredentialProvider.
+ * Per-operation credential resolver with deterministic rotation, concurrent
+ * lease balancing, and bounded cooldown. Secrets are never persisted or
+ * cached: every acquisition resolves the selected reference through the
+ * authoritative resolver.
  */
 export class CredentialPool {
   private cursor = 0;
   private readonly health = new Map<CredentialRef, CredentialHealth>();
+  private readonly inFlight = new Map<CredentialRef, number>();
   private readonly maxFailures: number;
   private readonly cooldownMs: number;
   private readonly now: () => number;
 
   constructor(
-    private readonly provider: CredentialProvider,
+    private readonly provider: CredentialResolver,
     private readonly refs: readonly CredentialRef[],
     options: CredentialPoolOptions = {},
   ) {
@@ -55,31 +62,66 @@ export class CredentialPool {
       );
   }
 
-  /** Resolve the next healthy configured reference; returns undefined when none are currently usable. */
+  /**
+   * Resolve the least-busy healthy reference, using the cursor only as the
+   * deterministic tie-breaker. The reference is reserved before the async
+   * resolve so concurrent callers cannot all observe the same cursor.
+   */
   async acquire(): Promise<CredentialLease | undefined> {
-    const now = this.now();
-    for (let offset = 0; offset < this.refs.length; offset++) {
-      const index = (this.cursor + offset) % this.refs.length;
-      const ref = this.refs[index]!;
-      const state = this.health.get(ref);
-      if (state !== undefined && state.cooldownUntil > now) continue;
-      const resolved = await this.provider.resolve(ref);
-      if (resolved === undefined) continue;
-      this.cursor = (index + 1) % this.refs.length;
-      return { ref, ...resolved };
+    const attempted = new Set<CredentialRef>();
+    while (attempted.size < this.refs.length) {
+      const now = this.now();
+      let selectedIndex = -1;
+      let selectedLoad = Number.POSITIVE_INFINITY;
+      for (let offset = 0; offset < this.refs.length; offset++) {
+        const index = (this.cursor + offset) % this.refs.length;
+        const ref = this.refs[index]!;
+        if (attempted.has(ref)) continue;
+        const state = this.health.get(ref);
+        if (state !== undefined && state.cooldownUntil > now) continue;
+        const load = this.inFlight.get(ref) ?? 0;
+        if (load < selectedLoad) {
+          selectedIndex = index;
+          selectedLoad = load;
+        }
+      }
+      if (selectedIndex < 0) return undefined;
+
+      const ref = this.refs[selectedIndex]!;
+      attempted.add(ref);
+      this.cursor = (selectedIndex + 1) % this.refs.length;
+      this.inFlight.set(ref, (this.inFlight.get(ref) ?? 0) + 1);
+      try {
+        const resolved = await this.provider.resolve(ref);
+        if (resolved !== undefined) return { ref, ...resolved };
+      } catch (error) {
+        this.release(ref);
+        throw error;
+      }
+      this.release(ref);
     }
     return undefined;
+  }
+
+  /** Release one completed lease without changing credential health. */
+  release(ref: CredentialRef): void {
+    this.requireMember(ref);
+    const current = this.inFlight.get(ref) ?? 0;
+    if (current <= 1) this.inFlight.delete(ref);
+    else this.inFlight.set(ref, current - 1);
   }
 
   /** Mark a successful operation so the reference immediately regains full health. */
   reportSuccess(ref: CredentialRef): void {
     this.requireMember(ref);
+    this.release(ref);
     this.health.delete(ref);
   }
 
   /** Mark a credential-scoped failure; repeated failures put the reference into cooldown. */
   reportFailure(ref: CredentialRef): void {
     this.requireMember(ref);
+    this.release(ref);
     const current = this.health.get(ref) ?? { failures: 0, cooldownUntil: 0 };
     const failures = current.failures + 1;
     this.health.set(
@@ -95,6 +137,7 @@ export class CredentialPool {
     ref: CredentialRef;
     coolingDown: boolean;
     cooldownUntil: number;
+    inFlight: number;
   }[] {
     const now = this.now();
     return this.refs.map((ref) => {
@@ -103,6 +146,7 @@ export class CredentialPool {
         ref,
         coolingDown: (state?.cooldownUntil ?? 0) > now,
         cooldownUntil: state?.cooldownUntil ?? 0,
+        inFlight: this.inFlight.get(ref) ?? 0,
       };
     });
   }
