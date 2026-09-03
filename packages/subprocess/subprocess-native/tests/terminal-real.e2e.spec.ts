@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
@@ -49,7 +50,7 @@ async function withLocal<T>(run: (runtime: SubprocessRuntime) => Promise<T>): Pr
 async function withNative<T>(run: (runtime: SubprocessRuntime) => Promise<T>): Promise<T> {
   const ctx = new Context()
   const client = await ctx.plugin(NativeExecutionClient, {
-    binaryPath: resolve('native/execution-core/target/debug/dsh-execution-core'),
+    binaryPath,
   })
   const runtime = await ctx.plugin(NativeSubprocessRuntime)
   try {
@@ -60,6 +61,8 @@ async function withNative<T>(run: (runtime: SubprocessRuntime) => Promise<T>): P
   }
 }
 
+const binaryPath = resolve('native/execution-core/target/debug/dsh-execution-core')
+
 const terminalSpec = {
   argv: ['/bin/sh', '-c', 'printf DIFF; exit 3'],
   cwd: process.cwd(),
@@ -68,7 +71,7 @@ const terminalSpec = {
   graceMs: 100,
 }
 
-describe.skipIf(process.platform !== 'linux')('native/local terminal differential e2e', () => {
+describe.skipIf(process.platform !== 'linux' || !existsSync(binaryPath))('native/local terminal differential e2e', () => {
   it('matches the existing local provider for immediate output and exit', async () => {
     const local = await withLocal(async runtime => collect(await runtime.spawnTerminal(terminalSpec)))
     const native = await withNative(async runtime => collect(await runtime.spawnTerminal(terminalSpec)))

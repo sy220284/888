@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import { describe, expect, it } from 'vitest'
@@ -9,10 +10,11 @@ async function collect(readable: NodeJS.ReadableStream): Promise<string> {
   return Buffer.concat(chunks).toString('utf8')
 }
 
-describe.skipIf(process.platform !== 'linux')('NativeExecutionClient terminal e2e', () => {
+const binaryPath = resolve('native/execution-core/target/debug/dsh-execution-core')
+
+describe.skipIf(process.platform !== 'linux' || !existsSync(binaryPath))('NativeExecutionClient terminal e2e', () => {
   it('preserves output and exit from a terminal that finishes immediately after spawn', async () => {
     const ctx = new Context()
-    const binaryPath = resolve('native/execution-core/target/debug/dsh-execution-core')
     const fiber = await ctx.plugin(NativeExecutionClient, { binaryPath })
     try {
       const handle = await ctx.nativeExecution.spawnTerminal({
