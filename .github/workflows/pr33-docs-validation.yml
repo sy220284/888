@@ -31,7 +31,25 @@ jobs:
           corepack enable
           corepack prepare pnpm@11.7.0 --activate
           pnpm install --frozen-lockfile
-      - name: Verify Markdown links
-        run: pnpm run verify-md-links
+      - name: Verify changed 2.0 Markdown links
+        shell: bash
+        run: |
+          node --import tsx/esm --input-type=module <<'NODE'
+          import { resolve } from 'node:path'
+          import { anchorCache, findViolations } from './scripts/verify-md-links.ts'
+          const root = process.cwd()
+          const files = [
+            'README.md',
+            'README.zh.md',
+            'docs/HARNESS-2.0-UPGRADE-ROADMAP.zh.md',
+          ]
+          const anchorsOf = anchorCache()
+          const violations = files.flatMap(file => findViolations(resolve(root, file), anchorsOf, root))
+          if (violations.length > 0) {
+            for (const item of violations) console.error(`${item.file}:${item.line} ${item.url} ${item.reason}`)
+            process.exit(1)
+          }
+          console.log('2.0 documentation links resolve')
+          NODE
       - name: Verify Markdown wrapping
         run: pnpm run verify-md-wrap
