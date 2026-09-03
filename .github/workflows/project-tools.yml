@@ -1,0 +1,159 @@
+name: Project tools and dependency bundles
+
+on:
+  push:
+    branches:
+      - upgrade/2.0-p2b-linux-pty
+    paths:
+      - ".github/workflows/project-tools.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-tools-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DSH_NODE_VERSION: "22.19.0"
+  DSH_PNPM_VERSION: "11.7.0"
+  DSH_RUST_VERSION: "1.98.0"
+  DSH_UV_VERSION: "0.12.0"
+  DSH_RIPGREP_VERSION: "15.2.0"
+  DSH_FD_VERSION: "10.4.2"
+  DSH_NEXTEST_VERSION: "0.9.137"
+  DSH_ACTIONLINT_VERSION: "1.7.12"
+  DSH_SHELLCHECK_VERSION: "0.11.0"
+  DSH_SHELLCHECK_URL: "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz"
+  DSH_SHELLCHECK_SHA256: "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+
+jobs:
+  linux-bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "${{ env.DSH_NODE_VERSION }}"
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          cache: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Pin package and Rust toolchains
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare "pnpm@$DSH_PNPM_VERSION" --activate
+          python -m pip install "uv==$DSH_UV_VERSION"
+          rustup toolchain install "$DSH_RUST_VERSION" --profile minimal --component rustfmt --component clippy
+          rustup override set "$DSH_RUST_VERSION"
+          pnpm --version
+          uv --version
+          rustc --version
+          cargo --version
+
+      - name: Build portable project tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          output="$PWD/.artifacts/project-tools"
+          mkdir -p "$output/bin"
+
+          cargo install --root "$output" ripgrep --version "$DSH_RIPGREP_VERSION" --locked --force
+          cargo install --root "$output" fd-find --version "$DSH_FD_VERSION" --locked --force
+          cargo install --root "$output" cargo-nextest --version "$DSH_NEXTEST_VERSION" --locked --force
+          GOBIN="$output/bin" go install "github.com/rhysd/actionlint/cmd/actionlint@v$DSH_ACTIONLINT_VERSION"
+
+          shellcheck_archive="$RUNNER_TEMP/shellcheck-v$DSH_SHELLCHECK_VERSION.linux.x86_64.tar.xz"
+          curl --fail --location --retry 3 --proto '=https' --tlsv1.2 "$DSH_SHELLCHECK_URL" -o "$shellcheck_archive"
+          printf '%s  %s\n' "$DSH_SHELLCHECK_SHA256" "$shellcheck_archive" | sha256sum --check --strict -
+          tar -xJf "$shellcheck_archive" -C "$RUNNER_TEMP"
+          install -m 0755 "$RUNNER_TEMP/shellcheck-v$DSH_SHELLCHECK_VERSION/shellcheck" "$output/bin/shellcheck"
+
+          rm -f "$output/.crates.toml" "$output/.crates2.json"
+          node_root="$(dirname "$(dirname "$(command -v node)")")"
+          cp -a "$node_root" "$output/node"
+          rust_root="$(rustc --print sysroot)"
+          cp -a "$rust_root" "$output/rust"
+          install -m 0755 "$(rustup which cargo --toolchain "$DSH_RUST_VERSION")" "$output/rust/bin/cargo"
+          install -m 0755 "$(command -v uv)" "$output/bin/uv"
+
+          cat > "$output/bundle.json" <<JSON
+          {
+            "schemaVersion": 1,
+            "sourceCommit": "$GITHUB_SHA",
+            "platform": "linux",
+            "arch": "x64",
+            "node": "$DSH_NODE_VERSION",
+            "pnpm": "$DSH_PNPM_VERSION",
+            "rust": "$DSH_RUST_VERSION",
+            "uv": "$DSH_UV_VERSION",
+            "ripgrep": "$DSH_RIPGREP_VERSION",
+            "fd": "$DSH_FD_VERSION",
+            "cargoNextest": "$DSH_NEXTEST_VERSION",
+            "actionlint": "$DSH_ACTIONLINT_VERSION",
+            "shellcheck": "$DSH_SHELLCHECK_VERSION"
+          }
+          JSON
+          (
+            cd "$output"
+            find . -type f ! -name SHA256SUMS.txt -print0 |
+              sort -z |
+              xargs -0 sha256sum > SHA256SUMS.txt
+          )
+
+      - name: Prepare lock-resolved dependency caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          cache="$PWD/.artifacts/dependency-cache"
+          mkdir -p "$cache/pnpm" "$cache/cargo" "$cache/uv"
+          pnpm fetch --frozen-lockfile --store-dir "$cache/pnpm"
+          CARGO_HOME="$cache/cargo" cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
+          UV_CACHE_DIR="$cache/uv" uv sync --frozen --project python/sdk --group test
+          (
+            cd "$cache"
+            find . -type f ! -name SHA256SUMS.txt -print0 |
+              sort -z |
+              xargs -0 sha256sum > SHA256SUMS.txt
+          )
+
+      - name: Package checked-out source
+        shell: bash
+        run: |
+          mkdir -p .artifacts/source
+          git archive --format=tar.gz --output=.artifacts/source/dsh-source.tar.gz HEAD
+          sha256sum .artifacts/source/dsh-source.tar.gz > .artifacts/source/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-project-tools-Linux-X64
+          path: .artifacts/project-tools
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 30
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-project-dependencies-full-Linux-X64
+          path: .artifacts/dependency-cache
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 14
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-project-source
+          path: .artifacts/source
+          if-no-files-found: error
+          retention-days: 14
