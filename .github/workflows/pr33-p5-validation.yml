@@ -1,0 +1,49 @@
+name: PR33 P5 validation
+
+on:
+  push:
+    branches:
+      - upgrade/2.0-p2b-linux-pty
+    paths:
+      - "packages/hooks/hooks-claude-code/**"
+      - "packages/hooks/hook-protocol/**"
+      - ".github/workflows/pr33-p5-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr33-p5-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22.19.0"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@11.7.0 --activate
+          pnpm install --frozen-lockfile
+
+      - name: Typecheck Claude hook bridge
+        shell: bash
+        run: pnpm exec tsc -b packages/hooks/hooks-claude-code/tsconfig.json --pretty false
+
+      - name: Run P5 compatibility tests
+        shell: bash
+        run: >-
+          pnpm exec vitest run
+          packages/hooks/hooks-claude-code/tests/p5a.spec.ts
+          packages/hooks/hooks-claude-code/tests/p5b.spec.ts
