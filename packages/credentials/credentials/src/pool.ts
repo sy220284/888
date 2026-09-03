@@ -1,14 +1,14 @@
-import type { ResolvedCredential } from "./index.ts";
+import type { CredentialProvider, ResolvedCredential } from "./index.ts";
 import type { CredentialRef } from "./types.ts";
 
-/** Minimal resolver contract required by CredentialPool. */
-export interface CredentialResolver {
-  resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined>;
-}
+/** Minimal resolver contract consumed by the runtime-only pool. */
+export type CredentialResolver = Pick<CredentialProvider, "resolve">;
 
 /** One credential selected for a single provider operation. */
 export interface CredentialLease extends ResolvedCredential {
   readonly ref: CredentialRef;
+  /** Monotonic pool-local identity used to order out-of-order outcomes. */
+  readonly leaseId: number;
 }
 
 /** Runtime-only health policy for deterministic credential rotation. */
@@ -21,21 +21,24 @@ export interface CredentialPoolOptions {
 interface CredentialHealth {
   failures: number;
   cooldownUntil: number;
+  lastOutcomeLeaseId: number;
 }
 
 const DEFAULT_MAX_FAILURES = 1;
 const DEFAULT_COOLDOWN_MS = 30_000;
 
 /**
- * Per-operation credential resolver with deterministic rotation, concurrent
- * lease balancing, and bounded cooldown. Secrets are never persisted or
- * cached: every acquisition resolves the selected reference through the
+ * Per-operation credential resolver with deterministic rotation, bounded
+ * cooldown, and concurrency-aware leases. Secrets are never persisted or
+ * cached: every acquisition resolves its selected reference through the
  * authoritative resolver.
  */
 export class CredentialPool {
   private cursor = 0;
+  private nextLeaseId = 0;
   private readonly health = new Map<CredentialRef, CredentialHealth>();
   private readonly inFlight = new Map<CredentialRef, number>();
+  private readonly activeLeases = new Map<number, CredentialRef>();
   private readonly maxFailures: number;
   private readonly cooldownMs: number;
   private readonly now: () => number;
@@ -63,76 +66,75 @@ export class CredentialPool {
   }
 
   /**
-   * Resolve the least-busy healthy reference, using the cursor only as the
-   * deterministic tie-breaker. The reference is reserved before the async
-   * resolve so concurrent callers cannot all observe the same cursor.
+   * Resolve the next healthy configured reference. Selection advances before
+   * the provider await and prefers the least-busy reference, so concurrent
+   * callers do not all observe the same cursor.
    */
   async acquire(): Promise<CredentialLease | undefined> {
     const attempted = new Set<CredentialRef>();
     while (attempted.size < this.refs.length) {
-      const now = this.now();
-      let selectedIndex = -1;
-      let selectedLoad = Number.POSITIVE_INFINITY;
-      for (let offset = 0; offset < this.refs.length; offset++) {
-        const index = (this.cursor + offset) % this.refs.length;
-        const ref = this.refs[index]!;
-        if (attempted.has(ref)) continue;
-        const state = this.health.get(ref);
-        if (state !== undefined && state.cooldownUntil > now) continue;
-        const load = this.inFlight.get(ref) ?? 0;
-        if (load < selectedLoad) {
-          selectedIndex = index;
-          selectedLoad = load;
-        }
-      }
-      if (selectedIndex < 0) return undefined;
-
-      const ref = this.refs[selectedIndex]!;
+      const selected = this.select(attempted);
+      if (selected === undefined) return undefined;
+      const { index, ref } = selected;
       attempted.add(ref);
-      this.cursor = (selectedIndex + 1) % this.refs.length;
+      this.cursor = (index + 1) % this.refs.length;
+      const resolved = await this.provider.resolve(ref);
+      if (resolved === undefined) continue;
+      const leaseId = ++this.nextLeaseId;
+      this.activeLeases.set(leaseId, ref);
       this.inFlight.set(ref, (this.inFlight.get(ref) ?? 0) + 1);
-      try {
-        const resolved = await this.provider.resolve(ref);
-        if (resolved !== undefined) return { ref, ...resolved };
-      } catch (error) {
-        this.release(ref);
-        throw error;
-      }
-      this.release(ref);
+      const lease = { ref, ...resolved } as CredentialLease;
+      Object.defineProperty(lease, "leaseId", {
+        value: leaseId,
+        enumerable: false,
+        writable: false,
+        configurable: false,
+      });
+      return Object.freeze(lease);
     }
     return undefined;
   }
 
-  /** Release one completed lease without changing credential health. */
-  release(ref: CredentialRef): void {
-    this.requireMember(ref);
-    const current = this.inFlight.get(ref) ?? 0;
-    if (current <= 1) this.inFlight.delete(ref);
-    else this.inFlight.set(ref, current - 1);
-  }
-
-  /** Mark a successful operation so the reference immediately regains full health. */
-  reportSuccess(ref: CredentialRef): void {
-    this.requireMember(ref);
-    this.release(ref);
+  /** Mark a successful operation; stale out-of-order success cannot erase a newer failure. */
+  reportSuccess(lease: CredentialLease | CredentialRef): void {
+    const settled = this.settle(lease);
+    if (settled === undefined) return;
+    const { ref, leaseId } = settled;
+    const current = this.health.get(ref);
+    if (leaseId < (current?.lastOutcomeLeaseId ?? 0)) return;
     this.health.delete(ref);
   }
 
   /** Mark a credential-scoped failure; repeated failures put the reference into cooldown. */
-  reportFailure(ref: CredentialRef): void {
-    this.requireMember(ref);
-    this.release(ref);
-    const current = this.health.get(ref) ?? { failures: 0, cooldownUntil: 0 };
+  reportFailure(lease: CredentialLease | CredentialRef): void {
+    const settled = this.settle(lease);
+    if (settled === undefined) return;
+    const { ref, leaseId } = settled;
+    const current = this.health.get(ref) ?? {
+      failures: 0,
+      cooldownUntil: 0,
+      lastOutcomeLeaseId: 0,
+    };
+    if (leaseId < current.lastOutcomeLeaseId) return;
     const failures = current.failures + 1;
     this.health.set(
       ref,
       failures >= this.maxFailures
-        ? { failures: 0, cooldownUntil: this.now() + this.cooldownMs }
-        : { failures, cooldownUntil: 0 },
+        ? {
+            failures: 0,
+            cooldownUntil: this.now() + this.cooldownMs,
+            lastOutcomeLeaseId: leaseId,
+          }
+        : { failures, cooldownUntil: 0, lastOutcomeLeaseId: leaseId },
     );
   }
 
-  /** Safe health snapshot containing references and timers only, never secret values. */
+  /** Release an operation that says nothing about credential health. */
+  release(lease: CredentialLease | CredentialRef): void {
+    this.settle(lease);
+  }
+
+  /** Safe health snapshot containing references, timers, and counts only. */
   status(): readonly {
     ref: CredentialRef;
     coolingDown: boolean;
@@ -149,6 +151,61 @@ export class CredentialPool {
         inFlight: this.inFlight.get(ref) ?? 0,
       };
     });
+  }
+
+  private select(attempted: ReadonlySet<CredentialRef>): {
+    index: number;
+    ref: CredentialRef;
+  } | undefined {
+    const now = this.now();
+    let best:
+      | { index: number; ref: CredentialRef; inFlight: number; offset: number }
+      | undefined;
+    for (let offset = 0; offset < this.refs.length; offset++) {
+      const index = (this.cursor + offset) % this.refs.length;
+      const ref = this.refs[index]!;
+      if (attempted.has(ref)) continue;
+      const state = this.health.get(ref);
+      if (state !== undefined && state.cooldownUntil > now) continue;
+      const inFlight = this.inFlight.get(ref) ?? 0;
+      if (
+        best === undefined ||
+        inFlight < best.inFlight ||
+        (inFlight === best.inFlight && offset < best.offset)
+      ) {
+        best = { index, ref, inFlight, offset };
+      }
+    }
+    return best;
+  }
+
+  private settle(lease: CredentialLease | CredentialRef): {
+    ref: CredentialRef;
+    leaseId: number;
+  } | undefined {
+    if (typeof lease === "string") {
+      this.requireMember(lease);
+      const active = [...this.activeLeases.entries()].find(([, ref]) => ref === lease);
+      if (active === undefined) return { ref: lease, leaseId: ++this.nextLeaseId };
+      const [leaseId] = active;
+      this.activeLeases.delete(leaseId);
+      this.decrementInFlight(lease);
+      return { ref: lease, leaseId };
+    }
+    this.requireMember(lease.ref);
+    const activeRef = this.activeLeases.get(lease.leaseId);
+    if (activeRef === undefined) return undefined;
+    if (activeRef !== lease.ref)
+      throw new Error("credential lease identity does not match its reference");
+    this.activeLeases.delete(lease.leaseId);
+    this.decrementInFlight(lease.ref);
+    return { ref: lease.ref, leaseId: lease.leaseId };
+  }
+
+  private decrementInFlight(ref: CredentialRef): void {
+    const remaining = (this.inFlight.get(ref) ?? 1) - 1;
+    if (remaining <= 0) this.inFlight.delete(ref);
+    else this.inFlight.set(ref, remaining);
   }
 
   private requireMember(ref: CredentialRef): void {
