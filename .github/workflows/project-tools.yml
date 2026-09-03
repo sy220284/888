@@ -82,11 +82,86 @@ jobs:
 
           rm -f "$output/.crates.toml" "$output/.crates2.json"
           node_root="$(dirname "$(dirname "$(command -v node)")")"
-          cp -a "$node_root" "$output/node"
+          cp -aL "$node_root" "$output/node"
+          rm -f \
+            "$output/node/bin/corepack" \
+            "$output/node/bin/pnpm" \
+            "$output/node/bin/pnpx" \
+            "$output/node/bin/npm" \
+            "$output/node/bin/npx"
+          npm install \
+            --prefix "$output/pnpm-runtime" \
+            --ignore-scripts \
+            --no-audit \
+            --no-fund \
+            "pnpm@$DSH_PNPM_VERSION"
+          find "$output/pnpm-runtime" -type l -delete
+
           rust_root="$(rustc --print sysroot)"
-          cp -a "$rust_root" "$output/rust"
+          cp -aL "$rust_root" "$output/rust"
           install -m 0755 "$(rustup which cargo --toolchain "$DSH_RUST_VERSION")" "$output/rust/bin/cargo"
           install -m 0755 "$(command -v uv)" "$output/bin/uv"
+
+          cat > "$output/bin/node" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+          exec "$root/node/bin/node" "$@"
+          EOF
+          cat > "$output/bin/pnpm" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+          exec "$root/node/bin/node" "$root/pnpm-runtime/node_modules/pnpm/bin/pnpm.cjs" "$@"
+          EOF
+          cat > "$output/bin/npm" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+          exec "$root/node/bin/node" "$root/node/lib/node_modules/npm/bin/npm-cli.js" "$@"
+          EOF
+          cat > "$output/bin/npx" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+          exec "$root/node/bin/node" "$root/node/lib/node_modules/npm/bin/npx-cli.js" "$@"
+          EOF
+          for tool in cargo rustc rustfmt clippy-driver; do
+            cat > "$output/bin/$tool" <<EOF
+          #!/usr/bin/env bash
+          set -euo pipefail
+          root="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
+          exec "\$root/rust/bin/$tool" "\$@"
+          EOF
+          done
+          chmod 0755 \
+            "$output/bin/node" \
+            "$output/bin/pnpm" \
+            "$output/bin/npm" \
+            "$output/bin/npx" \
+            "$output/bin/cargo" \
+            "$output/bin/rustc" \
+            "$output/bin/rustfmt" \
+            "$output/bin/clippy-driver"
+
+          cat > "$output/activate.sh" <<'EOF'
+          #!/usr/bin/env bash
+          dsh_project_tools_root="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+          export PATH="$dsh_project_tools_root/bin:$PATH"
+          unset dsh_project_tools_root
+          EOF
+          chmod 0755 "$output/activate.sh"
+
+          "$output/bin/node" --version
+          test "$("$output/bin/pnpm" --version)" = "$DSH_PNPM_VERSION"
+          "$output/bin/npm" --version
+          "$output/bin/rustc" --version
+          "$output/bin/cargo" --version
+          if find "$output" -type l -print -quit | grep -q .; then
+            echo "portable tool bundle must not contain symbolic links" >&2
+            find "$output" -type l -print >&2
+            exit 1
+          fi
 
           cat > "$output/bundle.json" <<JSON
           {
@@ -118,7 +193,7 @@ jobs:
           set -euo pipefail
           cache="$PWD/.artifacts/dependency-cache"
           mkdir -p "$cache/pnpm" "$cache/cargo" "$cache/uv"
-          pnpm fetch --frozen-lockfile --store-dir "$cache/pnpm"
+          "$PWD/.artifacts/project-tools/bin/pnpm" fetch --frozen-lockfile --store-dir "$cache/pnpm"
           CARGO_HOME="$cache/cargo" cargo fetch --locked --manifest-path native/execution-core/Cargo.toml
           UV_CACHE_DIR="$cache/uv" uv sync --frozen --project python/sdk --group test
           (
@@ -133,7 +208,10 @@ jobs:
         run: |
           mkdir -p .artifacts/source
           git archive --format=tar.gz --output=.artifacts/source/dsh-source.tar.gz HEAD
-          sha256sum .artifacts/source/dsh-source.tar.gz > .artifacts/source/SHA256SUMS.txt
+          (
+            cd .artifacts/source
+            sha256sum dsh-source.tar.gz > SHA256SUMS.txt
+          )
 
       - uses: actions/upload-artifact@v7
         with:
