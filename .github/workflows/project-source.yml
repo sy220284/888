@@ -1,0 +1,31 @@
+name: Export PR source bundle
+
+on:
+  push:
+    branches:
+      - upgrade/2.0-p2b-linux-pty
+    paths:
+      - ".github/workflows/project-source.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Package tracked source
+        shell: bash
+        run: |
+          mkdir -p .artifacts/source
+          git archive --format=tar.gz --output=.artifacts/source/dsh-source.tar.gz HEAD
+          sha256sum .artifacts/source/dsh-source.tar.gz > .artifacts/source/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dsh-project-source
+          path: .artifacts/source
+          if-no-files-found: error
+          retention-days: 1
