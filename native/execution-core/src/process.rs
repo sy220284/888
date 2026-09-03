@@ -296,7 +296,7 @@ fn stream_output<R: Read + Send + 'static>(
 }
 
 #[cfg(unix)]
-fn signal_name(signal: i32) -> Option<&'static str> {
+pub(crate) fn signal_name(signal: i32) -> Option<&'static str> {
     match signal {
         libc::SIGTERM => Some("SIGTERM"),
         libc::SIGKILL => Some("SIGKILL"),
@@ -322,15 +322,27 @@ pub fn write_json<T: serde::Serialize>(writer: &Writer, value: &T) -> Result<(),
 }
 
 #[cfg(unix)]
+pub(crate) fn signal_number(signal: &str) -> Result<i32, String> {
+    match signal {
+        "SIGTERM" => Ok(libc::SIGTERM),
+        "SIGKILL" => Ok(libc::SIGKILL),
+        "SIGINT" => Ok(libc::SIGINT),
+        "SIGHUP" => Ok(libc::SIGHUP),
+        "SIGTSTP" => Ok(libc::SIGTSTP),
+        other => Err(format!("unsupported signal: {other}")),
+    }
+}
+
+#[cfg(not(unix))]
+pub(crate) fn signal_number(signal: &str) -> Result<i32, String> {
+    Err(format!(
+        "native signals are not implemented on this platform: {signal}"
+    ))
+}
+
+#[cfg(unix)]
 pub fn signal_tree(pid: u32, signal: &str) -> Result<(), String> {
-    let sig = match signal {
-        "SIGTERM" => libc::SIGTERM,
-        "SIGKILL" => libc::SIGKILL,
-        "SIGINT" => libc::SIGINT,
-        "SIGHUP" => libc::SIGHUP,
-        "SIGTSTP" => libc::SIGTSTP,
-        other => return Err(format!("unsupported signal: {other}")),
-    };
+    let sig = signal_number(signal)?;
     let result = unsafe { libc::kill(-(pid as i32), sig) };
     if result == 0 {
         return Ok(());
