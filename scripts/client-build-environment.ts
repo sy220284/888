@@ -14,7 +14,7 @@ import { dirname, resolve } from 'node:path'
 const CLIENT_BUILD_ENV_PREFIX = 'DSH_CLIENT_'
 
 /** Non-public selector used by build orchestration to request a named client profile. */
-export const CLIENT_BUILD_PROFILE_SELECTOR = 'DSH_BUILD_CLIENT_PROFILE'
+const CLIENT_BUILD_PROFILE_SELECTOR = 'DSH_BUILD_CLIENT_PROFILE'
 
 /** Public client environment required by official DSH artifacts. */
 const OFFICIAL_CLIENT_BUILD_ENVIRONMENT = {
