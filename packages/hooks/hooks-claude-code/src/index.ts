@@ -141,7 +141,7 @@ export function apply(ctx: Context, config: Config): void {
     }
   }
 
-  const staticParsed = explicitConfigPath === undefined
+  const staticParsed: ClaudeCodeHookConfig = explicitConfigPath === undefined
     ? {}
     : loadConfigSource(explicitConfigPath, {
       ...config.pluginRoot !== undefined ? { pluginRoot: config.pluginRoot } : {},
