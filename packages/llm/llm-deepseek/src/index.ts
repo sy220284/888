@@ -163,7 +163,7 @@ const catalogModel: z<DeepSeekCatalogModel> = z.object({
 
 export const Config: z<Config> = z.object({
   apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
-  apiKeyEnvs: z.array(z.string().role('credential-ref')).min(1),
+  apiKeyEnvs: z.array(z.string().role('credential-ref')),
   baseURL: z.string(),
   thinking: z.union(['enabled', 'disabled']),
   reasoningEffort: z.union(['off', 'low', 'high', 'max']),
@@ -199,8 +199,9 @@ const BASE_URL_ENV = 'DEEPSEEK_BASE_URL'
 export type ResolvedDeepSeekOptions = DeepSeekConnectionOptions
 
 function resolveCredentialRefs(config: Config): readonly CredentialRef[] {
-  const raw = config.apiKeyEnvs ?? [config.apiKeyEnv ?? DEFAULT_API_KEY_ENV]
-  if (raw.length === 0) throw new Error('llm-deepseek: apiKeyEnvs must not be empty')
+  const raw = config.apiKeyEnvs !== undefined && config.apiKeyEnvs.length > 0
+    ? config.apiKeyEnvs
+    : [config.apiKeyEnv ?? DEFAULT_API_KEY_ENV]
   const refs = raw.map(value => credentialRef(value))
   if (new Set(refs).size !== refs.length) {
     throw new Error('llm-deepseek: apiKeyEnvs must not contain duplicates')
@@ -465,6 +466,14 @@ export function apply(ctx: Context, config: Config): void {
     const lease = await pool.acquire()
     if (lease === undefined) {
       const refs = refsByConnection.get(connection) ?? [connection.apiKeyEnv]
+      if (refs.length === 1) {
+        const ref = refs[0]!
+        throw new LlmError(
+          `llm-deepseek: no API key for provider route "${PROVIDER}"; store ${ref} through the credentials`
+          + ` service (the web Models page writes it), or export ${ref} in the launching environment`,
+          'MISSING_CREDENTIAL',
+        )
+      }
       throw new LlmError(
         `llm-deepseek: no API key for provider route "${PROVIDER}"; configure one of ${refs.join(', ')}`,
         'MISSING_CREDENTIAL',
