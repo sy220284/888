@@ -95,7 +95,7 @@ declare module '@deepseek-ai/cordis' {
   }
 }
 
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /** Step-scoped fallback route selected after one failed request attempt. */
     'model/route-selected': {

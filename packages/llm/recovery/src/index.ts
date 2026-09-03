@@ -41,7 +41,7 @@ export interface RecoveryHandlerOptions { readonly priority?: number }
 interface RegisteredHandler { readonly id: string; readonly priority: number; readonly order: number; readonly run: RecoveryHandler }
 
 declare module '@deepseek-ai/cordis' { interface Context { recovery: RecoveryService } }
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     'recovery/decision': {
       turn: number
