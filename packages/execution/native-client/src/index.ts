@@ -421,6 +421,12 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     this.child.once('error', (error) => {
       this.failAll(error)
     })
+    // A sidecar may close its read end between the failed-state check and a
+    // request write. Writable streams emit that EPIPE independently of the
+    // write callback, so route it through the same transport-failure boundary.
+    this.child.stdin.on('error', (error) => {
+      this.failAll(error)
+    })
     this.child.once('exit', (code, signal) => {
       this.failAll(
         new Error(
@@ -553,6 +559,10 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
     signal?.throwIfAborted()
     const id = this.nextId++
     const state = Promise.withResolvers<unknown>()
+    // failAll() may reject synchronously from stdin's error event before this
+    // request reaches the return below. Keep that internal timing from becoming
+    // an unhandled rejection; callers still receive the request rejection.
+    void state.promise.catch(() => {})
     this.pending.set(id, state)
     const frame = JSON.stringify({ id, ...payload }) + '\n'
     try {
@@ -564,7 +574,6 @@ export class NativeExecutionClient extends NativeExecutionRuntime {
       })
     } catch (error: unknown) {
       this.pending.delete(id)
-      state.reject(error)
       throw error
     }
     if (signal === undefined) return state.promise as Promise<T>
