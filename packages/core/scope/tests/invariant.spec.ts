@@ -1,4 +1,4 @@
-import { freezeMessage, MessageId } from '@deepseek-ai/dsh-llm'
+import { CallId, freezeMessage, MessageId } from '@deepseek-ai/dsh-llm'
 import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import type { Events } from '@deepseek-ai/cordis'
@@ -55,8 +55,8 @@ describe('scoped-dispatch invariants', () => {
       'agent/pre-step': [{ agent, messages: [message], turn: 1, step: 1, signal }, () => Promise.resolve({ kind: 'enter', messages: [message] })],
       'agent/request': [{ agent, turn: 1, step: 1, signal }, () => Promise.resolve(config)],
       'agent/tool-call-input': [
-        { agent, call: { type: 'tool-call', id: 'c', name: 't', arguments: {} }, turn: 1, step: 1, signal },
-        () => Promise.resolve({ type: 'tool-call', id: 'c', name: 't', arguments: {} }),
+        { agent, call: { type: 'tool-call', id: CallId('c'), name: 't', arguments: '{}' }, turn: 1, step: 1, signal },
+        () => Promise.resolve({ type: 'tool-call', id: CallId('c'), name: 't', arguments: '{}' }),
       ],
       'agent/step-snapshot': [{ agent, turn: 1, step: 1, attempt: 1, header: { config }, signal }, () => Promise.resolve({ requestHeader: 0, requestContext: 0 })],
       'agent/request-error': [
