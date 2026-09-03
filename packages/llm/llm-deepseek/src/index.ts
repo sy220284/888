@@ -473,14 +473,14 @@ export function apply(ctx: Context, config: Config): void {
     try {
       const value = assertUsableApiKey(lease.value, 'llm-deepseek', lease.ref)
       const state = runState.getStore()
-      if (state === undefined) pool.release(lease.ref)
+      if (state === undefined) pool.release(lease)
       else {
         state.pool = pool
         state.lease = lease
       }
       return value
     } catch (error) {
-      pool.reportFailure(lease.ref)
+      pool.reportFailure(lease)
       throw error
     }
   }
@@ -488,9 +488,9 @@ export function apply(ctx: Context, config: Config): void {
   const settle = (state: CredentialRunState, outcome: 'success' | 'failure' | 'release'): void => {
     if (state.settled || state.pool === undefined || state.lease === undefined) return
     state.settled = true
-    if (outcome === 'success') state.pool.reportSuccess(state.lease.ref)
-    else if (outcome === 'failure') state.pool.reportFailure(state.lease.ref)
-    else state.pool.release(state.lease.ref)
+    if (outcome === 'success') state.pool.reportSuccess(state.lease)
+    else if (outcome === 'failure') state.pool.reportFailure(state.lease)
+    else state.pool.release(state.lease)
   }
 
   const track = <T>(source: AsyncIterable<T>): AsyncIterable<T> => ({
