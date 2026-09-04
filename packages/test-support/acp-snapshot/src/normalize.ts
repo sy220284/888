@@ -209,6 +209,51 @@ function scrubValue(value: unknown, ctx: NormalizeContext, cwdPathMode: CwdPathM
   return value
 }
 
+/** Canonicalize workspace-relative instruction provenance across project-root spellings. */
+function canonicalizeAgentInstructionValue(value: unknown, key?: string): unknown {
+  if (typeof value === 'string') {
+    if (key === 'baselineIdentity') {
+      try {
+        const identity = JSON.parse(value) as Record<string, unknown>
+        if ('projectRoot' in identity) identity.projectRoot = '{{projectRoot}}'
+        return JSON.stringify(identity)
+      } catch {
+        // An invalid embedded identity stays regression-visible below.
+      }
+    }
+    return value
+      .split(`${CWD}/`).join('')
+      .split(`${CWD}\0`).join('.\0')
+  }
+  if (Array.isArray(value)) return value.map(item => canonicalizeAgentInstructionValue(item))
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([childKey, item]) => [
+      childKey,
+      canonicalizeAgentInstructionValue(item, childKey),
+    ]))
+  }
+  return value
+}
+
+/** Find messages sourced from agent-instructions and canonicalize only their payloads. */
+function canonicalizeAgentInstructionSources(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(item => canonicalizeAgentInstructionSources(item))
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const source = record.source
+    if (source !== null
+      && typeof source === 'object'
+      && (source as { kind?: unknown }).kind === 'agent-instructions') {
+      return canonicalizeAgentInstructionValue(record)
+    }
+    return Object.fromEntries(Object.entries(record).map(([key, item]) => [
+      key,
+      canonicalizeAgentInstructionSources(item),
+    ]))
+  }
+  return value
+}
+
 /** Escape one literal path segment for use in a regular expression. */
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -370,7 +415,9 @@ export function normalizeSessionLog(
         (data.consumed as Record<string, unknown>).wallTimeMs = 0
       }
     }
-    return scrubValue(record, ctx, cwdPathMode) as Record<string, unknown>
+    return canonicalizeAgentInstructionSources(
+      scrubValue(record, ctx, cwdPathMode),
+    ) as Record<string, unknown>
   })
   return records.map(r => JSON.stringify(r)).join('\n') + '\n'
 }

@@ -261,6 +261,38 @@ describe('normalizeSessionLog', () => {
     expect(out).toContain('acp-snap-cwd-abc123-backup')
   })
 
+  it('canonicalizes generated-root and project-relative agent instruction provenance', () => {
+    const generated = JSON.stringify({
+      type: 'user/message',
+      data: {
+        content: [{ type: 'text', text: `Instructions from: ${ctx.cwd}/nested/AGENTS.md` }],
+        source: {
+          kind: 'agent-instructions',
+          baselineIdentity: JSON.stringify({ projectRoot: '..', maxBytes: 64 }),
+          changes: [{ scope: `${ctx.cwd}/nested\u0000AGENTS.md`, path: `${ctx.cwd}/nested/AGENTS.md` }],
+        },
+      },
+    })
+    const relative = JSON.stringify({
+      type: 'user/message',
+      data: {
+        content: [{ type: 'text', text: 'Instructions from: nested/AGENTS.md' }],
+        source: {
+          kind: 'agent-instructions',
+          baselineIdentity: JSON.stringify({ projectRoot: '', maxBytes: 64 }),
+          changes: [{ scope: 'nested\u0000AGENTS.md', path: 'nested/AGENTS.md' }],
+        },
+      },
+    })
+    const session = `${header({ cwd: ctx.cwd })}\n`
+    const generatedOut = normalizeSessionLog(`${session}${generated}\n`, ctx)
+    const relativeOut = normalizeSessionLog(`${session}${relative}\n`, ctx)
+
+    expect(generatedOut).toBe(relativeOut)
+    expect(generatedOut).toContain('Instructions from: nested/AGENTS.md')
+    expect(generatedOut).toContain('\\"projectRoot\\":\\"{{projectRoot}}\\"')
+  })
+
   it('scrubs cwd at file URI and chained-punctuation boundaries in event data', () => {
     const ev = JSON.stringify({
       type: 'tool/result',
