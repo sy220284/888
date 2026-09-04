@@ -46,6 +46,8 @@ jobs:
           pnpm exec vitest run --config vitest.snapshot.config.ts
           examples/headless-agent/tests/headless.snapshot.ts
           -t "runs one task through the product headless profile command"
+      - name: Install Chromium for browser tests
+        run: pnpm exec playwright install --with-deps chromium
       - name: Test built web application in replay mode
         env:
           DSH_SNAPSHOT: replay
