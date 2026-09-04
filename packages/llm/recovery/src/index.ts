@@ -9,6 +9,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent, RequestErrorAction } from '@deepseek-ai/dsh-agent'
 import type { LlmCallConfig, LlmFailure, ResolvedRetryPolicy } from '@deepseek-ai/dsh-llm'
+import { scopeChainOf, type ScopeKey } from '@deepseek-ai/dsh-scope'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
 export const name = 'recovery'
@@ -36,17 +37,17 @@ export interface RecoveryResolution {
 
 /** Recovery strategy invoked after downstream retry handling declines. */
 export type RecoveryHandler = (request: RecoveryRequest) => Promise<RecoveryResolution | undefined>
-/** Ordering and optional agent ownership for a recovery handler. */
+/** Ordering and optional scope ownership for a recovery handler. */
 export interface RecoveryHandlerOptions {
   readonly priority?: number
-  /** Limit this strategy to one mounted Agent preset; omitted strategies are global. */
-  readonly agent?: Agent
+  /** Limit this strategy to one Agent or ancestor Preset scope; omitted strategies are global. */
+  readonly scope?: ScopeKey
 }
 interface RegisteredHandler {
   readonly id: string
   readonly priority: number
   readonly order: number
-  readonly agent?: Agent
+  readonly scope?: ScopeKey
   readonly run: RecoveryHandler
 }
 
@@ -130,7 +131,7 @@ export class RecoveryService extends Service {
    */
   register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void {
     if (id.trim().length === 0) throw new Error('recovery strategy id must be non-empty')
-    if (this.handlers.some(handler => handler.id === id && handler.agent === options.agent)) {
+    if (this.handlers.some(handler => handler.id === id && handler.scope === options.scope)) {
       throw new Error(`recovery strategy "${id}" is already registered`)
     }
     const priority = options.priority ?? 0
@@ -139,7 +140,7 @@ export class RecoveryService extends Service {
       id,
       priority,
       order: this.nextOrder++,
-      ...options.agent === undefined ? {} : { agent: options.agent },
+      ...options.scope === undefined ? {} : { scope: options.scope },
       run,
     }
     this.handlers.push(handler)
@@ -159,7 +160,7 @@ export class RecoveryService extends Service {
   async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined> {
     for (const handler of [...this.handlers]) {
       request.signal.throwIfAborted()
-      if (handler.agent !== undefined && handler.agent !== request.agent) continue
+      if (handler.scope !== undefined && !scopeChainOf(request.agent).includes(handler.scope)) continue
       const resolution = await handler.run(request)
       request.signal.throwIfAborted()
       if (resolution === undefined) continue

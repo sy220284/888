@@ -1072,6 +1072,9 @@ importers:
       '@deepseek-ai/dsh-recovery':
         specifier: workspace:^
         version: link:../../llm/recovery
+      '@deepseek-ai/dsh-scope':
+        specifier: workspace:^
+        version: link:../../core/scope
       '@deepseek-ai/dsh-recovery-compaction':
         specifier: workspace:^
         version: link:../../compaction/recovery-compaction
@@ -5744,6 +5747,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../llm
+      '@deepseek-ai/dsh-scope':
+        specifier: workspace:^
+        version: link:../../core/scope
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session

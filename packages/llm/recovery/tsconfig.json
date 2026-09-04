@@ -8,6 +8,7 @@
     {"path": "../../../vendor/cordis"},
     {"path": "../../core/session"},
     {"path": "../../core/agent"},
+    {"path": "../../core/scope"},
     {"path": "../llm"},
     {"path": "../../runtime-diagnostics/invariants"}
   ]

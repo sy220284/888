@@ -394,7 +394,7 @@ describe('the shipped Web composition', () => {
         signal: new AbortController().signal,
         agent: handle.agent,
       })
-      expect(loaded.isError).toBe(false)
+      expect(loaded.isError, JSON.stringify(loaded.content)).toBe(false)
       expect(JSON.stringify(loaded.content)).toContain('powered by dsh')
     } finally {
       await handle.dispose()

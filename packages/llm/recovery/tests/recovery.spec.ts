@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
+import { bindScopeParent } from '@deepseek-ai/dsh-scope'
 import RecoveryService from '../src/index.ts'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 
@@ -28,12 +29,16 @@ describe('RecoveryService', () => {
     const ctx = await setup(); ctx.recovery.register('owner', async () => ({ strategy: 'other', action: 'retry', reason: 'bad' }))
     await expect(ctx.recovery.resolve({ agent: fakeAgent(ctx, 'recovery-mismatch'), turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' }, retryPolicy: undefined, signal: new AbortController().signal })).rejects.toThrow(/mismatched strategy/)
   })
-  it('allows the same strategy identity in separate agent scopes', async () => {
+  it('allows the same strategy identity in separate preset scopes', async () => {
     const ctx = await setup()
     const first = fakeAgent(ctx, 'recovery-scope-first')
     const second = fakeAgent(ctx, 'recovery-scope-second')
-    ctx.recovery.register('scoped', async () => ({ strategy: 'scoped', action: 'retry', reason: 'first' }), { agent: first })
-    ctx.recovery.register('scoped', async () => ({ strategy: 'scoped', action: 'retry', reason: 'second' }), { agent: second })
+    const firstPreset = { preset: 'first' }
+    const secondPreset = { preset: 'second' }
+    bindScopeParent(first, firstPreset)
+    bindScopeParent(second, secondPreset)
+    ctx.recovery.register('scoped', async () => ({ strategy: 'scoped', action: 'retry', reason: 'first' }), { scope: firstPreset })
+    ctx.recovery.register('scoped', async () => ({ strategy: 'scoped', action: 'retry', reason: 'second' }), { scope: secondPreset })
 
     const request = { turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' as const }, retryPolicy: undefined, signal: new AbortController().signal }
     await expect(ctx.recovery.resolve({ ...request, agent: first })).resolves.toMatchObject({ reason: 'first' })
