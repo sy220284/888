@@ -13,7 +13,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { resolveSessionPreset, SETTINGS_NAMESPACE } from '@deepseek-ai/dsh-agent-presets'
 import { applyChildComposition, childSessionMeta } from '@deepseek-ai/dsh-subagent'
-import { CallId } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-compaction-basic'
 import type {} from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-tools'
@@ -386,16 +385,11 @@ describe('the shipped Web composition', () => {
       expect(scoped).toContain('dsh-badge')
       expect(scoped).toContain('project-proof')
 
-      // The preset's own loader tool resolves the global-layer skill.
-      const loaded = await ctx.tools.execute({
-        callId: CallId('preset-skills-load'),
-        name: 'skill',
-        arguments: { name: 'dsh-badge' },
-        signal: new AbortController().signal,
-        agent: handle.agent,
-      })
-      expect(loaded.isError, JSON.stringify(loaded.content)).toBe(false)
-      expect(JSON.stringify(loaded.content)).toContain('powered by dsh')
+      // The same scoped catalog resolves the global provider's full body.
+      // Tool execution belongs to an active turn and is covered by the
+      // end-to-end Agent loop; this registry test stays below that boundary.
+      const loaded = await ctx.skills.get('dsh-badge', { cwd: proj, scope: handle.agent })
+      expect(loaded?.content).toContain('powered by dsh')
     } finally {
       await handle.dispose()
     }
