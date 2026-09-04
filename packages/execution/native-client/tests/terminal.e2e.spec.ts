@@ -51,7 +51,9 @@ lines.on('line', line => {
     })
     const output = collect(handle.output)
     await expect(handle.done).resolves.toEqual({ exitCode: 0, signal: null })
-    await expect(output).rejects.toThrow('native execution sidecar exited (23)')
+    // Node may publish the child exit or the broken stdin pipe first. Both
+    // transport failures must close the still-open terminal output.
+    await expect(output).rejects.toThrow(/native execution sidecar exited \(23\)|write EPIPE/)
   } finally {
     await fiber.dispose()
     await rm(dir, { recursive: true, force: true })
