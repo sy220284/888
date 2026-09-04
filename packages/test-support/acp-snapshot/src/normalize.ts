@@ -147,9 +147,22 @@ function replaceCwd(value: string, ctx: NormalizeContext, replacement: string): 
   return out
 }
 
+/** Replace relative references to the generated harness workspace basename. */
+function replaceGeneratedCwdBasename(value: string, ctx: NormalizeContext): string {
+  const basename = ctx.cwd.split(/[\\/]/).at(-1)
+  if (basename === undefined || !/^acp-snap-cwd-[A-Za-z0-9_-]+$/.test(basename)) return value
+  const relativeCwd = new RegExp(
+    String.raw`(?<![A-Za-z0-9._~-])${escapeRegExp(basename)}`
+    + String.raw`(?=$|[\\/\s<>'"()\[\]{},;:!?=\u0000])`,
+    'g',
+  )
+  return value.replace(relativeCwd, CWD)
+}
+
 /** Replace cwd, session ids, and any stray UUID with stable tokens in a string. */
 function scrubString(value: string, ctx: NormalizeContext, cwdPathMode: CwdPathMode): string {
   let out = replaceCwd(value, ctx, CWD)
+  out = replaceGeneratedCwdBasename(out, ctx)
   // Filesystem APIs can report one directory with several spellings. Replace
   // every known spelling longest-first so a shorter alias cannot corrupt a
   // longer one before it is tokenized. macOS additionally symlinks
@@ -209,7 +222,15 @@ function tokenizeFixtureString(value: string, ctx: NormalizeContext, basename: s
     + String.raw`(?=$|[\\/\s<>'"()\[\]{},;:!?=])`,
     'g',
   )
-  return exact.replace(absoluteCwd, CWD).split(`/private${CWD}`).join(CWD)
+  const relativeCwd = new RegExp(
+    String.raw`(?<![A-Za-z0-9._~-])${escapeRegExp(basename)}`
+    + String.raw`(?=$|[\\/\s<>'"()\[\]{},;:!?=\u0000])`,
+    'g',
+  )
+  return exact
+    .replace(absoluteCwd, CWD)
+    .replace(relativeCwd, CWD)
+    .split(`/private${CWD}`).join(CWD)
 }
 
 /** Recursively replace generated-cwd spellings while preserving every other JSON value. */
@@ -244,7 +265,9 @@ export function tokenizeSessionFixtureCwd(rawLog: string): string {
   const firstLine = lines.find(line => line.trim().length > 0)
   const header = firstLine === undefined ? undefined : JSON.parse(firstLine) as { cwd?: unknown }
   const cwd = typeof header?.cwd === 'string' ? header.cwd : ''
-  const basename = cwd.split(/[\\/]/).at(-1)
+  const basename = cwd === CWD
+    ? rawLog.match(/(?<![A-Za-z0-9._~-])(acp-snap-cwd-[A-Za-z0-9_-]+)(?=[\\/\u0000])/)?.[1] ?? CWD
+    : cwd.split(/[\\/]/).at(-1)
   if (basename === undefined || basename.length === 0) {
     throw new Error('acp-snapshot: cannot tokenize a cwd without a basename')
   }
@@ -329,6 +352,23 @@ export function normalizeSessionLog(
     if (record.type === 'hook/result' && record.data !== null && typeof record.data === 'object') {
       const data = record.data as Record<string, unknown>
       if ('durationMs' in data) data.durationMs = 0
+    }
+    if (record.data !== null && typeof record.data === 'object') {
+      const data = record.data as Record<string, unknown>
+      if (record.type === 'world/effect-start' && 'startedAt' in data) data.startedAt = 0
+      if (record.type === 'world/effect-receipt' && 'endedAt' in data) data.endedAt = 0
+      if (record.type === 'runtime/budget-charge'
+        && data.charge !== null
+        && typeof data.charge === 'object'
+        && 'wallTimeMs' in data.charge) {
+        (data.charge as Record<string, unknown>).wallTimeMs = 0
+      }
+      if (record.type === 'runtime/budget'
+        && data.consumed !== null
+        && typeof data.consumed === 'object'
+        && 'wallTimeMs' in data.consumed) {
+        (data.consumed as Record<string, unknown>).wallTimeMs = 0
+      }
     }
     return scrubValue(record, ctx, cwdPathMode) as Record<string, unknown>
   })

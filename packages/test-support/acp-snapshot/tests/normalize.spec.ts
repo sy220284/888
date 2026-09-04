@@ -246,6 +246,21 @@ describe('normalizeSessionLog', () => {
     expect(out).not.toContain(ctx.cwd)
   })
 
+  it('scrubs relative references to a generated harness workspace', () => {
+    const ev = JSON.stringify({
+      type: 'user/message',
+      data: {
+        path: 'acp-snap-cwd-abc123/nested/AGENTS.md',
+        scope: 'acp-snap-cwd-abc123/nested\u0000AGENTS.md',
+        authored: 'acp-snap-cwd-abc123-backup',
+      },
+    })
+    const out = normalizeSessionLog(`${header({ cwd: ctx.cwd })}\n${ev}\n`, ctx)
+    expect(out).toContain('{{cwd}}/nested/AGENTS.md')
+    expect(out).toContain('{{cwd}}/nested\\u0000AGENTS.md')
+    expect(out).toContain('acp-snap-cwd-abc123-backup')
+  })
+
   it('scrubs cwd at file URI and chained-punctuation boundaries in event data', () => {
     const ev = JSON.stringify({
       type: 'tool/result',
@@ -446,6 +461,24 @@ describe('normalizeSessionSnapshot', () => {
     expect(normalizeSessionSnapshot(raw, ctx)).toContain('"dt":[0]')
   })
 
+  it('normalizes runtime effect clocks and measured wall time', () => {
+    const raw = [
+      JSON.stringify({ type: 'session', version: 0 }),
+      JSON.stringify({ type: 'world/effect-start', data: { startedAt: 123, stable: true } }),
+      JSON.stringify({ type: 'runtime/budget-charge', data: { charge: { wallTimeMs: 17, toolCalls: 1 } } }),
+      JSON.stringify({ type: 'world/effect-receipt', data: { endedAt: 456, status: 'succeeded' } }),
+      JSON.stringify({ type: 'runtime/budget', data: { consumed: { wallTimeMs: 17, tokens: 4 } } }),
+    ].join('\n') + '\n'
+
+    expect(normalizeSessionSnapshot(raw, ctx)).toBe([
+      JSON.stringify({ type: 'session', version: 0 }),
+      JSON.stringify({ type: 'world/effect-start', data: { startedAt: 0, stable: true } }),
+      JSON.stringify({ type: 'runtime/budget-charge', data: { charge: { wallTimeMs: 0, toolCalls: 1 } } }),
+      JSON.stringify({ type: 'world/effect-receipt', data: { endedAt: 0, status: 'succeeded' } }),
+      JSON.stringify({ type: 'runtime/budget', data: { consumed: { wallTimeMs: 0, tokens: 4 } } }),
+    ].join('\n') + '\n')
+  })
+
   it('rejects headerless input', () => {
     expect(() => normalizeSessionSnapshot('{"type":"turn/start"}\n', ctx))
       .toThrow('session snapshot must start with a session header')
@@ -528,6 +561,26 @@ describe('tokenizeSessionFixtureCwd', () => {
     const out = tokenizeSessionFixtureCwd(raw)
     expect(out).toContain('wrote {{cwd}}/proof.txt')
     expect(out).not.toContain('/private{{cwd}}')
+    expect(tokenizeSessionFixtureCwd(out)).toBe(out)
+  })
+
+  it('retokenizes stabilized generated-workspace basenames after the header is already portable', () => {
+    const raw = [
+      JSON.stringify({ type: 'session', id: 's', createdAt: 1, cwd: '{{cwd}}' }),
+      JSON.stringify({
+        type: 'user/message',
+        data: {
+          text: 'Instructions from: acp-snap-cwd-old123/nested/AGENTS.md',
+          scope: 'acp-snap-cwd-old123/nested\u0000AGENTS.md',
+        },
+      }),
+      '',
+    ].join('\n')
+
+    const out = tokenizeSessionFixtureCwd(raw)
+    expect(out).toContain('Instructions from: {{cwd}}/nested/AGENTS.md')
+    expect(out).toContain('{{cwd}}/nested\\u0000AGENTS.md')
+    expect(out).not.toContain('acp-snap-cwd-old123')
     expect(tokenizeSessionFixtureCwd(out)).toBe(out)
   })
 
