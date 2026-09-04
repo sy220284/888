@@ -8,7 +8,9 @@
           baseURL: !!js process.env.DSH_SNAPSHOT_BASE_URL
           thinking: enabled
           reasoningEffort: low
-          streamIdleTimeoutMs: 150
+          # Four 300 ms waits keep the whole response beyond this deadline;
+          # only parsed SSE comments can keep the stream alive.
+          streamIdleTimeoutMs: 1000
       - id: agent-spine
         config:
           agents:

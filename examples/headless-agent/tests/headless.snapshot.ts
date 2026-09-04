@@ -102,6 +102,7 @@ interface DeepSeekDefaultsServer {
 /** Serve one deterministic DeepSeek-compatible response while retaining its request body. */
 async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
   const requests: JsonObject[] = []
+  const keepAliveIntervalMs = 300
   const server = createServer((request: IncomingMessage, response: ServerResponse) => {
     let body = ''
     request.setEncoding('utf8')
@@ -113,7 +114,7 @@ async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
       const write = (): void => {
         if (keepAlives-- > 0) {
           response.write(': keep-alive\n\n')
-          setTimeout(write, 60)
+          setTimeout(write, keepAliveIntervalMs)
           return
         }
         response.end([
@@ -123,7 +124,7 @@ async function deepseekDefaultsServer(): Promise<DeepSeekDefaultsServer> {
           '',
         ].join('\n\n'))
       }
-      setTimeout(write, 60)
+      setTimeout(write, keepAliveIntervalMs)
     })
   })
   await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
