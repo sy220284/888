@@ -28,4 +28,15 @@ describe('RecoveryService', () => {
     const ctx = await setup(); ctx.recovery.register('owner', async () => ({ strategy: 'other', action: 'retry', reason: 'bad' }))
     await expect(ctx.recovery.resolve({ agent: fakeAgent(ctx, 'recovery-mismatch'), turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' }, retryPolicy: undefined, signal: new AbortController().signal })).rejects.toThrow(/mismatched strategy/)
   })
+  it('allows the same strategy identity in separate agent scopes', async () => {
+    const ctx = await setup()
+    const first = fakeAgent(ctx, 'recovery-scope-first')
+    const second = fakeAgent(ctx, 'recovery-scope-second')
+    ctx.recovery.register('scoped', async () => ({ strategy: 'scoped', action: 'retry', reason: 'first' }), { agent: first })
+    ctx.recovery.register('scoped', async () => ({ strategy: 'scoped', action: 'retry', reason: 'second' }), { agent: second })
+
+    const request = { turn: 1, step: 1, attempt: 1, provider: 'mock', model: 'm', failure: { message: 'busy', code: 'SERVER' as const }, retryPolicy: undefined, signal: new AbortController().signal }
+    await expect(ctx.recovery.resolve({ ...request, agent: first })).resolves.toMatchObject({ reason: 'first' })
+    await expect(ctx.recovery.resolve({ ...request, agent: second })).resolves.toMatchObject({ reason: 'second' })
+  })
 })

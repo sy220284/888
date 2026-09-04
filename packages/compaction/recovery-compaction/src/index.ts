@@ -23,6 +23,6 @@ export function apply(ctx: Context): void {
       action: 'retry',
       reason: 'compacted model-visible history after provider-confirmed context overflow',
     }
-  }, { priority: 100 })
+  }, { priority: 100, ...ctx.agent === undefined ? {} : { agent: ctx.agent } })
   ctx.effect(() => () => { dispose() }, 'recovery-compaction: unregister strategy')
 }

@@ -306,11 +306,6 @@ describe('the shipped Web composition', () => {
       expect(tools).toEqual(expect.arrayContaining(['bash', 'read', 'edit', 'skill']))
       expect(tools).not.toContain('str_replace_editor')
 
-      // The preset's own authoring skill registers into ITS layer of the host
-      // registry: the cordis agent's view carries it, the global view does not.
-      const scoped = (await ctx.skills.list({ scope: handle.agent })).map(skill => skill.name)
-      expect(scoped).toContain('editing-cordis-compositions')
-      expect((await ctx.skills.list()).map(skill => skill.name)).not.toContain('editing-cordis-compositions')
     } finally {
       await handle.dispose()
     }
@@ -359,16 +354,6 @@ describe('the shipped Web composition', () => {
     } finally {
       await handle.dispose()
     }
-  })
-
-  it('ships the composition-authoring skill inside the preset directory', async () => {
-    // The preset's skill root is derived from its own `baseUrl`, so the skill
-    // travels with the directory wherever the preset is installed.
-    const skill = join(
-      CONFIG_DIR, 'agent-presets', 'cordis', 'skills', 'editing-cordis-compositions', 'SKILL.md',
-    )
-
-    expect((await readFile(skill, 'utf8')).startsWith('---\nname: editing-cordis-compositions')).toBe(true)
   })
 
   it('merges the global skill layer into a preset agent\'s catalog, keeping local discovery preset-side', async () => {

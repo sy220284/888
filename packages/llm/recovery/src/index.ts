@@ -36,9 +36,19 @@ export interface RecoveryResolution {
 
 /** Recovery strategy invoked after downstream retry handling declines. */
 export type RecoveryHandler = (request: RecoveryRequest) => Promise<RecoveryResolution | undefined>
-/** Ordering options for a recovery handler. */
-export interface RecoveryHandlerOptions { readonly priority?: number }
-interface RegisteredHandler { readonly id: string; readonly priority: number; readonly order: number; readonly run: RecoveryHandler }
+/** Ordering and optional agent ownership for a recovery handler. */
+export interface RecoveryHandlerOptions {
+  readonly priority?: number
+  /** Limit this strategy to one mounted Agent preset; omitted strategies are global. */
+  readonly agent?: Agent
+}
+interface RegisteredHandler {
+  readonly id: string
+  readonly priority: number
+  readonly order: number
+  readonly agent?: Agent
+  readonly run: RecoveryHandler
+}
 
 declare module '@deepseek-ai/cordis' { interface Context { recovery: RecoveryService } }
 declare module '@deepseek-ai/dsh-session/types' {
@@ -120,10 +130,18 @@ export class RecoveryService extends Service {
    */
   register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void {
     if (id.trim().length === 0) throw new Error('recovery strategy id must be non-empty')
-    if (this.handlers.some(handler => handler.id === id)) throw new Error(`recovery strategy "${id}" is already registered`)
+    if (this.handlers.some(handler => handler.id === id && handler.agent === options.agent)) {
+      throw new Error(`recovery strategy "${id}" is already registered`)
+    }
     const priority = options.priority ?? 0
     if (!Number.isFinite(priority)) throw new Error('recovery strategy priority must be finite')
-    const handler: RegisteredHandler = { id, priority, order: this.nextOrder++, run }
+    const handler: RegisteredHandler = {
+      id,
+      priority,
+      order: this.nextOrder++,
+      ...options.agent === undefined ? {} : { agent: options.agent },
+      run,
+    }
     this.handlers.push(handler)
     this.handlers.sort((left, right) => right.priority - left.priority || left.order - right.order)
     const dispose = this.ctx.effect(() => () => {
@@ -141,6 +159,7 @@ export class RecoveryService extends Service {
   async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined> {
     for (const handler of [...this.handlers]) {
       request.signal.throwIfAborted()
+      if (handler.agent !== undefined && handler.agent !== request.agent) continue
       const resolution = await handler.run(request)
       request.signal.throwIfAborted()
       if (resolution === undefined) continue
