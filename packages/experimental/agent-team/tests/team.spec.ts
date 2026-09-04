@@ -974,6 +974,52 @@ describe('Team mailbox and waiting', () => {
     await waitNoAgent(ctx, target.id)
   })
 
+  it('joins a duplicate dispatch attempt to the same in-flight delivery', async () => {
+    const { ctx, lead } = await setup(['hang'])
+    const started = await spawn(ctx, lead, 'joined-target')
+    const target = await waitRunning(ctx, started.member.id)
+    const message: TeamMessageSnapshot = {
+      id: TeamMessageId('joined-dispatch-message'),
+      senderId: lead.id,
+      senderName: 'lead',
+      targetId: target.id,
+      delivery: 'quiet',
+      content: content('deliver exactly once'),
+    }
+    lead.session.append('team/message/queued', {
+      version: 1,
+      teamId: TeamId(lead.id),
+      message,
+    })
+    await ctx.sessions.flush(lead.session)
+
+    const targetFlushEntered = Promise.withResolvers<undefined>()
+    const releaseTargetFlush = Promise.withResolvers<undefined>()
+    const flush = ctx.sessions.flush.bind(ctx.sessions)
+    vi.spyOn(ctx.sessions, 'flush').mockImplementation(async (session) => {
+      if (session === target.session) {
+        targetFlushEntered.resolve(undefined)
+        await releaseTargetFlush.promise
+      }
+      return await flush(session)
+    })
+
+    const internal = teamInternals(ctx).mailbox
+    const first = internal.tryDispatch(lead, message, SIGNAL)
+    await targetFlushEntered.promise
+    const duplicate = internal.tryDispatch(lead, message, SIGNAL)
+    releaseTargetFlush.resolve(undefined)
+
+    await expect(Promise.all([first, duplicate])).resolves.toEqual([true, true])
+    expect(target.inbox.nextStep.filter(item => item.source.kind === 'team-message'
+      && item.source.messageId === message.id)).toHaveLength(1)
+    expect(durable(lead).pendingMessages).toEqual([])
+
+    ctx.agentTeams.interrupt(lead, 'joined-target')
+    target.cancel({ kind: 'parent' })
+    await waitNoAgent(ctx, target.id)
+  })
+
   it('acknowledges waking messages accepted by a busy target inbox', async () => {
     const { ctx, lead } = await setup(['hang'], { maxPendingMessagesPerMember: 1 })
     const started = await spawn(ctx, lead, 'busy-target')
