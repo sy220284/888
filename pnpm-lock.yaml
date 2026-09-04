@@ -8982,6 +8982,12 @@ importers:
       '@deepseek-ai/dsh-pwsh-local':
         specifier: workspace:^
         version: link:../../packages/shell/pwsh-local
+      '@deepseek-ai/dsh-recovery-compaction':
+        specifier: workspace:^
+        version: link:../../packages/compaction/recovery-compaction
+      '@deepseek-ai/dsh-recovery':
+        specifier: workspace:^
+        version: link:../../packages/llm/recovery
       '@deepseek-ai/dsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../packages/guard/repeat-tool-reminder
