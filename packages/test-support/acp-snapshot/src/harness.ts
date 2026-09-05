@@ -21,7 +21,6 @@ import { existsSync, realpathSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, delimiter } from 'node:path'
-import { vi } from 'vitest'
 import {
   ClientSideConnection,
   PROTOCOL_VERSION,
@@ -31,11 +30,11 @@ import {
   type SessionNotification,
 } from '@agentclientprotocol/sdk'
 import { launchAcpTestAgent, type AgentUnderTest, type LaunchedAcpTestAgent } from './launcher.ts'
+import { waitForSnapshotCondition } from './wait.ts'
 
 export type { AgentUnderTest } from './launcher.ts'
 
 const DEFAULT_WAIT_TIMEOUT_MS = 10_000
-const WAIT_POLL_INTERVAL_MS = 10
 
 /**
  * One step of a scenario's deterministic input script (`input.json`). The
@@ -531,7 +530,8 @@ async function waitForPersistedTurnStart(
   minimumTurn?: number,
 ): Promise<void> {
   let invalidRecord: { error: unknown } | undefined
-  await vi.waitFor(async () => {
+  const detail = minimumTurn === undefined ? 'turn/start' : `turn/start at or beyond turn ${minimumTurn}`
+  await waitForSnapshotCondition(async () => {
     const log = (await harvestSessionLogs(root)).find(candidate => candidate.id === sessionId)
     let openTurn: number | undefined
     try {
@@ -541,13 +541,10 @@ async function waitForPersistedTurnStart(
       // vi.waitFor retries every callback throw, so capture the validation
       // failure, resolve the wait, and rethrow immediately below.
       invalidRecord = { error }
-      return
+      return true
     }
-    if (openTurn === undefined || (minimumTurn !== undefined && openTurn < minimumTurn)) {
-      const detail = minimumTurn === undefined ? 'turn/start' : `turn/start at or beyond turn ${minimumTurn}`
-      throw new Error(`snapshot-harness: session "${sessionId}" did not persist ${detail} within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+    return openTurn !== undefined && (minimumTurn === undefined || openTurn >= minimumTurn)
+  }, timeoutMs, `snapshot-harness: session "${sessionId}" did not persist ${detail} within ${timeoutMs}ms`)
   if (invalidRecord !== undefined) throw invalidRecord.error
 }
 
@@ -562,12 +559,10 @@ async function waitForPersistedTurnEnd(
   sessionId: string,
   timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
-  await vi.waitFor(async () => {
+  await waitForSnapshotCondition(async () => {
     const log = (await harvestSessionLogs(root)).find(candidate => candidate.id === sessionId)
-    if (log === undefined || !latestTurnIsClosed(log.content)) {
-      throw new Error(`snapshot-harness: session "${sessionId}" did not persist turn/end within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+    return log !== undefined && latestTurnIsClosed(log.content)
+  }, timeoutMs, `snapshot-harness: session "${sessionId}" did not persist turn/end within ${timeoutMs}ms`)
 }
 
 /**
@@ -585,23 +580,12 @@ async function waitForPersistedChildTurnEnd(
   minimumTurn = 1,
 ): Promise<void> {
   const timeoutMessage = `snapshot-harness: subagent child #${child} did not persist closed turn ${minimumTurn} within ${timeoutMs}ms`
-  try {
-    await vi.waitFor(async () => {
-      const log = (await harvestSessionLogs(root))[child]
-      if (log === undefined || !latestTurnIsClosed(log.content)
-        || !hasRequestHeaderAfterDescriptor(log.content)
-        || !hasClosedTurn(log.content, minimumTurn)) {
-        throw new Error(timeoutMessage)
-      }
-    }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
-  } catch (error) {
-    // Under a saturated worker pool Vitest's timer can expire before the first
-    // async poll settles, yielding its generic message instead of our contract.
-    if (error instanceof Error && error.message === 'Timed out in waitFor!') {
-      throw new Error(timeoutMessage, { cause: error })
-    }
-    throw error
-  }
+  await waitForSnapshotCondition(async () => {
+    const log = (await harvestSessionLogs(root))[child]
+    return log !== undefined && latestTurnIsClosed(log.content)
+      && hasRequestHeaderAfterDescriptor(log.content)
+      && hasClosedTurn(log.content, minimumTurn)
+  }, timeoutMs, timeoutMessage)
 }
 
 /** Whether a raw session log contains the requested closed turn. */
@@ -619,16 +603,14 @@ async function waitForPersistedGoalPhase(
   phase: string,
   timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
-  await vi.waitFor(async () => {
+  await waitForSnapshotCondition(async () => {
     const content = (await harvestSessionLogs(root)).find(log => log.id === sessionId)?.content
     const matched = content?.split('\n').filter(Boolean).some((line) => {
       const event = JSON.parse(line) as { type?: unknown; data?: { goal?: { phase?: unknown } } }
       return event.type === 'goal/change' && event.data?.goal?.phase === phase
     }) ?? false
-    if (!matched) {
-      throw new Error(`snapshot-harness: session "${sessionId}" did not persist goal phase "${phase}" within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+    return matched
+  }, timeoutMs, `snapshot-harness: session "${sessionId}" did not persist goal phase "${phase}" within ${timeoutMs}ms`)
 }
 
 /** Wait until an inserted inbox message contains scenario-owned text. */
@@ -638,7 +620,7 @@ async function waitForPersistedInboxMessage(
   text: string,
   timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
-  await vi.waitFor(async () => {
+  await waitForSnapshotCondition(async () => {
     const log = (await harvestSessionLogs(root)).find(candidate => candidate.id === sessionId)
     const matched = log?.content.split('\n').some((line) => {
       if (line.length === 0) return false
@@ -650,10 +632,8 @@ async function waitForPersistedInboxMessage(
         message.content?.some(block => block.type === 'text'
           && typeof block.text === 'string' && block.text.includes(text))) === true
     }) ?? false
-    if (!matched) {
-      throw new Error(`snapshot-harness: session "${sessionId}" did not persist expected inbox message within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+    return matched
+  }, timeoutMs, `snapshot-harness: session "${sessionId}" did not persist expected inbox message within ${timeoutMs}ms`)
 }
 
 /** Whether a child log contains model work after its own descriptor event. */
@@ -673,12 +653,10 @@ async function waitForPersistedTitleAfterTurnEnd(
   sessionId: string,
   timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
-  await vi.waitFor(async () => {
+  await waitForSnapshotCondition(async () => {
     const log = (await harvestSessionLogs(root)).find(candidate => candidate.id === sessionId)
-    if (log === undefined || !latestTitleFollowsTurnEnd(log.content)) {
-      throw new Error(`snapshot-harness: session "${sessionId}" did not persist session/title after turn/end within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+    return log !== undefined && latestTitleFollowsTurnEnd(log.content)
+  }, timeoutMs, `snapshot-harness: session "${sessionId}" did not persist session/title after turn/end within ${timeoutMs}ms`)
 }
 
 /** Wait until a complete record of `type` follows the latest closed turn. */
@@ -688,12 +666,10 @@ async function waitForPersistedEventAfterTurnEnd(
   type: string,
   timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
-  await vi.waitFor(async () => {
+  await waitForSnapshotCondition(async () => {
     const log = (await harvestSessionLogs(root)).find(candidate => candidate.id === sessionId)
-    if (log === undefined || !latestEventFollowsTurnEnd(log.content, type)) {
-      throw new Error(`snapshot-harness: session "${sessionId}" did not persist ${type} after turn/end within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+    return log !== undefined && latestEventFollowsTurnEnd(log.content, type)
+  }, timeoutMs, `snapshot-harness: session "${sessionId}" did not persist ${type} after turn/end within ${timeoutMs}ms`)
 }
 
 /** Wait for a cwd-relative marker proving an external action reached readiness. */
@@ -703,11 +679,8 @@ async function waitForWorkspaceFile(
   timeoutMs = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
   const target = join(cwd, path)
-  await vi.waitFor(() => {
-    if (!existsSync(target)) {
-      throw new Error(`snapshot-harness: workspace file "${path}" did not appear within ${timeoutMs}ms`)
-    }
-  }, { interval: WAIT_POLL_INTERVAL_MS, timeout: timeoutMs })
+  await waitForSnapshotCondition(() => existsSync(target), timeoutMs,
+    `snapshot-harness: workspace file "${path}" did not appear within ${timeoutMs}ms`)
 }
 
 /** Return whether the last complete raw-JSONL turn boundary closes its turn. */
