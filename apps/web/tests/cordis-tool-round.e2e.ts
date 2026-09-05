@@ -4,8 +4,8 @@
 // and conversation accessibility tree.
 //
 // The approval is never in the fixture. The fixture pins what the MODEL said;
-// tools execute for real, and this test answers the approval before starting the
-// stop turn. The package therefore carries a browser half whose only
+// tools execute for real, and this test answers each runtime tool approval plus
+// the separate Cordis activation approval. The package carries a browser half whose only
 // job is to be visible (`[data-snapshot-probe]`): its absence before the answer
 // and presence after it is the v3 user gate, proven rather than described.
 import { readFile } from 'node:fs/promises'
@@ -14,6 +14,7 @@ import type { Browser, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import type {} from '@deepseek-ai/dsh-user-approval'
 import {
   captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
@@ -61,6 +62,13 @@ function assertCompleteCordisLifecycle(events: readonly SessionEvent[]): void {
   )
   expect(results).toHaveLength(CORDIS_TOOLS.length)
   expect(results.every(event => !event.data.message.content[0].isError)).toBe(true)
+
+  const approvals = events.filter(event => event.type === 'approval/asked')
+  expect(approvals.map(event => event.data.toolName)).toEqual(CORDIS_TOOLS)
+  for (const approval of approvals) {
+    expect(events.find(event => event.type === 'approval/decided' && event.data.id === approval.data.id)?.data)
+      .toEqual({ id: approval.data.id, outcome: 'allowed-once' })
+  }
 }
 
 describe('web e2e: Cordis tools use their owned cards', () => {
@@ -69,6 +77,24 @@ describe('web e2e: Cordis tools use their owned cards', () => {
   let page: Page
   let tripwire: ReturnType<typeof watchConsole>
   const sessionEvents: SessionEvent[] = []
+
+  async function approveTool(toolName: typeof CORDIS_TOOLS[number]): Promise<void> {
+    const panel = page.locator('[data-approval-key]')
+    await panel.waitFor({ timeout: MODE === 'record' ? 180_000 : 30_000 })
+    const request = sessionEvents.filter(event => event.type === 'approval/asked').at(-1)
+    expect(request?.data.toolName).toBe(toolName)
+    expect(request?.data.reason).toBe('runtime capability policy requires approval')
+    expect(sessionEvents.some(event => event.type === 'world/effect-start' && event.data.callId === request?.data.callId))
+      .toBe(false)
+    // Tool admission cannot activate the browser package: that remains the
+    // separate Cordis run approval below, after the model turn has settled.
+    expect(await page.locator('[data-snapshot-probe]').count()).toBe(toolName === 'cordis_stop' ? 1 : 0)
+    const approvalKey = await panel.getAttribute('data-approval-key')
+    await panel.getByRole('button', { name: 'Allow once', exact: true }).click()
+    await expect.poll(() => page.locator('[data-approval-key]').evaluateAll(
+      elements => elements[0]?.getAttribute('data-approval-key') ?? null,
+    )).not.toBe(approvalKey)
+  }
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({
@@ -97,31 +123,42 @@ describe('web e2e: Cordis tools use their owned cards', () => {
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
     const runTurnSettled = scaffold.whenTurnSettled()
-    await input.fill(PROMPT)
-    await input.press('Enter')
-
-    // The approval is the TEST's action in every mode: the fixture pins what the
-    // model said, and the gate is a real round trip through the real panel.
     const approve = page.locator('[data-cordis-approve]').first()
-    await approve.waitFor({ timeout: 90_000 })
+    const [sessionId] = await Promise.all([
+      runTurnSettled,
+      (async () => {
+        await input.fill(PROMPT)
+        await input.press('Enter')
+        for (const toolName of CORDIS_TOOLS.slice(0, 3)) await approveTool(toolName)
+        await approve.waitFor({ timeout: 30_000 })
+      })(),
+    ])
     // The one assertion this scenario cannot give up: the model asking to run is
     // NOT the plugin running. Until a person answers, the browser half has not
     // been fetched, evaluated, or mounted anywhere on this page.
     expect(await page.locator('[data-snapshot-probe]').count()).toBe(0)
-    const sessionId = await runTurnSettled
     // Approving from idle makes the run-outcome steer a distinct continuation
     // turn, matching the recorded replay and keeping turn grouping deterministic.
     const approvalTurnSettled = scaffold.whenTurnSettled()
-    await approve.click()
-    await expect.poll(() => page.locator('[data-snapshot-probe]').count(), { timeout: 30_000 }).toBe(1)
-    await approvalTurnSettled
+    await Promise.all([
+      approvalTurnSettled,
+      (async () => {
+        await approve.click()
+        await expect.poll(() => page.locator('[data-snapshot-probe]').count(), { timeout: 30_000 }).toBe(1)
+      })(),
+    ])
     await expect.poll(() => page.getByText('The Cordis Plugin is running.', { exact: true }).count(), { timeout: 15_000 })
       .toBeGreaterThanOrEqual(1)
     await expect.poll(() => input.isEnabled(), { timeout: 15_000 }).toBe(true)
     const stopTurnSettled = scaffold.whenTurnSettled()
-    await input.fill(STOP_PROMPT)
-    await input.press('Enter')
-    await stopTurnSettled
+    await Promise.all([
+      stopTurnSettled,
+      (async () => {
+        await input.fill(STOP_PROMPT)
+        await input.press('Enter')
+        await approveTool('cordis_stop')
+      })(),
+    ])
     if (MODE === 'record') {
       assertCompleteCordisLifecycle(sessionEvents)
       await expect.poll(() => page.getByText('CORDIS_UI_DONE', { exact: true }).count(), { timeout: 15_000 })
