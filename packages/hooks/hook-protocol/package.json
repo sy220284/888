@@ -1,6 +1,6 @@
 {
   "name": "@deepseek-ai/dsh-hook-protocol",
-  "description": "Shared Claude Code / Codex hook wire protocol: matcher engine, stdin/exit-code/stdout codec, multi-hook merge, and hook/* session events",
+  "description": "Adapter-neutral hook protocol: matcher strategies, stdin/exit-code/stdout codec, multi-hook merge, and durable hook/* session events",
   "version": "0.1.1-rc.2",
   "publishConfig": {
     "access": "public"
