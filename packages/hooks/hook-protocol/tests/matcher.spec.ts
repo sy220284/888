@@ -77,7 +77,7 @@ describe('matcherDiagnostic — parse-time diagnostics', () => {
 
   it('reports canonical strategy ids for new adapters', () => {
     expect(matcherDiagnostic('(', 'literal-alternation-or-regex'))
-      .toBe('invalid literal-alternation-or-regex regex matcher "("')
-    expect(matcherDiagnostic('[', 'regex')).toBe('invalid regex regex matcher "["')
+      .toBe('invalid literal-alternation-or-regex-strategy regex matcher "("')
+    expect(matcherDiagnostic('[', 'regex')).toBe('invalid regex-strategy regex matcher "["')
   })
 })
