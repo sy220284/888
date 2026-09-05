@@ -39,6 +39,12 @@ function matcherStrategy(mode: MatcherMode): MatcherStrategy {
   return mode
 }
 
+/** Preserve legacy diagnostic labels; give canonical strategies readable labels. */
+function matcherDiagnosticLabel(mode: MatcherMode): string {
+  if (mode === 'claude-code' || mode === 'codex') return mode
+  return `${mode}-strategy`
+}
+
 /**
  * Validate one matcher before an adapter accepts its config group.
  * @param matcher - configured pattern; match-all sentinels are valid.
@@ -51,7 +57,7 @@ export function matcherDiagnostic(matcher: string | undefined, mode: MatcherMode
   const strategy = matcherStrategy(mode)
   if (strategy === 'literal-alternation-or-regex' && LITERAL_ALTERNATION.test(pattern)) return undefined
   return compileRegex(pattern) === undefined
-    ? `invalid ${mode} regex matcher ${JSON.stringify(pattern)}`
+    ? `invalid ${matcherDiagnosticLabel(mode)} regex matcher ${JSON.stringify(pattern)}`
     : undefined
 }
 
