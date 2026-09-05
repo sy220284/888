@@ -1,74 +1,83 @@
 import { describe, expect, it } from 'vitest'
 import { matcherDiagnostic, matchesMatcher } from '@deepseek-ai/dsh-hook-protocol'
 
-describe('matchesMatcher — match-all sentinels (both dialects)', () => {
-  for (const mode of ['claude-code', 'codex'] as const) {
-    it(`${mode}: absent / empty / '*' match everything`, () => {
-      expect(matchesMatcher(undefined, 'Bash', mode)).toBe(true)
-      expect(matchesMatcher('', 'anything', mode)).toBe(true)
-      expect(matchesMatcher('*', 'whatever', mode)).toBe(true)
+describe('matchesMatcher — canonical match-all sentinels', () => {
+  for (const strategy of ['literal-alternation-or-regex', 'regex'] as const) {
+    it(`${strategy}: absent / empty / '*' match everything`, () => {
+      expect(matchesMatcher(undefined, 'Bash', strategy)).toBe(true)
+      expect(matchesMatcher('', 'anything', strategy)).toBe(true)
+      expect(matchesMatcher('*', 'whatever', strategy)).toBe(true)
     })
   }
 })
 
-describe('matchesMatcher — claude dialect (literal-or-regex)', () => {
-  it('a pure word-char pattern is a LITERAL exact match (not substring)', () => {
-    expect(matchesMatcher('Bash', 'Bash', 'claude-code')).toBe(true)
-    // literal exact: "Bash" must NOT match "BashOutput" (a regex would, substring)
-    expect(matchesMatcher('Bash', 'BashOutput', 'claude-code')).toBe(false)
+describe('matchesMatcher — literal-alternation-or-regex strategy', () => {
+  it('a pure word-char pattern is a literal exact match', () => {
+    expect(matchesMatcher('Bash', 'Bash', 'literal-alternation-or-regex')).toBe(true)
+    expect(matchesMatcher('Bash', 'BashOutput', 'literal-alternation-or-regex')).toBe(false)
   })
 
-  it('a pipe pattern is literal ALTERNATION (exact match any alternative)', () => {
-    expect(matchesMatcher('Edit|Write', 'Edit', 'claude-code')).toBe(true)
-    expect(matchesMatcher('Edit|Write', 'Write', 'claude-code')).toBe(true)
-    expect(matchesMatcher('Edit|Write', 'Read', 'claude-code')).toBe(false)
-    // still exact per-alternative, not substring
-    expect(matchesMatcher('Edit|Write', 'EditFile', 'claude-code')).toBe(false)
+  it('a pipe pattern is literal alternation', () => {
+    expect(matchesMatcher('Edit|Write', 'Edit', 'literal-alternation-or-regex')).toBe(true)
+    expect(matchesMatcher('Edit|Write', 'Write', 'literal-alternation-or-regex')).toBe(true)
+    expect(matchesMatcher('Edit|Write', 'Read', 'literal-alternation-or-regex')).toBe(false)
+    expect(matchesMatcher('Edit|Write', 'EditFile', 'literal-alternation-or-regex')).toBe(false)
   })
 
-  it('a non-word pattern falls through to regex (unanchored)', () => {
-    expect(matchesMatcher('^Bash$', 'Bash', 'claude-code')).toBe(true)
-    expect(matchesMatcher('Bash.*', 'BashOutput', 'claude-code')).toBe(true)
-    expect(matchesMatcher('.*\\.ts$', 'foo.ts', 'claude-code')).toBe(true)
-    expect(matchesMatcher('.*\\.ts$', 'foo.js', 'claude-code')).toBe(false)
+  it('a non-word pattern falls through to unanchored regex', () => {
+    expect(matchesMatcher('^Bash$', 'Bash', 'literal-alternation-or-regex')).toBe(true)
+    expect(matchesMatcher('Bash.*', 'BashOutput', 'literal-alternation-or-regex')).toBe(true)
+    expect(matchesMatcher('.*\\.ts$', 'foo.ts', 'literal-alternation-or-regex')).toBe(true)
+    expect(matchesMatcher('.*\\.ts$', 'foo.js', 'literal-alternation-or-regex')).toBe(false)
   })
 })
 
-describe('matchesMatcher — codex dialect (always regex)', () => {
-  it('a word pattern is an unanchored regex (substring matches, unlike claude literal)', () => {
-    expect(matchesMatcher('Bash', 'Bash', 'codex')).toBe(true)
-    // codex has NO literal fast path: "Bash" is /Bash/, so it DOES match a substring
-    expect(matchesMatcher('Bash', 'BashOutput', 'codex')).toBe(true)
+describe('matchesMatcher — regex strategy', () => {
+  it('a word pattern is an unanchored regex', () => {
+    expect(matchesMatcher('Bash', 'Bash', 'regex')).toBe(true)
+    expect(matchesMatcher('Bash', 'BashOutput', 'regex')).toBe(true)
   })
 
   it('regex alternation and anchors work', () => {
-    expect(matchesMatcher('Edit|Write', 'Edit', 'codex')).toBe(true)
-    expect(matchesMatcher('^Bash$', 'Bash', 'codex')).toBe(true)
-    expect(matchesMatcher('^Bash$', 'BashOutput', 'codex')).toBe(false)
+    expect(matchesMatcher('Edit|Write', 'Edit', 'regex')).toBe(true)
+    expect(matchesMatcher('^Bash$', 'Bash', 'regex')).toBe(true)
+    expect(matchesMatcher('^Bash$', 'BashOutput', 'regex')).toBe(false)
   })
 })
 
-describe('matchesMatcher — invalid regex is a non-match (never throws)', () => {
-  it('an unbalanced pattern matches nothing rather than throwing', () => {
-    // '(' is not the claude-literal charset, so it goes to the regex path and is invalid.
-    expect(() => matchesMatcher('(', 'x', 'claude-code')).not.toThrow()
-    expect(matchesMatcher('(', 'x', 'claude-code')).toBe(false)
-    expect(matchesMatcher('[', 'x', 'codex')).toBe(false)
+describe('matchesMatcher — legacy provider aliases', () => {
+  it('keeps existing bridge behavior without making provider ids the canonical API', () => {
+    expect(matchesMatcher('Bash', 'BashOutput', 'claude-code')).toBe(false)
+    expect(matchesMatcher('Bash', 'BashOutput', 'codex')).toBe(true)
+  })
+})
+
+describe('matchesMatcher — invalid regex is a non-match', () => {
+  it('never throws for malformed patterns', () => {
+    expect(() => matchesMatcher('(', 'x', 'literal-alternation-or-regex')).not.toThrow()
+    expect(matchesMatcher('(', 'x', 'literal-alternation-or-regex')).toBe(false)
+    expect(matchesMatcher('[', 'x', 'regex')).toBe(false)
   })
 })
 
 describe('matcherDiagnostic — parse-time diagnostics', () => {
-  it('accepts match-all sentinels, Claude literals, and valid regexes', () => {
-    expect(matcherDiagnostic(undefined, 'claude-code')).toBeUndefined()
-    expect(matcherDiagnostic('', 'codex')).toBeUndefined()
-    expect(matcherDiagnostic('*', 'codex')).toBeUndefined()
-    expect(matcherDiagnostic('Edit|Write', 'claude-code')).toBeUndefined()
-    expect(matcherDiagnostic('^Bash$', 'claude-code')).toBeUndefined()
-    expect(matcherDiagnostic('Edit|Write', 'codex')).toBeUndefined()
+  it('accepts match-all sentinels, literals, and valid regexes through canonical strategies', () => {
+    expect(matcherDiagnostic(undefined, 'literal-alternation-or-regex')).toBeUndefined()
+    expect(matcherDiagnostic('', 'regex')).toBeUndefined()
+    expect(matcherDiagnostic('*', 'regex')).toBeUndefined()
+    expect(matcherDiagnostic('Edit|Write', 'literal-alternation-or-regex')).toBeUndefined()
+    expect(matcherDiagnostic('^Bash$', 'literal-alternation-or-regex')).toBeUndefined()
+    expect(matcherDiagnostic('Edit|Write', 'regex')).toBeUndefined()
   })
 
-  it('returns a stable diagnostic for invalid regexes in either dialect', () => {
+  it('keeps legacy diagnostic strings stable while adapters migrate', () => {
     expect(matcherDiagnostic('(', 'claude-code')).toBe('invalid claude-code regex matcher "("')
     expect(matcherDiagnostic('[', 'codex')).toBe('invalid codex regex matcher "["')
+  })
+
+  it('reports canonical strategy ids for new adapters', () => {
+    expect(matcherDiagnostic('(', 'literal-alternation-or-regex'))
+      .toBe('invalid literal-alternation-or-regex regex matcher "("')
+    expect(matcherDiagnostic('[', 'regex')).toBe('invalid regex regex matcher "["')
   })
 })
