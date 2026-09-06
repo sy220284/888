@@ -121,7 +121,7 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     disposeApproval = scaffold.ctx.on(
       'approval/request',
       () => Promise.resolve('allowed-once'),
-      { prepend: true },
+      { global: true, prepend: true },
     )
     await seedPackageInventory(scaffold.workspaceCwd)
     scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })

@@ -350,7 +350,10 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     // and Playwright text matching skips the hidden rows — expand the list,
     // then assert each row's content.
     await dock.getByText('2 queued messages').waitFor({ timeout: 10_000 })
-    await dock.getByRole('button').click()
+    // The conversation can auto-scroll between the count assertion and the
+    // click, placing this attached header beneath the fixed composer. Trigger
+    // the same DOM activation without Playwright attempting another scroll.
+    await dock.getByRole('button').evaluate((button: HTMLButtonElement) => { button.click() })
     await dock.getByText(STEER_ONE, { exact: true }).waitFor({ timeout: 10_000 })
     await dock.getByText(STEER_TWO, { exact: true }).waitFor({ timeout: 10_000 })
     expect(await page.locator('[data-pending-steering]').count()).toBe(0)

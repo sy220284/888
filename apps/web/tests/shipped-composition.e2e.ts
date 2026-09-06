@@ -192,7 +192,7 @@ it('lets a preset producer reach the background-job registry', async () => {
   const disposeApproval = ctx.on(
     'approval/request',
     () => Promise.resolve('allowed-once'),
-    { prepend: true },
+    { global: true, prepend: true },
   )
   const handle = await ctx.agents.create({
     sessionId: SessionId('shipped-background-job'),

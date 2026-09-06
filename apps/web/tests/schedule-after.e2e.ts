@@ -221,7 +221,7 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
     disposeApproval = scaffold.ctx.on(
       'approval/request',
       () => Promise.resolve('allowed-once'),
-      { prepend: true },
+      { global: true, prepend: true },
     )
     scaffold.ctx.effect(
       () => scaffold.ctx.llm.registerAdapter([AFTER_PROVIDER], afterAdapter),
