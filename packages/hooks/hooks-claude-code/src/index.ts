@@ -193,6 +193,15 @@ export function apply(ctx: Context, config: Config): void {
   const sessionStartGates = new WeakMap<Agent, Promise<UserMessage | undefined>>()
   const sessionStartConsumed = new WeakSet<Agent>()
   const sessionStartWaiting = new WeakSet<Agent>()
+  // SessionStart runs before a turn exists, while hook audit events are
+  // deliberately turn-enclosed. Retain only its user-facing warnings and
+  // commit their ordinary invoked/result pairs at the first safe turn edge.
+  const deferredSessionStartAudits = new WeakMap<Agent, Array<{
+    handlerId: string
+    matcher?: string
+    output: HookOutput
+    durationMs: number
+  }>>()
   const deferredStops = new WeakMap<Agent, string>()
   const stopContinuations = new WeakMap<Agent, { turn: number; count: number }>()
   // Model-direct PreToolUse runs before assistant/message persistence so updatedInput
@@ -258,6 +267,16 @@ export function apply(ctx: Context, config: Config): void {
         }
         if (session && opts.turn !== undefined) {
           appendHookResult(session, { turn: opts.turn, point, handlerId, output, stderrSummaryMaxChars, durationMs })
+        } else if (session && opts.agent !== undefined && point === 'SessionStart'
+          && output.systemMessage !== undefined && output.systemMessage.length > 0) {
+          const audits = deferredSessionStartAudits.get(opts.agent) ?? []
+          audits.push({
+            handlerId,
+            ...group.matcher !== undefined ? { matcher: group.matcher } : {},
+            output,
+            durationMs,
+          })
+          deferredSessionStartAudits.set(opts.agent, audits)
         }
       }
     }
@@ -281,6 +300,30 @@ export function apply(ctx: Context, config: Config): void {
   /** Prepend one context without flattening source fields or other downstream metadata. */
   function prependContext(ours: UserMessage, theirs: UserMessage[] | undefined): UserMessage[] {
     return [ours, ...theirs ?? []]
+  }
+
+  /** Commit SessionStart warnings once the first turn supplies a valid audit enclosure. */
+  function flushSessionStartAudits(agent: Agent, turn: number): void {
+    const audits = deferredSessionStartAudits.get(agent)
+    if (audits === undefined) return
+    deferredSessionStartAudits.delete(agent)
+    for (const audit of audits) {
+      appendHookInvoked(agent.session, {
+        turn,
+        point: 'SessionStart',
+        dialect: 'claude-code',
+        handlerId: audit.handlerId,
+        ...audit.matcher !== undefined ? { matcher: audit.matcher } : {},
+      })
+      appendHookResult(agent.session, {
+        turn,
+        point: 'SessionStart',
+        handlerId: audit.handlerId,
+        output: audit.output,
+        stderrSummaryMaxChars,
+        durationMs: audit.durationMs,
+      })
+    }
   }
 
   // SessionStart remains an emit-shaped lifecycle event, but its bridge run is
@@ -325,6 +368,7 @@ export function apply(ctx: Context, config: Config): void {
         sessionStartConsumed.add(agent)
       }
     }
+    flushSessionStartAudits(agent, turn)
     signal.throwIfAborted()
     if (deferredStops.delete(agent)) return { kind: 'reject' }
     if (messages.length === 0) {

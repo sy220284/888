@@ -89,6 +89,26 @@ async function waitFor(predicate: () => boolean, timeout = 5000, interval = 10):
 }
 
 describe('hooks-claude-code bridge — UserPromptSubmit', () => {
+  it('commits a SessionStart systemMessage at the first safe turn without exposing it to the model', async () => {
+    const dir = writeConfig({})
+    const script = join(dir, 'session-warning.sh')
+    writeFileSync(script, '#!/usr/bin/env bash\necho \'{"systemMessage":"workspace warning"}\'\n')
+    chmodSync(script, 0o755)
+    writeFileSync(join(dir, 'hooks.json'), JSON.stringify({ hooks: {
+      SessionStart: [{ hooks: [{ type: 'command', command: script }] }],
+    } }))
+    const adapter = new MockAdapter([textResponse('ok')])
+    const ctx = await harness(dir, adapter)
+    const agent = ctx.agentLoop.create(SessionId('session-start-system-message'), { provider: 'mock', model: 'mock' })
+    agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
+    await waitForIdle(ctx, agent)
+
+    const audit = events(agent).find(event => event.type === 'hook/result'
+      && event.data.point === 'SessionStart')
+    expect(audit?.type === 'hook/result' && audit.data.systemMessage).toBe('workspace warning')
+    expect(JSON.stringify(adapter.requests[0]!.messages)).not.toContain('workspace warning')
+  })
+
   it('a UserPromptSubmit hook that exits 2 closes a blocked turn without a step', async () => {
     // UserPromptSubmit ignores its malformed matcher field, then exit 2 blocks
     // with the reason on stderr.

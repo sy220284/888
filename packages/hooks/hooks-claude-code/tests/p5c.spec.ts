@@ -49,6 +49,17 @@ async function waitFor(predicate: () => boolean, timeout = 5000): Promise<void> 
   }
 }
 
+/** A shell redirection creates its target before the JSON body is complete. */
+function hasCompleteJson(path: string): boolean {
+  if (!existsSync(path)) return false
+  try {
+    JSON.parse(readFileSync(path, 'utf8'))
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function harness(configPath: string): Promise<Context> {
   const ctx = new Context()
   await mountAgentLoopTestDependencies(ctx)
@@ -88,10 +99,10 @@ describe('hooks-claude-code P5C subagent type matcher', () => {
     const identity = { runId, provider: 'inproc', id: child.agent.id, local: true }
 
     ctx.emit(subagentCarrier(ctx), 'subagent/start', identity)
-    await waitFor(() => existsSync(startPayload))
+    await waitFor(() => hasCompleteJson(startPayload))
     await child.dispose()
     ctx.emit(subagentCarrier(ctx), 'subagent/end', { ...identity, stopReason: 'completed' })
-    await waitFor(() => existsSync(stopPayload))
+    await waitFor(() => hasCompleteJson(stopPayload))
 
     expect(JSON.parse(readFileSync(startPayload, 'utf8'))).toMatchObject({
       hook_event_name: 'SubagentStart',
@@ -124,7 +135,7 @@ describe('hooks-claude-code P5C subagent type matcher', () => {
       id: child.agent.id,
       local: true,
     })
-    await waitFor(() => existsSync(marker))
+    await waitFor(() => hasCompleteJson(marker))
 
     expect(JSON.parse(readFileSync(marker, 'utf8'))).toMatchObject({
       hook_event_name: 'SubagentStart',
