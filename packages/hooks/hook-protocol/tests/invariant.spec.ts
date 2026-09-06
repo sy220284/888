@@ -96,12 +96,20 @@ describe('hook-protocol invariants', () => {
   it.each([
     [invoked({ point: '' }), /point and handlerId must be non-empty/],
     [invoked({ handlerId: '' }), /point and handlerId must be non-empty/],
-    [invoked({ dialect: 'other' }), /unknown dialect/],
+    [invoked({ dialect: '' }), /dialect must be non-empty/],
   ])('rejects malformed hook invocation %#', async (data, message) => {
     const ctx = await setup()
     const session = ctx.sessions.create()
     startTurn(session)
     expect(() => session.append('hook/invoked', data as never)).toThrow(message)
+  })
+
+  it('accepts an open non-empty adapter id without a core enum update', async () => {
+    const ctx = await setup()
+    const session = ctx.sessions.create()
+    startTurn(session)
+    expect(() => session.append('hook/invoked', invoked({ dialect: 'third-party' }))).not.toThrow()
+    expect(() => session.append('hook/result', result())).not.toThrow()
   })
 
   it('rejects unmatched and malformed results', async () => {
