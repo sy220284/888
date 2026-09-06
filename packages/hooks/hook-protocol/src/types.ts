@@ -31,7 +31,9 @@ declare module '@deepseek-ai/dsh-session/types' {
     /**
      * Log-only outcome paired to `hook/invoked` by `handlerId`. Decision is the
      * parsed permission result, `stop` for `continue:false`, or `pass`; exit code
-     * may be absent, stderr is bounded, and duration is wall-clock runtime.
+     * may be absent, stderr is bounded, `systemMessage` is the adapter-neutral
+     * user warning retained for audit without entering model context, and
+     * duration is wall-clock runtime.
      */
     'hook/result': {
       turn: number
@@ -40,6 +42,7 @@ declare module '@deepseek-ai/dsh-session/types' {
       decision: string
       exitCode?: number
       stderrSummary?: string
+      systemMessage?: string
       durationMs: number
     }
   }

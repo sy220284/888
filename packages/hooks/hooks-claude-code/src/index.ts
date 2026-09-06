@@ -256,9 +256,6 @@ export function apply(ctx: Context, config: Config): void {
             ctx.logger.warn(`hooks-claude-code: ${point} hook requested updatedInput outside the safe PreToolUse rewrite seam (ignored)`)
           }
         }
-        if (output.systemMessage !== undefined) {
-          ctx.logger.warn(`hooks-claude-code: ${point} hook emitted a systemMessage, which is not yet surfaced (ignored)`)
-        }
         if (session && opts.turn !== undefined) {
           appendHookResult(session, { turn: opts.turn, point, handlerId, output, stderrSummaryMaxChars, durationMs })
         }

@@ -85,7 +85,8 @@ export function appendHookInvoked(session: Session, invocation: HookInvocation):
 /**
  * Append the durable result paired with `hook/invoked`. The recorded decision
  * is the parsed decision, then `stop` for `continue:false`, else `pass`; stderr
- * is trimmed and capped, and an absent process exit stays omitted.
+ * is trimmed and capped, a non-empty system message is retained as audit-only
+ * data, and an absent process exit stays omitted.
  * @param session - the session whose open turn records the event.
  * @param record - the outcome to record: the decoded output plus the summary cap and duration.
  */
@@ -99,6 +100,9 @@ export function appendHookResult(session: Session, record: HookResultRecord): vo
     decision: output.decision ?? (output.continue === false ? 'stop' : 'pass'),
     ...output.exitCode !== undefined ? { exitCode: output.exitCode } : {},
     ...stderrSummary !== undefined ? { stderrSummary } : {},
+    ...output.systemMessage !== undefined && output.systemMessage.length > 0
+      ? { systemMessage: output.systemMessage }
+      : {},
     durationMs: record.durationMs,
   })
 }

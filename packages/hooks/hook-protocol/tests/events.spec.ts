@@ -35,11 +35,21 @@ describe('hook/* session events', () => {
     const session = Session.create(SessionId('s'))
     appendHookResult(session, {
       turn: 1, point: 'PreToolUse', handlerId: 'h1',
-      stderrSummaryMaxChars: 500, durationMs: 5, output: output({ exitCode: 2, stderr: 'blocked', decision: 'deny' }),
+      stderrSummaryMaxChars: 500, durationMs: 5,
+      output: output({ exitCode: 2, stderr: 'blocked', decision: 'deny', systemMessage: 'heads up' }),
     })
     const full = [...session.events].find(e => e.type === 'hook/result')
     if (full?.type === 'hook/result') {
-      expect(full.data).toEqual({ turn: 1, point: 'PreToolUse', handlerId: 'h1', decision: 'deny', exitCode: 2, stderrSummary: 'blocked', durationMs: 5 })
+      expect(full.data).toEqual({
+        turn: 1,
+        point: 'PreToolUse',
+        handlerId: 'h1',
+        decision: 'deny',
+        exitCode: 2,
+        stderrSummary: 'blocked',
+        systemMessage: 'heads up',
+        durationMs: 5,
+      })
     }
 
     // A result with no exit code / no stderr (e.g. a hook that could not run) omits both keys.
@@ -52,6 +62,7 @@ describe('hook/* session events', () => {
     if (sparse?.type === 'hook/result') {
       expect('exitCode' in sparse.data).toBe(false)
       expect('stderrSummary' in sparse.data).toBe(false)
+      expect('systemMessage' in sparse.data).toBe(false)
       expect(sparse.data.decision).toBe('allow')
     }
   })
