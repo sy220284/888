@@ -48,6 +48,8 @@ jobs:
           -t "runs one task through the product headless profile command"
       - name: Install Chromium for browser tests
         run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium
+      - name: Prepare bubblewrap for sandboxed browser scenarios
+        run: bash scripts/prepare-ci-bubblewrap.sh
       - name: Test built web application in replay mode
         env:
           DSH_SNAPSHOT: replay

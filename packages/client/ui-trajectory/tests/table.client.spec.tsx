@@ -8,6 +8,7 @@ import type { TrajectoryTurnModel } from '../src/client/layout.ts'
 
 afterEach(() => {
   cleanup()
+  vi.useRealTimers()
   vi.restoreAllMocks()
   Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
 })
@@ -529,6 +530,32 @@ describe('TrajectoryTable', () => {
     await waitFor(() => {
       expect(view.container.querySelector('tr[data-virtual-position]')).toBeTruthy()
     })
+  })
+
+  it('clears virtual scroll work when the table unmounts', () => {
+    vi.useFakeTimers()
+    vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600)
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', {
+      configurable: true,
+      value: vi.fn(),
+    })
+    const cells = Array.from({ length: 500 }, (_, index) => ({
+      index: index + 1,
+      kind: 'context' as const,
+      text: `Context ${index + 1}`,
+      timeSeconds: 0,
+    }))
+    const view = render(
+      <TrajectoryTable
+        turns={[{ turn: 1, groups: [{ title: 'Context', cells }] }]}
+        {...FOLD_PROPS}
+      />,
+    )
+
+    fireEvent.scroll(screen.getByRole('table').parentElement as HTMLElement)
+    view.unmount()
+
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('mounts only the visible window for a long ledger', async () => {

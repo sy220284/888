@@ -1794,6 +1794,10 @@ export function TrajectoryTable({
     overscan: VIRTUAL_OVERSCAN_ROWS,
     scrollMargin: virtualScrollMargin,
     scrollEndThreshold: BOTTOM_FOLLOW_THRESHOLD_PX,
+    // Prefer the native event when available. Besides avoiding a redundant
+    // debounce, this prevents virtual-core's fallback timer from notifying
+    // React after the table and its test/browser document have been disposed.
+    useScrollendEvent: true,
   })
   const virtualIndexByRecordId = useMemo(() => {
     const indexes = new Map<string, number>()
