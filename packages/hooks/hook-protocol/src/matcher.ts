@@ -42,8 +42,9 @@ function matcherStrategy(mode: MatcherModeInput): MatcherStrategy {
   return mode
 }
 
-/** Preserve legacy diagnostic labels; give canonical strategies readable labels. */
-function matcherDiagnosticLabel(mode: MatcherModeInput): string {
+/** Preserve legacy labels unless an adapter supplies its own diagnostic label. */
+function matcherDiagnosticLabel(mode: MatcherModeInput, diagnosticLabel?: string): string {
+  if (diagnosticLabel !== undefined) return diagnosticLabel
   if (mode === 'claude-code' || mode === 'codex') return mode
   return `${mode}-strategy`
 }
@@ -52,15 +53,20 @@ function matcherDiagnosticLabel(mode: MatcherModeInput): string {
  * Validate one matcher before an adapter accepts its config group.
  * @param matcher - configured pattern; match-all sentinels are valid.
  * @param mode - canonical strategy, or a legacy bridge selector during migration.
+ * @param diagnosticLabel - optional adapter-owned label used only in diagnostics.
  * @returns `undefined` for a valid matcher, otherwise a stable diagnostic.
  */
-export function matcherDiagnostic(matcher: string | undefined, mode: MatcherModeInput): string | undefined {
+export function matcherDiagnostic(
+  matcher: string | undefined,
+  mode: MatcherModeInput,
+  diagnosticLabel?: string,
+): string | undefined {
   if (isMatchAll(matcher)) return undefined
   const pattern = matcher as string
   const strategy = matcherStrategy(mode)
   if (strategy === 'literal-alternation-or-regex' && LITERAL_ALTERNATION.test(pattern)) return undefined
   return compileRegex(pattern) === undefined
-    ? `invalid ${matcherDiagnosticLabel(mode)} regex matcher ${JSON.stringify(pattern)}`
+    ? `invalid ${matcherDiagnosticLabel(mode, diagnosticLabel)} regex matcher ${JSON.stringify(pattern)}`
     : undefined
 }
 
