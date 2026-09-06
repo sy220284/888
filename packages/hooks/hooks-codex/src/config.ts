@@ -75,7 +75,7 @@ export function parseCodexConfig(raw: unknown): ParsedCodexConfig {
       const matcher = event === 'UserPromptSubmit' || event === 'Stop'
         ? undefined
         : typeof group.matcher === 'string' ? group.matcher : undefined
-      const diagnostic = matcherDiagnostic(matcher, 'codex')
+      const diagnostic = matcherDiagnostic(matcher, 'regex', 'codex')
       if (diagnostic !== undefined) throw new SyntaxError(`${diagnostic} on event ${JSON.stringify(event)}`)
       groups.push({ ...matcher !== undefined ? { matcher } : {}, hooks: commands })
     }
