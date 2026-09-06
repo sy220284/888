@@ -75,6 +75,12 @@ describe('matcherDiagnostic — parse-time diagnostics', () => {
     expect(matcherDiagnostic('[', 'codex')).toBe('invalid codex regex matcher "["')
   })
 
+  it('lets adapters keep provider-specific diagnostics while selecting canonical strategies', () => {
+    expect(matcherDiagnostic('(', 'literal-alternation-or-regex', 'claude-code'))
+      .toBe('invalid claude-code regex matcher "("')
+    expect(matcherDiagnostic('[', 'regex', 'codex')).toBe('invalid codex regex matcher "["')
+  })
+
   it('reports canonical strategy ids for new adapters', () => {
     expect(matcherDiagnostic('(', 'literal-alternation-or-regex'))
       .toBe('invalid literal-alternation-or-regex-strategy regex matcher "("')
