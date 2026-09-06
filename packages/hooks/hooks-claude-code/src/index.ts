@@ -17,9 +17,15 @@ import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, MessageSource } from '@deepseek-ai/dsh-llm'
-import type { UserMessage } from '@deepseek-ai/dsh-session'
+import type { JsonValue, UserMessage } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-persistence'
-import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import {
+  validateJsonSchemaValue,
+  type PostToolDecision,
+  type PreToolDecision,
+  type ToolExecution,
+  type ToolExecutionResult,
+} from '@deepseek-ai/dsh-tools'
 import {
   appendHookInvoked,
   appendHookResult,
@@ -39,9 +45,10 @@ import type { SubagentRunId } from '@deepseek-ai/dsh-subagent'
 import { parseClaudeCodeConfig, type ClaudeCodeHookConfig, type SubstitutionVars } from './config.ts'
 
 export const name = 'hooks-claude-code'
-// `bash` is required to run hooks; the rest are read opportunistically via
-// ctx.get so a deployment can load this bridge without every extension point present.
-export const inject = ['shell']
+// Hook execution needs the shell; PostToolUse result rewrites consult the
+// registered tool's output schema before they may replace its canonical value.
+// Other extension points remain opportunistic listeners.
+export const inject = ['shell', 'tools']
 
 /** Plugin config: explicit compatibility source + optional per-session project discovery. */
 export interface Config {
@@ -407,16 +414,49 @@ export function apply(ctx: Context, config: Config): void {
     )
     deferStop(exec.agent, merged, point)
     const context = contextFrom(merged)
+    let replacement: JsonValue | undefined
+    if (merged.toolOutputRewrite !== undefined) {
+      if (point !== 'PostToolUse') {
+        ctx.logger.warn(`hooks-claude-code: ${point} hook requested a tool-output rewrite outside PostToolUse (ignored)`)
+      } else if (merged.toolOutputRewrite.scope === 'mcp-tool' && !exec.name.startsWith('mcp__')) {
+        ctx.logger.warn(`hooks-claude-code: PostToolUse updatedMCPToolOutput targeted non-MCP tool "${exec.name}" (ignored)`)
+      } else {
+        const tool = ctx.tools.get(exec.name, exec.agent)
+        const violations = tool === undefined
+          ? [`tool "${exec.name}" is no longer registered`]
+          : validateJsonSchemaValue(tool.output.schema, merged.toolOutputRewrite.value, 'value')
+        if (violations.length > 0) {
+          ctx.logger.warn(
+            `hooks-claude-code: PostToolUse tool-output rewrite for "${exec.name}" did not match its output schema (ignored): ${violations.join('; ')}`,
+          )
+        } else {
+          replacement = merged.toolOutputRewrite.value
+        }
+      }
+    }
     if (merged.decision === 'deny') {
       return { kind: 'block', feedback: [{ type: 'text', text: merged.reason ?? `blocked by ${point} hook` }], ...context ? { additionalContexts: [context] } : {} }
     }
     // Our hooks did not block. DELEGATE so a later listener can still block/replace,
     // then fold our context onto its decision (a downstream block carries it too).
     const downstream = await next()
-    if (!context) return downstream
     if (downstream.kind === 'block') {
-      return { ...downstream, additionalContexts: prependContext(context, downstream.additionalContexts) }
+      return context
+        ? { ...downstream, additionalContexts: prependContext(context, downstream.additionalContexts) }
+        : downstream
     }
+    // A later listener's explicit projection replacement wins. Otherwise the
+    // Claude hook's validated value travels through the ToolRuntime's ordinary
+    // materialization path, which re-renders canonical model/UI content.
+    const downstreamReplaced = Object.hasOwn(downstream, 'value') || Object.hasOwn(downstream, 'content')
+    if (replacement !== undefined && !downstreamReplaced) {
+      return {
+        kind: 'accept',
+        value: replacement,
+        ...context ? { additionalContexts: prependContext(context, downstream.additionalContexts) } : {},
+      }
+    }
+    if (!context) return downstream
     return {
       ...downstream,
       additionalContexts: prependContext(context, downstream.additionalContexts),
@@ -543,7 +583,7 @@ function postToolPayload(ctx: Context, point: 'PostToolUse' | 'PostToolUseFailur
   const common = { ...base(ctx, exec.agent, point), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }
   return result.isError
     ? { ...common, error: result.error.message, is_interrupt: exec.signal.aborted }
-    : { ...common, tool_response: blocksToText(result.content) }
+    : { ...common, tool_response: result.value }
 }
 function stopPayload(ctx: Context, agent: Agent, stopHookActive: boolean): Record<string, unknown> {
   return { ...base(ctx, agent, 'Stop'), stop_hook_active: stopHookActive }

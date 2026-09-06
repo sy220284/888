@@ -43,6 +43,16 @@ describe('mergeHookOutputs — updatedInput', () => {
   })
 })
 
+describe('mergeHookOutputs — tool output rewrite', () => {
+  it('keeps the last rewrite across universal and MCP-scoped forms', () => {
+    const m = mergeHookOutputs([
+      out({ toolOutputRewrite: { value: { first: true }, scope: 'any-tool' } }),
+      out({ toolOutputRewrite: { value: { second: true }, scope: 'mcp-tool' } }),
+    ])
+    expect(m.toolOutputRewrite).toEqual({ value: { second: true }, scope: 'mcp-tool' })
+  })
+})
+
 describe('mergeHookOutputs — reasons, stop, context, systemMessages accumulate', () => {
   it('joins block/deny reasons with a blank line (only from blocking hooks)', () => {
     const m = mergeHookOutputs([

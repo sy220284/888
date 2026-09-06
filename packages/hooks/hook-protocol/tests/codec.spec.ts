@@ -88,6 +88,31 @@ describe('parseHookOutput — structured stdout (exit 0 only)', () => {
     expect(out.updatedInput).toEqual({ command: 'safe' })
   })
 
+  it('normalizes updatedToolOutput and the MCP compatibility alias', () => {
+    const universal = parseHookOutput(0, JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
+        updatedToolOutput: [{ type: 'text', text: 'redacted' }],
+        updatedMCPToolOutput: { content: [] },
+      },
+    }), '', 'PostToolUse')
+    expect(universal.toolOutputRewrite).toEqual({
+      value: [{ type: 'text', text: 'redacted' }],
+      scope: 'any-tool',
+    })
+
+    const mcp = parseHookOutput(0, JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PostToolUse',
+        updatedMCPToolOutput: { content: [{ type: 'text', text: 'safe' }] },
+      },
+    }), '', 'PostToolUse')
+    expect(mcp.toolOutputRewrite).toEqual({
+      value: { content: [{ type: 'text', text: 'safe' }] },
+      scope: 'mcp-tool',
+    })
+  })
+
   it('an unknown decision string is ignored (not coerced)', () => {
     expect(parseHookOutput(0, JSON.stringify({ decision: 'maybe' }), '').decision).toBeUndefined()
   })
@@ -96,13 +121,21 @@ describe('parseHookOutput — structured stdout (exit 0 only)', () => {
     // A PreToolUse block emitted on a Stop hook is malformed — its event-scoped
     // fields must not take effect (a stray PreToolUse deny must not deny the Stop).
     const out = parseHookOutput(0, JSON.stringify({
-      hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'no', additionalContext: 'x', updatedInput: { command: 'y' } },
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+        permissionDecisionReason: 'no',
+        additionalContext: 'x',
+        updatedInput: { command: 'y' },
+        updatedToolOutput: { secret: true },
+      },
     }), '', 'Stop')
     expect(out.hookEventName).toBe('PreToolUse') // still recorded for the log
     expect(out.decision).toBeUndefined() // event-scoped fields discarded
     expect(out.reason).toBeUndefined()
     expect(out.additionalContext).toBeUndefined()
     expect(out.updatedInput).toBeUndefined()
+    expect(out.toolOutputRewrite).toBeUndefined()
   })
 
   it('APPLIES a hookSpecificOutput block whose hookEventName matches the firing event', () => {

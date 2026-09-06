@@ -5,6 +5,8 @@
  * @module @deepseek-ai/dsh-hook-protocol/types
  */
 
+import type { JsonValue } from '@deepseek-ai/dsh-session'
+
 declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     /**
@@ -138,4 +140,15 @@ export interface HookOutput {
    * policy.
    */
   updatedInput?: Record<string, unknown>
+  /**
+   * A post-execution tool-result rewrite. The codec normalizes provider field
+   * names into one semantic shape; an adapter still decides whether the firing
+   * point and tool identity make the rewrite applicable.
+   */
+  toolOutputRewrite?: {
+    /** Lossless JSON value requested as the replacement tool result. */
+    value: JsonValue
+    /** `mcp-tool` limits the rewrite to a provider-bridged MCP tool. */
+    scope: 'any-tool' | 'mcp-tool'
+  }
 }
