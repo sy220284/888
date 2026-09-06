@@ -11,6 +11,7 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -50,7 +51,7 @@ export const name = 'hooks-claude-code'
 // Other extension points remain opportunistic listeners.
 export const inject = ['shell', 'tools']
 
-/** Plugin config: explicit compatibility source + optional per-session project discovery. */
+/** Plugin config: explicit compatibility source plus opt-in Claude source discovery. */
 export interface Config {
   /**
    * Optional explicit `hooks.json` or settings file whose `hooks` key holds the config.
@@ -65,6 +66,16 @@ export interface Config {
    * are executable code and Harness has no Claude workspace-trust prompt seam yet.
    */
   discoverProjectHooks?: boolean
+  /** Discover `settings.json` from Claude's user config directory. */
+  discoverUserHooks?: boolean
+  /** Discover the platform `managed-settings.json` policy file. */
+  discoverManagedHooks?: boolean
+  /** Discover `hooks/hooks.json` below {@link pluginRoot}. */
+  discoverPluginHooks?: boolean
+  /** Override Claude's user config directory (defaults to CLAUDE_CONFIG_DIR or `~/.claude`). */
+  claudeConfigDir?: string
+  /** Override the platform managed-settings path, primarily for embedded hosts and tests. */
+  managedSettingsPath?: string
   /**
    * Replaces `${CLAUDE_PLUGIN_ROOT}` in command strings.
    */
@@ -88,6 +99,11 @@ export interface Config {
 export const Config: z<Config> = z.object({
   configPath: z.string(),
   discoverProjectHooks: z.boolean().default(false),
+  discoverUserHooks: z.boolean().default(false),
+  discoverManagedHooks: z.boolean().default(false),
+  discoverPluginHooks: z.boolean().default(false),
+  claudeConfigDir: z.string(),
+  managedSettingsPath: z.string(),
   pluginRoot: z.string(),
   projectDir: z.string(),
   defaultTimeoutMs: z.number().default(DEFAULT_HOOK_TIMEOUT_MS),
@@ -111,6 +127,17 @@ function assertPositiveInteger(name: string, value: number): void {
   }
 }
 
+/** Claude's file-based managed settings location for the current platform. */
+function defaultManagedSettingsPath(): string {
+  if (process.platform === 'darwin') {
+    return '/Library/Application Support/ClaudeCode/managed-settings.json'
+  }
+  if (process.platform === 'win32') {
+    return join(process.env['ProgramFiles'] ?? 'C:\\Program Files', 'ClaudeCode', 'managed-settings.json')
+  }
+  return '/etc/claude-code/managed-settings.json'
+}
+
 export function apply(ctx: Context, config: Config): void {
   // Validate before config parsing so a bad value cannot be hidden by its early return.
   const stderrSummaryMaxChars = config.stderrSummaryMaxChars ?? DEFAULT_STDERR_SUMMARY_MAX_CHARS
@@ -119,7 +146,14 @@ export function apply(ctx: Context, config: Config): void {
   const maxStopContinuations = config.maxStopContinuations ?? 8
   assertPositiveInteger('maxStopContinuations', maxStopContinuations)
   const discoverProjectHooks = config.discoverProjectHooks ?? false
+  const discoverUserHooks = config.discoverUserHooks ?? false
+  const discoverManagedHooks = config.discoverManagedHooks ?? false
+  const discoverPluginHooks = config.discoverPluginHooks ?? false
   const explicitConfigPath = config.configPath === undefined ? undefined : resolve(config.configPath)
+  const claudeConfigDir = resolve(config.claudeConfigDir
+    ?? process.env['CLAUDE_CONFIG_DIR']
+    ?? join(homedir(), '.claude'))
+  const managedSettingsPath = resolve(config.managedSettingsPath ?? defaultManagedSettingsPath())
   const warned = new Set<string>()
 
   function warnOnce(key: string, message: string): void {
@@ -158,21 +192,41 @@ export function apply(ctx: Context, config: Config): void {
 
   function groupsFor(point: string, workdir: string | undefined): MatcherGroup[] {
     const groups: MatcherGroup[] = [...staticParsed[point] ?? []]
-    if (!discoverProjectHooks || workdir === undefined) return groups
-
     const projectDir = config.projectDir ?? workdir
-    const vars: SubstitutionVars = {
-      ...config.pluginRoot !== undefined ? { pluginRoot: config.pluginRoot } : {},
-      projectDir,
+    const projectVars: SubstitutionVars = {
+      ...projectDir !== undefined ? { projectDir } : {},
     }
-    for (const path of [
-      join(workdir, '.claude', 'settings.json'),
-      join(workdir, '.claude', 'settings.local.json'),
-    ]) {
-      // Avoid double execution when an existing explicit source points at the
-      // same project settings file that discovery would otherwise re-read.
-      if (explicitConfigPath !== undefined && resolve(path) === explicitConfigPath) continue
-      const parsed = loadConfigSource(path, vars, true)
+    const sources: Array<{ path: string; vars: SubstitutionVars }> = []
+    if (discoverUserHooks) {
+      sources.push({ path: join(claudeConfigDir, 'settings.json'), vars: projectVars })
+    }
+    if (discoverProjectHooks && workdir !== undefined) {
+      sources.push(
+        { path: join(workdir, '.claude', 'settings.json'), vars: projectVars },
+        { path: join(workdir, '.claude', 'settings.local.json'), vars: projectVars },
+      )
+    }
+    if (discoverManagedHooks) {
+      sources.push({ path: managedSettingsPath, vars: projectVars })
+    }
+    if (discoverPluginHooks && config.pluginRoot !== undefined) {
+      sources.push({
+        path: join(config.pluginRoot, 'hooks', 'hooks.json'),
+        vars: {
+          ...projectVars,
+          pluginRoot: config.pluginRoot,
+        },
+      })
+    }
+
+    const seen = new Set(explicitConfigPath === undefined ? [] : [explicitConfigPath])
+    for (const source of sources) {
+      const path = resolve(source.path)
+      // Avoid double execution when two configured discovery sources resolve
+      // to the same file or the explicit source already loaded it.
+      if (seen.has(path)) continue
+      seen.add(path)
+      const parsed = loadConfigSource(path, source.vars, true)
       groups.push(...parsed[point] ?? [])
     }
     return groups

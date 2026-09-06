@@ -38,13 +38,16 @@ function settings(dir: string, hooks: unknown, local = false): void {
   )
 }
 
-async function harness(adapter: MockAdapter): Promise<Context> {
+async function harness(
+  adapter: MockAdapter,
+  config: HooksClaude.Config = { discoverProjectHooks: true },
+): Promise<Context> {
   const ctx = new Context()
   await mountAgentLoopTestDependencies(ctx)
   await ctx.plugin(AgentLoop, { agents: [] })
   await ctx.plugin(LocalSubprocessRuntime)
   await ctx.plugin(LocalBashExecutor, { timeoutMs: 10_000 })
-  await ctx.plugin(HooksClaude, { discoverProjectHooks: true })
+  await ctx.plugin(HooksClaude, config)
   ctx.llm.registerAdapter(['mock'], adapter)
   return ctx
 }
@@ -54,6 +57,58 @@ function prompt(text = 'go') {
 }
 
 describe('hooks-claude-code P5B per-session project discovery', () => {
+  it('merges user, project, local, managed, and plugin hook sources', async () => {
+    const dir = project()
+    const userDir = join(dir, 'user-config')
+    const pluginRoot = join(dir, 'plugin')
+    const managedPath = join(dir, 'managed-settings.json')
+    mkdirSync(userDir, { recursive: true })
+    mkdirSync(join(pluginRoot, 'hooks'), { recursive: true })
+
+    const hook = (command: string) => ({
+      UserPromptSubmit: [{ hooks: [{ type: 'command', command }] }],
+    })
+    const contextScript = (name: string, label: string) => script(
+      dir,
+      name,
+      `#!/usr/bin/env bash\necho '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"${label}"}}'\n`,
+    )
+    writeFileSync(join(userDir, 'settings.json'), JSON.stringify({
+      hooks: hook(contextScript('user.sh', 'user-hook')),
+    }))
+    settings(dir, hook(contextScript('project.sh', 'project-hook')))
+    settings(dir, hook(contextScript('local.sh', 'local-hook')), true)
+    writeFileSync(managedPath, JSON.stringify({
+      hooks: hook(contextScript('managed.sh', 'managed-hook')),
+    }))
+    script(pluginRoot, 'plugin.sh', '#!/usr/bin/env bash\necho \'{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"plugin-hook"}}\'\n')
+    writeFileSync(join(pluginRoot, 'hooks', 'hooks.json'), JSON.stringify({
+      hooks: hook('${CLAUDE_PLUGIN_ROOT}/plugin.sh'),
+    }))
+
+    const adapter = new MockAdapter([textResponse('ok')])
+    const ctx = await harness(adapter, {
+      discoverUserHooks: true,
+      discoverProjectHooks: true,
+      discoverManagedHooks: true,
+      discoverPluginHooks: true,
+      claudeConfigDir: userDir,
+      managedSettingsPath: managedPath,
+      pluginRoot,
+    })
+    const agent = ctx.agentLoop.create(SessionId('p5b-all-sources'), { provider: 'mock', model: 'mock' }, { cwd: dir })
+
+    agent.followup(prompt())
+    await agent.whenIdle()
+
+    const request = JSON.stringify(adapter.requests[0]!.messages)
+    const labels = ['user-hook', 'project-hook', 'local-hook', 'managed-hook', 'plugin-hook']
+    for (const label of labels) expect(request).toContain(label)
+    expect(labels.map(label => request.indexOf(label))).toEqual(
+      [...labels.map(label => request.indexOf(label))].sort((left, right) => left - right),
+    )
+  })
+
   it('isolates project settings by session cwd', async () => {
     const a = project()
     const b = project()
