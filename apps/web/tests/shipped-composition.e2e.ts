@@ -16,6 +16,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-permission-presets'
+import type {} from '@deepseek-ai/dsh-runtime-policy'
 import type {} from '@deepseek-ai/dsh-agent-presets'
 import type {} from '@deepseek-ai/dsh-commands'
 import type {} from '@deepseek-ai/dsh-system-prompt'
@@ -192,13 +193,14 @@ it('lets a preset producer reach the background-job registry', async () => {
     meta: { cwd: scaffold.workspaceCwd },
     setup: agentCtx => ctx.agentPresets.mount(agentCtx).then(() => undefined),
   })
-  // The registry linkage is the subject here; generic runtime approvals are
-  // exercised in their browser-owned scenarios. Approval dispatch is scoped
-  // to the exact Agent, so install the answerer on that scope.
-  const disposeApproval = handle.agent.ctx.on(
-    'approval/request',
-    () => Promise.resolve('allowed-once'),
-    { prepend: true },
+  // The registry linkage is the subject here; these host-side reads run
+  // between turns, where an approval audit cannot legally be appended. Keep
+  // the producer's ordinary process requirement and exempt only the two
+  // controller reads from the conservative unknown-tool fallback.
+  const disposeRequirements = ctx.runtimePolicy.registerToolRequirements(
+    'web-e2e:shipped-background-registry',
+    exec => exec.name === 'job_list' || exec.name === 'job_output' ? [] : undefined,
+    { priority: 100 },
   )
   try {
     const signal = new AbortController().signal
@@ -249,7 +251,7 @@ it('lets a preset producer reach the background-job registry', async () => {
       { type: 'text', text: expect.stringContaining('SHIPPED_BACKGROUND_OK') as unknown as string },
     ])
   } finally {
-    disposeApproval()
+    disposeRequirements()
     await handle.dispose()
   }
 }, 120_000)

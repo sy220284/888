@@ -346,12 +346,10 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     await input.fill(STEER_TWO)
     await input.press('Enter')
     const dock = page.locator('[data-queue-dock]')
-    // Both messages queued: inspect the collapsed rows without expanding the
-    // dock. The empty-draft chord must land inside the first replay window,
-    // before the approval composer replaces the ordinary textarea.
+    // Both messages queued. Keep the dock collapsed: its rows are intentionally
+    // not mounted in that state, and the empty-draft chord must land inside the
+    // first replay window before the question composer replaces the textarea.
     await dock.getByText('2 queued messages').waitFor({ timeout: 10_000 })
-    expect(await dock.getByRole('listitem').evaluateAll(rows => rows.map(row => row.textContent)))
-      .toEqual([expect.stringContaining(STEER_ONE), expect.stringContaining(STEER_TWO)])
     expect(await page.locator('[data-pending-steering]').count()).toBe(0)
 
     // Empty draft + Cmd+Enter: both queued rows steer in FIFO order, the dock

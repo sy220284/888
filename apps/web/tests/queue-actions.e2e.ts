@@ -130,7 +130,7 @@ describe('web e2e: queue row actions', () => {
     // Chromium may reserve a classic scroll bar for the transcript, shifting
     // the dock relative to the non-scrolling input card by half that width.
     // The contract is symmetric containment with at least the declared inset.
-    expect(queueLeftInset).toBeCloseTo(queueRightInset, 1)
+    expect(Math.abs(queueLeftInset - queueRightInset)).toBeLessThanOrEqual(2)
     expect(queueLeftInset).toBeGreaterThanOrEqual(composerMetrics.dockInset - 1)
     await page.setViewportSize({ width: 1680, height: 1000 })
 

@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { AgentHandle } from '@deepseek-ai/dsh-agent'
 import { CallId, createUserMessage, LlmAdapter } from '@deepseek-ai/dsh-llm'
 import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
+import type {} from '@deepseek-ai/dsh-runtime-policy'
 import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
 import {
   ScheduleId,
@@ -208,6 +209,7 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
   let everyAssistantReply: SessionEvent<'assistant/message'> | undefined
   let everyRecords: readonly [EveryScheduleRecord, EveryScheduleRecord]
   let tripwire: ReturnType<typeof watchConsole>
+  let disposeSetupRequirements: (() => void) | undefined
   const approvalDisposers: Array<() => void> = []
   const afterAdapter = new ReminderAdapter()
   const atAdapter = new BrowserZoneAtAdapter()
@@ -215,6 +217,16 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({ extraOverlayPath: OVERLAY })
+    // The two host-side fixture setup calls run between turns, where an
+    // approval audit cannot legally be appended. Exempt only those exact call
+    // ids; the model-authored schedule_create still follows normal approval.
+    disposeSetupRequirements = scaffold.ctx.runtimePolicy.registerToolRequirements(
+      'web-e2e:schedule-setup',
+      exec => exec.callId === 'schedule-after-create' || exec.callId === 'schedule-every-list'
+        ? []
+        : undefined,
+      { priority: 100 },
+    )
     scaffold.ctx.effect(
       () => scaffold.ctx.llm.registerAdapter([AFTER_PROVIDER], afterAdapter),
       'Schedule Web After adapter',
@@ -388,6 +400,7 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
     const failures: unknown[] = []
     await browser?.close().catch((error: unknown) => failures.push(error))
     for (const dispose of approvalDisposers.splice(0)) dispose()
+    disposeSetupRequirements?.()
     await atHandle?.dispose().catch((error: unknown) => failures.push(error))
     await everyHandle?.dispose().catch((error: unknown) => failures.push(error))
     await afterHandle?.dispose().catch((error: unknown) => failures.push(error))

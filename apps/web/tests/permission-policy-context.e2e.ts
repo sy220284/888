@@ -163,7 +163,7 @@ describe('web e2e: current sandbox policy reaches the model before tools', () =>
     expect(callArgs(firstCall)['sandbox_permissions']).toBeUndefined()
     expect(calls.some(call => callArgs(call)['sandbox_permissions'] !== undefined)).toBe(true)
     expect(sessionEvents.some(event => event.type === 'tool/result'
-      && JSON.stringify(event.data).includes('[sandbox: file access denied under read-only mode]'))).toBe(true)
+      && JSON.stringify(event.data).includes('runtime permission denied file.write on'))).toBe(true)
     expect(sessionEvents.some(event => event.type === 'approval/asked')).toBe(true)
     if (sessionWorkspace === undefined) throw new Error('permission-policy scenario observed no session workspace')
     expect(await readFile(join(sessionWorkspace, 'policy-neutral.txt'), 'utf8')).toBe('POLICY_NEUTRAL_OK')
