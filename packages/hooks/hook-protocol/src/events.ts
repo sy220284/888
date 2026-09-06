@@ -7,7 +7,7 @@
  */
 
 import type { Session } from '@deepseek-ai/dsh-session'
-import type { HookDialect, HookOutput } from './types.ts'
+import type { HookAdapterId, HookOutput } from './types.ts'
 
 /** What identifies a hook invocation across its invoked/result pair. */
 export interface HookInvocation {
@@ -15,8 +15,8 @@ export interface HookInvocation {
   turn: number
   /** The hook point (`PreToolUse`, `Stop`, …). */
   point: string
-  /** The bridge dialect that ran it. */
-  dialect: HookDialect
+  /** The ecosystem adapter that ran it; persisted under the legacy `dialect` field name. */
+  dialect: HookAdapterId
   /** A stable id correlating the invoked event with its result. */
   handlerId: string
   /** The matcher-group pattern that selected it (absent for match-all). */

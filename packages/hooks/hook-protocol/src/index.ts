@@ -10,13 +10,14 @@
 export type {
   CommandHook,
   HookAdapterId,
-  HookDialect,
   HookOutput,
   LegacyMatcherMode,
   MatcherGroup,
-  MatcherMode,
   MatcherStrategy,
 } from './types.ts'
+// Public compatibility aliases intentionally remain exported while callers migrate.
+// oxlint-disable-next-line typescript/no-deprecated
+export type { HookDialect, MatcherMode } from './types.ts'
 export { matcherDiagnostic, matchesMatcher } from './matcher.ts'
 export { parseHookOutput } from './codec.ts'
 export { DEFAULT_HOOK_TIMEOUT_MS, runHook } from './runner.ts'
