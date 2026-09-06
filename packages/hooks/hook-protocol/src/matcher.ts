@@ -7,7 +7,10 @@
  * @module @deepseek-ai/dsh-hook-protocol/matcher
  */
 
-import type { MatcherMode, MatcherStrategy } from './types.ts'
+import type { LegacyMatcherMode, MatcherStrategy } from './types.ts'
+
+/** Compatibility input accepted while existing adapters migrate to strategies. */
+type MatcherModeInput = MatcherStrategy | LegacyMatcherMode
 
 /** True for an absent / empty / `'*'` pattern — the match-all sentinels. */
 function isMatchAll(matcher: string | undefined): boolean {
@@ -33,14 +36,14 @@ function compileRegex(pattern: string): RegExp | undefined {
  * branch is deliberately closed: new ecosystem adapters select a strategy and
  * never add their provider name here.
  */
-function matcherStrategy(mode: MatcherMode): MatcherStrategy {
+function matcherStrategy(mode: MatcherModeInput): MatcherStrategy {
   if (mode === 'claude-code') return 'literal-alternation-or-regex'
   if (mode === 'codex') return 'regex'
   return mode
 }
 
 /** Preserve legacy diagnostic labels; give canonical strategies readable labels. */
-function matcherDiagnosticLabel(mode: MatcherMode): string {
+function matcherDiagnosticLabel(mode: MatcherModeInput): string {
   if (mode === 'claude-code' || mode === 'codex') return mode
   return `${mode}-strategy`
 }
@@ -51,7 +54,7 @@ function matcherDiagnosticLabel(mode: MatcherMode): string {
  * @param mode - canonical strategy, or a legacy bridge selector during migration.
  * @returns `undefined` for a valid matcher, otherwise a stable diagnostic.
  */
-export function matcherDiagnostic(matcher: string | undefined, mode: MatcherMode): string | undefined {
+export function matcherDiagnostic(matcher: string | undefined, mode: MatcherModeInput): string | undefined {
   if (isMatchAll(matcher)) return undefined
   const pattern = matcher as string
   const strategy = matcherStrategy(mode)
@@ -70,7 +73,7 @@ export function matcherDiagnostic(matcher: string | undefined, mode: MatcherMode
  * @param query - candidate value such as a tool name or session source.
  * @param mode - canonical strategy, or a legacy bridge selector during migration.
  */
-export function matchesMatcher(matcher: string | undefined, query: string, mode: MatcherMode): boolean {
+export function matchesMatcher(matcher: string | undefined, query: string, mode: MatcherModeInput): boolean {
   if (isMatchAll(matcher)) return true
   const pattern = matcher as string
   const strategy = matcherStrategy(mode)
