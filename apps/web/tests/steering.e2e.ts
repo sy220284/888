@@ -45,6 +45,10 @@ const STEER_ALL_MID = join(STEER_ALL_DIR, 'mid-steer.expected.md')
 const STEER_ALL_SETTLED = join(STEER_ALL_DIR, 'settled.expected.md')
 const STEER_ONE = 'Interjection: include the word BANANA in your final reply.'
 const STEER_TWO = 'Interjection: include the word ORANGE in your final reply.'
+// This scenario performs three composer submissions before the question tool
+// replaces the textarea. Give each replay chunk enough room for the real
+// submitting -> editable projection round trip on a busy CI runner.
+const STEER_ALL_REPLAY_PACE_MS = 500
 
 /** Concatenated assistant text deltas — the model-visible reply body. */
 function assistantText(events: SessionEvent[]): string {
@@ -313,7 +317,7 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     scaffold = await launchWebScaffold({
       replayFixture: STEER_ALL_FIXTURE,
       replayOverride: STEER_ALL_OVERRIDE,
-      paceMs: REPLAY_PACE_MS,
+      paceMs: STEER_ALL_REPLAY_PACE_MS,
     })
     scaffold.ctx.on('session/event', (_session, event) => { sessionEvents.push(event) })
     browser = await chromium.launch()
@@ -341,8 +345,11 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     // first replay window, before the question composer replaces the textarea.
     await input.fill(PROMPT)
     await input.press('Enter')
+    await page.getByRole('button', { name: 'Stop generating' }).waitFor({ timeout: 10_000 })
+    await expect.poll(() => input.isEditable(), { timeout: 10_000 }).toBe(true)
     await input.fill(STEER_ONE)
     await input.press('Enter')
+    await expect.poll(() => input.isEditable(), { timeout: 10_000 }).toBe(true)
     await input.fill(STEER_TWO)
     await input.press('Enter')
     const dock = page.locator('[data-queue-dock]')
@@ -354,6 +361,7 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
 
     // Empty draft + Cmd+Enter: both queued rows steer in FIFO order, the dock
     // empties, and the pending steering renders at the conversation tail.
+    await expect.poll(() => input.isEditable(), { timeout: 10_000 }).toBe(true)
     await input.press('Meta+Enter')
     await expect.poll(
       () => page.locator('[data-pending-steering]').filter({ hasText: /BANANA|ORANGE/ }).count(),
