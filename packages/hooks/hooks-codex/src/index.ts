@@ -128,7 +128,7 @@ export function apply(ctx: Context, config: Config): void {
     const workdir = opts.agent?.session.header.cwd
     for (const group of groups) {
       // Codex always interprets matchers as regexes; it has no literal fast path.
-      if (!matchesMatcher(group.matcher, matchQuery, 'codex')) continue
+      if (!matchesMatcher(group.matcher, matchQuery, 'regex')) continue
       for (const hook of group.hooks) {
         const handlerId = nextHandlerId(point)
         const session = opts.agent?.session
