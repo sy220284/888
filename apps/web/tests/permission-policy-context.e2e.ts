@@ -69,7 +69,6 @@ describe('web e2e: current sandbox policy reaches the model before tools', () =>
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold(MODE === 'record' ? {} : { replayFixture: FIXTURE })
-    disposeApproval = scaffold.ctx.on('approval/request', () => Promise.resolve('allowed-once'), { prepend: true })
     scaffold.ctx.on('session/event', (session, event: SessionEvent) => {
       sessionWorkspace = session.header.cwd
       sessionEvents.push(event)
@@ -80,6 +79,13 @@ describe('web e2e: current sandbox policy reaches the model before tools', () =>
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     await connectFreshWorkspace(page, scaffold.workspaceCwd)
+    const agent = scaffold.ctx.agents.list()[0]
+    if (agent === undefined) throw new Error('permission-policy scenario connected no agent')
+    disposeApproval = agent.ctx.on(
+      'approval/request',
+      () => Promise.resolve('allowed-once'),
+      { prepend: true },
+    )
   }, 120_000)
 
   afterAll(async () => {
@@ -157,7 +163,8 @@ describe('web e2e: current sandbox policy reaches the model before tools', () =>
     expect(callArgs(firstCall)['sandbox_permissions']).toBeUndefined()
     expect(calls.some(call => callArgs(call)['sandbox_permissions'] !== undefined)).toBe(true)
     expect(sessionEvents.some(event => event.type === 'tool/result'
-      && JSON.stringify(event.data).includes('runtime permission denied file.write on'))).toBe(true)
+      && JSON.stringify(event.data).includes('[sandbox: file access denied under read-only mode]'))).toBe(true)
+    expect(sessionEvents.some(event => event.type === 'approval/asked')).toBe(true)
     if (sessionWorkspace === undefined) throw new Error('permission-policy scenario observed no session workspace')
     expect(await readFile(join(sessionWorkspace, 'policy-neutral.txt'), 'utf8')).toBe('POLICY_NEUTRAL_OK')
   })

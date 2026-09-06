@@ -118,6 +118,18 @@ describe('SandboxPolicyService', () => {
     })
   })
 
+  it('hands one outer runtime escalation only to the exact executing call', async () => {
+    const ctx = await mounted()
+    const approved = {}
+    const other = {}
+    ctx.sandboxPolicy.grantEscalation(approved, 'workspace-write')
+
+    expect(ctx.sandboxPolicy.consumeEscalation(other, 'workspace-write')).toBeUndefined()
+    expect(ctx.sandboxPolicy.consumeEscalation(approved, 'danger-full-access')).toBeUndefined()
+    expect(ctx.sandboxPolicy.consumeEscalation(approved, 'workspace-write')).toBe('workspace-write')
+    expect(ctx.sandboxPolicy.consumeEscalation(approved, 'workspace-write')).toBeUndefined()
+  })
+
   it('uses the configured root when a session has no cwd', async () => {
     const ctx = await mounted({ workspaceRoot: '/fallback' })
     expect(ctx.sandboxPolicy.resolve({ session: session('sess-no-cwd') }).workspaceRoot).toBe(resolve('/fallback'))

@@ -115,14 +115,6 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     scaffold = await launchWebScaffold(
       MODE === 'record' ? {} : { replayFixture: FIXTURE, replayOverride: OVERRIDE },
     )
-    // Goal exercises its own multi-turn behavior, not the generic permission
-    // surface. Admit its model-authored tools at the host seam so every round
-    // can advance while the dedicated approval scenarios keep owning the UI.
-    disposeApproval = scaffold.ctx.on(
-      'approval/request',
-      () => Promise.resolve('allowed-once'),
-      { global: true, prepend: true },
-    )
     await seedPackageInventory(scaffold.workspaceCwd)
     scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })
     browser = await chromium.launch()
@@ -131,6 +123,16 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     await connectFreshWorkspace(page, scaffold.workspaceCwd)
+    const agent = scaffold.ctx.agents.list()[0]
+    if (agent === undefined) throw new Error('goal-multi-turn-actions connected no agent')
+    // Goal exercises its own multi-turn behavior, not the generic permission
+    // surface. Admit its model-authored tools on the exact Agent scope while
+    // the dedicated approval scenarios keep owning the UI.
+    disposeApproval = agent.ctx.on(
+      'approval/request',
+      () => Promise.resolve('allowed-once'),
+      { prepend: true },
+    )
   }
 
   /** Submit the Goal command after arming the two-turn barrier. */

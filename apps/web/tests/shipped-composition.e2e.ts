@@ -187,18 +187,19 @@ it('assembles the shipped Web catalog, file-reference guidance, retry policy, an
 it('lets a preset producer reach the background-job registry', async () => {
   scaffold = await launchWebScaffold()
   const ctx = scaffold.ctx
-  // The registry linkage is the subject here; generic runtime approvals are
-  // exercised in their browser-owned scenarios.
-  const disposeApproval = ctx.on(
-    'approval/request',
-    () => Promise.resolve('allowed-once'),
-    { global: true, prepend: true },
-  )
   const handle = await ctx.agents.create({
     sessionId: SessionId('shipped-background-job'),
     meta: { cwd: scaffold.workspaceCwd },
     setup: agentCtx => ctx.agentPresets.mount(agentCtx).then(() => undefined),
   })
+  // The registry linkage is the subject here; generic runtime approvals are
+  // exercised in their browser-owned scenarios. Approval dispatch is scoped
+  // to the exact Agent, so install the answerer on that scope.
+  const disposeApproval = handle.agent.ctx.on(
+    'approval/request',
+    () => Promise.resolve('allowed-once'),
+    { prepend: true },
+  )
   try {
     const signal = new AbortController().signal
     // `tool-bash` is a preset row and `tasks` is a host registry; the producer

@@ -231,7 +231,7 @@ describe('web e2e: queue row actions', () => {
     )
     await compareOrRefreshGolden(LAYOUT_EXPECTED, layoutSnapshot, MODE)
 
-    const expectAlignedContextPanels = async () => {
+    const expectAlignedContextPanels = async (allowResponsiveInset = false) => {
       const queuePanelBox = await page.locator('[data-queue-dock] > div').boundingBox()
       const todoBox = await page.locator('[data-testid="todo-panel"]').boundingBox()
       const goalBox = await page.locator('[data-goal-bar] > div').boundingBox()
@@ -240,17 +240,22 @@ describe('web e2e: queue row actions', () => {
       expect(goalBox).not.toBeNull()
       expect(todoBox!.y).toBeLessThan(goalBox!.y)
       expect(goalBox!.y).toBeLessThan(queuePanelBox!.y)
-      // Cross-platform Chromium rounds the scroll-reserved column and CSS
-      // calc() values on different subpixel grids. Two physical pixels keeps
-      // this an alignment assertion without demanding identical rounding.
-      expect(Math.abs(todoBox!.x - goalBox!.x)).toBeLessThanOrEqual(2)
-      expect(Math.abs(todoBox!.x - queuePanelBox!.x)).toBeLessThanOrEqual(2)
-      expect(Math.abs(todoBox!.width - goalBox!.width)).toBeLessThanOrEqual(2)
-      expect(Math.abs(todoBox!.width - queuePanelBox!.width)).toBeLessThanOrEqual(2)
+      const center = (box: NonNullable<typeof todoBox>) => box.x + box.width / 2
+      // The responsive transcript reserves its mobile gutter while the fixed
+      // composer surfaces use the full card column. All three remain centered;
+      // desktop additionally keeps identical widths.
+      expect(Math.abs(center(todoBox!) - center(goalBox!))).toBeLessThanOrEqual(2)
+      expect(Math.abs(center(todoBox!) - center(queuePanelBox!))).toBeLessThanOrEqual(2)
+      expect(Math.abs(goalBox!.width - queuePanelBox!.width)).toBeLessThanOrEqual(2)
+      if (allowResponsiveInset) {
+        expect(todoBox!.width).toBeLessThanOrEqual(goalBox!.width)
+      } else {
+        expect(Math.abs(todoBox!.width - goalBox!.width)).toBeLessThanOrEqual(2)
+      }
     }
     await expectAlignedContextPanels()
     await page.setViewportSize({ width: 640, height: 1000 })
-    await expectAlignedContextPanels()
+    await expectAlignedContextPanels(true)
     await page.setViewportSize({ width: 1680, height: 1000 })
 
     await queueHeader.click()

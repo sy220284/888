@@ -890,6 +890,23 @@ describe('sandbox escalation API (write/edit)', () => {
     expect(fs.stamped).toEqual([{ mode: 'danger-full-access', workspaceRoot: resolve('/session-project') }])
   })
 
+  it('consumes a runtime-approved escalation without asking a second time', async () => {
+    const { ctx, fs } = await setupConfining()
+    ctx.on('tools/execute', (exec, next) => {
+      ctx.sandboxPolicy.grantEscalation(exec, 'danger-full-access')
+      return next()
+    }, { prepend: true })
+    const result = await call(ctx, 'write', {
+      file_path: 'a.txt',
+      content: 'x',
+      sandbox_permissions: 'danger-full-access',
+      justification: 'the outer runtime already approved this call',
+    }, escalationAgent())
+
+    expect(result.isError).toBe(false)
+    expect(fs.stamped).toEqual([{ mode: 'danger-full-access', workspaceRoot: resolve('/session-project') }])
+  })
+
   it('a rejected escalation fails closed with its own text and never mutates', async () => {
     const { ctx, fs } = await setupConfining({ approval: true })
     ctx.on('approval/request', () => Promise.resolve('rejected' as const))

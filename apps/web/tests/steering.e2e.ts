@@ -346,16 +346,12 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     await input.fill(STEER_TWO)
     await input.press('Enter')
     const dock = page.locator('[data-queue-dock]')
-    // Both messages queued: the two-row dock shows a collapsed count header,
-    // and Playwright text matching skips the hidden rows — expand the list,
-    // then assert each row's content.
+    // Both messages queued: inspect the collapsed rows without expanding the
+    // dock. The empty-draft chord must land inside the first replay window,
+    // before the approval composer replaces the ordinary textarea.
     await dock.getByText('2 queued messages').waitFor({ timeout: 10_000 })
-    // The conversation can auto-scroll between the count assertion and the
-    // click, placing this attached header beneath the fixed composer. Trigger
-    // the same DOM activation without Playwright attempting another scroll.
-    await dock.getByRole('button').evaluate((button: HTMLButtonElement) => { button.click() })
-    await dock.getByText(STEER_ONE, { exact: true }).waitFor({ timeout: 10_000 })
-    await dock.getByText(STEER_TWO, { exact: true }).waitFor({ timeout: 10_000 })
+    expect(await dock.getByRole('listitem').evaluateAll(rows => rows.map(row => row.textContent)))
+      .toEqual([expect.stringContaining(STEER_ONE), expect.stringContaining(STEER_TWO)])
     expect(await page.locator('[data-pending-steering]').count()).toBe(0)
 
     // Empty draft + Cmd+Enter: both queued rows steer in FIFO order, the dock

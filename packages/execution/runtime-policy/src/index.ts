@@ -9,7 +9,7 @@ import type { TokenUsage } from '@deepseek-ai/dsh-llm'
 import { snapshotJsonValue, type EpochHeader, type Session, type SessionEvent, type StepSnapshotRefs } from '@deepseek-ai/dsh-session'
 import type { ToolDispatchExecution, ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-permission-presets'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
+import type { SandboxPolicyService } from '@deepseek-ai/dsh-sandbox-policy'
 import type {
   AgentKind,
   BudgetVector,
@@ -54,6 +54,43 @@ interface RegisteredRequirementClassifier {
   readonly priority: number
   readonly order: number
   readonly classify: ToolRequirementClassifier
+}
+
+type RuntimeEscalationMode = 'workspace-write' | 'danger-full-access'
+interface RuntimeSandboxEscalation {
+  readonly mode: RuntimeEscalationMode
+  readonly reason: string
+}
+
+const widerSandboxModes: Record<string, readonly RuntimeEscalationMode[]> = {
+  'read-only': ['workspace-write', 'danger-full-access'],
+  'workspace-write': ['danger-full-access'],
+}
+
+/**
+ * Recognize the two enforcing tool families' valid one-shot escalation
+ * envelope. RuntimePolicy owns the outer approval so permission, budget, and
+ * world-effect accounting all begin after the user grants the wider mode.
+ */
+function runtimeSandboxEscalation(
+  exec: Readonly<ToolExecution>,
+  sandboxPolicy: SandboxPolicyService,
+): RuntimeSandboxEscalation | undefined {
+  if (exec.agent === undefined) return undefined
+  const subject = exec.name === 'bash' || exec.name === 'pwsh'
+    ? 'command'
+    : exec.name === 'write' || exec.name === 'edit' || exec.name === 'str_replace_editor'
+      ? 'operation'
+      : undefined
+  if (subject === undefined || typeof exec.arguments !== 'object' || exec.arguments === null) return undefined
+  const args = exec.arguments as Record<string, unknown>
+  const mode = args['sandbox_permissions']
+  const justification = args['justification']
+  if ((mode !== 'workspace-write' && mode !== 'danger-full-access')
+    || typeof justification !== 'string' || justification.trim().length === 0) return undefined
+  const effective = sandboxPolicy.resolve({ session: exec.agent.session }).mode
+  if (!(widerSandboxModes[effective] ?? []).includes(mode)) return undefined
+  return { mode, reason: `escalate sandbox to ${mode}: ${justification}` }
 }
 
 const budgetSchema = z.object({
@@ -310,6 +347,7 @@ export class RuntimePolicyService extends Service {
   private readonly defaultDecision: CapabilityDecision
   private readonly requirementClassifiers: RegisteredRequirementClassifier[] = []
   private readonly requirementCache = new WeakMap<ToolExecution, readonly CapabilityRequirement[]>()
+  private readonly pendingSandboxEscalations = new WeakMap<ToolExecution, RuntimeSandboxEscalation>()
   private readonly activeToolLeases = new Map<ToolExecutionToken, { agent: Agent | undefined; lease: ResourceLease }>()
   private nextRequirementClassifierOrder = 0
 
@@ -335,15 +373,31 @@ export class RuntimePolicyService extends Service {
       const downstream = await next()
       if (exec.agent === undefined || downstream.kind === 'deny') return downstream
       const requirements = this.requirements(exec)
+      const escalation = runtimeSandboxEscalation(exec, this.ctx.sandboxPolicy)
+      const permission = escalation === undefined
+        ? this.permissionSnapshot(exec.agent)
+        : this.permissionSnapshotAtMode(exec.agent, escalation.mode)
       let local: CapabilityDecision = 'allow'
       for (const requirement of requirements) {
-        const decision = evaluateCapabilityPermission(this.permissionSnapshot(exec.agent), requirement)
+        const decision = evaluateCapabilityPermission(permission, requirement)
         if (decision === 'deny') {
           return { kind: 'deny', reason: `runtime permission denied ${requirement.capability} on ${requirement.resource.value}` }
         }
         if (decision === 'ask') local = 'ask'
       }
+      // A valid wider-mode request always asks, even when the requested mode's
+      // sandbox rules would allow this exact resource. Reaching tools/execute
+      // proves ToolRuntime received allowed-once; the body then consumes that
+      // same grant instead of prompting twice.
+      if (escalation !== undefined) local = 'ask'
       if (local === 'ask' || downstream.kind === 'ask') {
+        if (escalation !== undefined) {
+          this.pendingSandboxEscalations.set(exec, escalation)
+          const reason = downstream.kind === 'ask' && downstream.reason !== undefined
+            ? `${downstream.reason}; ${escalation.reason}`
+            : escalation.reason
+          return { kind: 'ask', reason }
+        }
         if (downstream.kind === 'ask') {
           return downstream.reason === undefined ? { kind: 'ask' } : { kind: 'ask', reason: downstream.reason }
         }
@@ -437,7 +491,15 @@ export class RuntimePolicyService extends Service {
    * @returns Effective immutable permission snapshot.
    */
   permissionSnapshot(agent: Agent): CapabilityPermissionSnapshot {
-    const policy = this.ctx.sandboxPolicy.resolve({ session: agent.session })
+    return this.permissionSnapshotAtMode(agent)
+  }
+
+  /** Resolve permission rules at an approved one-call sandbox mode. */
+  private permissionSnapshotAtMode(
+    agent: Agent,
+    mode?: RuntimeEscalationMode,
+  ): CapabilityPermissionSnapshot {
+    const policy = this.ctx.sandboxPolicy.resolve({ session: agent.session, ...mode === undefined ? {} : { mode } })
     const rules: CapabilityPermission[] = [
       { capability: 'file.read', resource: { kind: 'file', value: '*' }, decision: 'allow', source: 'sandbox' },
       { capability: 'file.search', resource: { kind: 'file', value: '*' }, decision: 'allow', source: 'sandbox' },
@@ -650,6 +712,10 @@ export class RuntimePolicyService extends Service {
           error: { message: denial, info: { name: 'BudgetExceededError', code: 'GLOBAL_BUDGET_EXCEEDED' } },
         }
       }
+
+      const escalation = this.pendingSandboxEscalations.get(exec)
+      this.pendingSandboxEscalations.delete(exec)
+      if (escalation !== undefined) this.ctx.sandboxPolicy.grantEscalation(exec, escalation.mode)
 
       const effects = requirements.filter(requirement => requirement.effect === true)
       const startedAt = Date.now()
