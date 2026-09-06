@@ -208,12 +208,21 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
   let everyAssistantReply: SessionEvent<'assistant/message'> | undefined
   let everyRecords: readonly [EveryScheduleRecord, EveryScheduleRecord]
   let tripwire: ReturnType<typeof watchConsole>
+  let disposeApproval: (() => void) | undefined
   const afterAdapter = new ReminderAdapter()
   const atAdapter = new BrowserZoneAtAdapter()
   const everyAdapter = new EveryReminderAdapter()
 
   beforeAll(async () => {
     scaffold = await launchWebScaffold({ extraOverlayPath: OVERLAY })
+    // This suite owns schedule delivery rather than the shared approval UI.
+    // Admit both setup calls and the model-authored At call through the same
+    // host approval seam used by the real tool registry.
+    disposeApproval = scaffold.ctx.on(
+      'approval/request',
+      () => Promise.resolve('allowed-once'),
+      { prepend: true },
+    )
     scaffold.ctx.effect(
       () => scaffold.ctx.llm.registerAdapter([AFTER_PROVIDER], afterAdapter),
       'Schedule Web After adapter',
@@ -371,6 +380,7 @@ describe.skipIf(MODE === 'record')('web e2e: conversational reminders', () => {
   afterAll(async () => {
     const failures: unknown[] = []
     await browser?.close().catch((error: unknown) => failures.push(error))
+    disposeApproval?.()
     await atHandle?.dispose().catch((error: unknown) => failures.push(error))
     await everyHandle?.dispose().catch((error: unknown) => failures.push(error))
     await afterHandle?.dispose().catch((error: unknown) => failures.push(error))

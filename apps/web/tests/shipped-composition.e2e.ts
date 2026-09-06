@@ -187,6 +187,13 @@ it('assembles the shipped Web catalog, file-reference guidance, retry policy, an
 it('lets a preset producer reach the background-job registry', async () => {
   scaffold = await launchWebScaffold()
   const ctx = scaffold.ctx
+  // The registry linkage is the subject here; generic runtime approvals are
+  // exercised in their browser-owned scenarios.
+  const disposeApproval = ctx.on(
+    'approval/request',
+    () => Promise.resolve('allowed-once'),
+    { prepend: true },
+  )
   const handle = await ctx.agents.create({
     sessionId: SessionId('shipped-background-job'),
     meta: { cwd: scaffold.workspaceCwd },
@@ -241,6 +248,7 @@ it('lets a preset producer reach the background-job registry', async () => {
       { type: 'text', text: expect.stringContaining('SHIPPED_BACKGROUND_OK') as unknown as string },
     ])
   } finally {
+    disposeApproval()
     await handle.dispose()
   }
 }, 120_000)

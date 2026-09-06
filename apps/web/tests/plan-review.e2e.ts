@@ -15,7 +15,7 @@ import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import {
-  assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
+  approveRuntimeTool, assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
@@ -71,8 +71,13 @@ describe('web e2e: plan review takeover round trip', () => {
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
     const settled = scaffold.whenTurnSettled(MODE === 'record' ? 180_000 : 30_000)
+    void settled.catch(() => undefined)
     await input.fill(LINE)
     await input.press('Enter')
+
+    await approveRuntimeTool(page, sessionEvents, 'exit_plan_mode', {
+      timeoutMs: MODE === 'record' ? 120_000 : 30_000,
+    })
 
     // The card takes over the input area while exit_plan_mode blocks. Its
     // presence is a STABLE waiting state (it stays until answered), so a plain

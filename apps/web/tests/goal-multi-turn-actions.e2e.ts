@@ -94,11 +94,14 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
   let page: Page
   let tripwire: ReturnType<typeof watchConsole>
   let sessionEvents: SessionEvent[]
+  let disposeApproval: (() => void) | undefined
 
   afterEach(async () => {
     const failures: unknown[] = []
     await browser?.close().catch((error: unknown) => failures.push(error))
     browser = undefined
+    disposeApproval?.()
+    disposeApproval = undefined
     const closing = scaffold
     scaffold = undefined
     await closing?.close().catch((error: unknown) => failures.push(error))
@@ -111,6 +114,14 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     sessionEvents = []
     scaffold = await launchWebScaffold(
       MODE === 'record' ? {} : { replayFixture: FIXTURE, replayOverride: OVERRIDE },
+    )
+    // Goal exercises its own multi-turn behavior, not the generic permission
+    // surface. Admit its model-authored tools at the host seam so every round
+    // can advance while the dedicated approval scenarios keep owning the UI.
+    disposeApproval = scaffold.ctx.on(
+      'approval/request',
+      () => Promise.resolve('allowed-once'),
+      { prepend: true },
     )
     await seedPackageInventory(scaffold.workspaceCwd)
     scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })

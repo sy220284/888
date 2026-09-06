@@ -40,10 +40,11 @@ function isBuildRecordReader(value: unknown): value is (root: string) => unknown
 it('boots the built plugin graph and renders a fixture session end to end', async () => {
   mountAssembledApp()
 
-  // The sidebar renders from the boot graph: every inject layer activated.
+  // The generic build keeps the source-available fallback brand; the official
+  // profile replaces both slots in its separate artifact lane.
   const tree = await screen.findByRole('tree', { name: 'Sessions' }, { timeout: 10_000 })
-  expect(document.querySelector('svg[viewBox="26 0 156 24"]')).not.toBeNull()
-  expect(screen.queryByText('DSH Local Build')).toBeNull()
+  expect(document.querySelector('svg[viewBox="0 0 23.16 17.04"]')).not.toBeNull()
+  expect(screen.getByText('DSH Local Build')).toBeTruthy()
   // The compact layout dropped group session counts; the fixture workspace
   // group row renders immediately with its sessions beneath it.
   const fixtureGroup = (await within(tree).findAllByText('fixture'))
