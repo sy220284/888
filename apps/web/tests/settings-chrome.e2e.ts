@@ -28,6 +28,11 @@ const PLUGINS_EXPECTED = join(SNAPSHOT_DIR, 'plugins.expected.md')
 const DIALOG_EN_EXPECTED = join(SNAPSHOT_DIR, 'dialog-en.expected.md')
 const PLUGIN_ROW_SELECTOR = '[data-plugin-entry$="ui-settings"]'
 const MODE = webSnapshotMode()
+// A fresh document can paint the shell before the Host-backed settings mirror
+// has completed its first request. CI runs every browser scenario concurrently,
+// so that request needs a readiness budget distinct from ordinary local UI
+// transitions (which use 5 seconds below).
+const HOST_PREFERENCE_READY_TIMEOUT_MS = 15_000
 
 describe('web e2e: settings modal and General preferences', () => {
   let scaffold: WebScaffold
@@ -300,7 +305,9 @@ describe('web e2e: settings modal and General preferences', () => {
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     acknowledgeReloadConnectionLoss(tripwire, warningStart)
     await page.emulateMedia({ colorScheme: 'light' })
-    await expect.poll(async () => (await readState()).attr, { timeout: 5_000 }).toBe(true)
+    await expect.poll(async () => (await readState()).attr, {
+      timeout: HOST_PREFERENCE_READY_TIMEOUT_MS,
+    }).toBe(true)
     const reloaded = await readState()
     expect(reloaded.legacy).toBeNull()
     expectThemeColorSynchronized(reloaded)
@@ -316,7 +323,9 @@ describe('web e2e: settings modal and General preferences', () => {
       await secondPage.emulateMedia({ colorScheme: 'light' })
       await secondPage.goto(second.baseUrl, { waitUntil: 'load' })
       await secondPage.waitForSelector('[class*="frame"]', { timeout: 30_000 })
-      await expect.poll(async () => (await readState(secondPage)).attr, { timeout: 5_000 }).toBe(true)
+      await expect.poll(async () => (await readState(secondPage)).attr, {
+        timeout: HOST_PREFERENCE_READY_TIMEOUT_MS,
+      }).toBe(true)
       const secondState = await readState(secondPage)
       expect(secondState.legacy).toBeNull()
       expectThemeColorSynchronized(secondState)
