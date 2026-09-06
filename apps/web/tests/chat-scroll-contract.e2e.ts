@@ -20,7 +20,7 @@ import {
   webSnapshotMode,
   type WebScaffold,
 } from './scaffold.ts'
-import { newEnglishPage, saveFailureShot } from './support.ts'
+import { newEnglishPage, REPO_ROOT, saveFailureShot } from './support.ts'
 
 const MODE = webSnapshotMode()
 const HISTORY_SESSION_ID = 'chat-scroll-history-e2e'
@@ -217,6 +217,11 @@ async function withScrollWorld(
     runFailure = error
     try {
       await saveFailureShot(world.page, options.failureShot)
+      await writeFile(join(REPO_ROOT, '.artifacts', `${options.failureShot}.json`), JSON.stringify({
+        events: world.events,
+        pageErrors: world.tripwire.pageErrors,
+        warnings: world.tripwire.warnings,
+      }, null, 2))
     } catch {
       // Best-effort evidence must never prevent cleanup of the owned world.
     }

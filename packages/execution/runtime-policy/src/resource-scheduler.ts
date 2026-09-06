@@ -9,6 +9,7 @@ export interface ResourceLease {
 interface Waiter {
   readonly id: number
   readonly requirements: readonly CapabilityRequirement[]
+  readonly ancestors: ReadonlySet<number>
   readonly signal?: AbortSignal
   readonly resolve: (lease: ResourceLease) => void
   readonly reject: (error: Error) => void
@@ -17,6 +18,7 @@ interface Waiter {
 
 interface ActiveLease {
   readonly requirements: readonly CapabilityRequirement[]
+  readonly ancestors: ReadonlySet<number>
 }
 
 /**
@@ -78,6 +80,7 @@ function abortError(signal: AbortSignal): Error {
  */
 export class ResourceScheduler {
   private readonly active = new Map<number, ActiveLease>()
+  private readonly leaseIds = new WeakMap<ResourceLease, number>()
   private readonly queue: Waiter[] = []
   private nextId = 1
   private disposed = false
@@ -91,17 +94,25 @@ export class ResourceScheduler {
    * Queue a resource set and resolve when FIFO conflict rules permit it.
    * @param requirements - resources required by one operation.
    * @param signal - optional cancellation signal while queued.
+   * @param parent - live enclosing lease; descendants still conflict with siblings and unrelated work.
    * @returns a lease that releases the granted resources.
    */
-  acquire(requirements: readonly CapabilityRequirement[], signal?: AbortSignal): Promise<ResourceLease> {
+  acquire(requirements: readonly CapabilityRequirement[], signal?: AbortSignal, parent?: ResourceLease): Promise<ResourceLease> {
     if (this.disposed) return Promise.reject(new Error('resource scheduler is disposed'))
     if (signal?.aborted === true) return Promise.reject(abortError(signal))
-    if (requirements.length === 0) return Promise.resolve({ release() {} })
+    const parentId = parent === undefined ? undefined : this.leaseIds.get(parent)
+    const enclosing = parentId === undefined ? undefined : this.active.get(parentId)
+    if (parent !== undefined && enclosing === undefined) {
+      return Promise.reject(new Error('parent resource lease is not active in this scheduler'))
+    }
+    const ancestors = new Set(enclosing?.ancestors)
+    if (parentId !== undefined) ancestors.add(parentId)
 
     return new Promise<ResourceLease>((resolve, reject) => {
       const waiter: Waiter = {
         id: this.nextId++,
         requirements: Object.freeze([...requirements]),
+        ancestors,
         ...(signal === undefined ? {} : { signal }),
         resolve,
         reject,
@@ -140,12 +151,21 @@ export class ResourceScheduler {
   private canGrant(index: number): boolean {
     const waiter = this.queue[index]
     if (waiter === undefined) return false
-    for (const lease of this.active.values()) {
+    for (const [id, lease] of this.active) {
+      if (waiter.ancestors.has(id)) continue
       if (requirementsConflict(waiter.requirements, lease.requirements)) return false
     }
     for (let earlier = 0; earlier < index; earlier++) {
       const queued = this.queue[earlier]
-      if (queued !== undefined && requirementsConflict(waiter.requirements, queued.requirements)) return false
+      if (queued === undefined || !requirementsConflict(waiter.requirements, queued.requirements)) continue
+      // An unrelated waiter blocked by our enclosing lease cannot run until
+      // this execution tree drains. Let descendants finish; preserve sibling FIFO.
+      const blockedByAncestor = [...waiter.ancestors].some((id) => {
+        const ancestor = this.active.get(id)
+        return ancestor !== undefined && !queued.ancestors.has(id)
+          && requirementsConflict(queued.requirements, ancestor.requirements)
+      })
+      if (!blockedByAncestor) return false
     }
     return true
   }
@@ -163,16 +183,18 @@ export class ResourceScheduler {
         if (waiter.signal !== undefined && waiter.abortListener !== undefined) {
           waiter.signal.removeEventListener('abort', waiter.abortListener)
         }
-        this.active.set(waiter.id, { requirements: waiter.requirements })
+        this.active.set(waiter.id, { requirements: waiter.requirements, ancestors: waiter.ancestors })
         let released = false
-        waiter.resolve({
+        const lease: ResourceLease = {
           release: () => {
             if (released) return
             released = true
             this.active.delete(waiter.id)
             this.drain()
           },
-        })
+        }
+        this.leaseIds.set(lease, waiter.id)
+        waiter.resolve(lease)
         changed = true
         break
       }

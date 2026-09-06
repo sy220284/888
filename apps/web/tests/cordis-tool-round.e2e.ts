@@ -16,7 +16,7 @@ import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-user-approval'
 import {
-  captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
+  approveRuntimeTool, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
@@ -79,21 +79,13 @@ describe('web e2e: Cordis tools use their owned cards', () => {
   const sessionEvents: SessionEvent[] = []
 
   async function approveTool(toolName: typeof CORDIS_TOOLS[number]): Promise<void> {
-    const panel = page.locator('[data-approval-key]')
-    await panel.waitFor({ timeout: MODE === 'record' ? 180_000 : 30_000 })
-    const request = sessionEvents.filter(event => event.type === 'approval/asked').at(-1)
-    expect(request?.data.toolName).toBe(toolName)
-    expect(request?.data.reason).toBe('runtime capability policy requires approval')
-    expect(sessionEvents.some(event => event.type === 'world/effect-start' && event.data.callId === request?.data.callId))
-      .toBe(false)
-    // Tool admission cannot activate the browser package: that remains the
-    // separate Cordis run approval below, after the model turn has settled.
-    expect(await page.locator('[data-snapshot-probe]').count()).toBe(toolName === 'cordis_stop' ? 1 : 0)
-    const approvalKey = await panel.getAttribute('data-approval-key')
-    await panel.getByRole('button', { name: 'Allow once', exact: true }).click()
-    await expect.poll(() => page.locator('[data-approval-key]').evaluateAll(
-      elements => elements[0]?.getAttribute('data-approval-key') ?? null,
-    )).not.toBe(approvalKey)
+    await approveRuntimeTool(page, sessionEvents, toolName, {
+      timeoutMs: MODE === 'record' ? 180_000 : 30_000,
+      beforeApprove: async () => {
+        // Tool admission cannot activate the package: its separate gate follows.
+        expect(await page.locator('[data-snapshot-probe]').count()).toBe(toolName === 'cordis_stop' ? 1 : 0)
+      },
+    })
   }
 
   beforeAll(async () => {

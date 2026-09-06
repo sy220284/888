@@ -13,6 +13,68 @@ const unknown: CapabilityRequirement = {
 }
 
 describe('ResourceScheduler', () => {
+  it('lets nested dispatch finish under its global parent before an earlier unrelated waiter', async () => {
+    const scheduler = new ResourceScheduler()
+    const parent = await scheduler.acquire([unknown])
+    let unrelatedGranted = false
+    const unrelated = scheduler.acquire([write('/workspace/a')]).then((lease) => {
+      unrelatedGranted = true
+      return lease
+    })
+    const child = await scheduler.acquire([write('/workspace/a')], undefined, parent)
+    const grandchild = await scheduler.acquire([read('/workspace/a')], undefined, child)
+    expect(unrelatedGranted).toBe(false)
+    grandchild.release()
+    child.release()
+    expect(unrelatedGranted).toBe(false)
+    parent.release()
+    const external = await unrelated
+    expect(unrelatedGranted).toBe(true)
+    external.release()
+    expect(scheduler.activeCount).toBe(0)
+  })
+
+  it('keeps sibling writes exclusive and FIFO while allowing disjoint child work', async () => {
+    const scheduler = new ResourceScheduler()
+    const parent = await scheduler.acquire([unknown])
+    const first = await scheduler.acquire([write('/workspace/a')], undefined, parent)
+    const granted: string[] = []
+    const second = scheduler.acquire([write('/workspace/a')], undefined, parent).then((lease) => {
+      granted.push('second')
+      return lease
+    })
+    const third = scheduler.acquire([write('/workspace/a')], undefined, parent).then((lease) => {
+      granted.push('third')
+      return lease
+    })
+    const disjoint = await scheduler.acquire([write('/workspace/b')], undefined, parent)
+    expect(granted).toEqual([])
+    disjoint.release()
+    first.release()
+    const next = await second
+    expect(granted).toEqual(['second'])
+    next.release()
+    const last = await third
+    expect(granted).toEqual(['second', 'third'])
+    last.release()
+    parent.release()
+  })
+
+  it('rejects foreign and released enclosing leases and cancels blocked children', async () => {
+    const scheduler = new ResourceScheduler()
+    const parent = await scheduler.acquire([])
+    await expect(new ResourceScheduler().acquire([unknown], undefined, parent)).rejects.toThrow('not active')
+    const first = await scheduler.acquire([write('/workspace/a')], undefined, parent)
+    const controller = new AbortController()
+    const child = scheduler.acquire([write('/workspace/a')], controller.signal, parent)
+    controller.abort(new Error('cancel child'))
+    await expect(child).rejects.toThrow('cancel child')
+    expect(scheduler.queuedCount).toBe(0)
+    first.release()
+    parent.release()
+    await expect(scheduler.acquire([unknown], undefined, parent)).rejects.toThrow('not active')
+  })
+
   it('allows read/read overlap and blocks a write on the same resource', async () => {
     const scheduler = new ResourceScheduler()
     const first = await scheduler.acquire([read('/workspace/a')])

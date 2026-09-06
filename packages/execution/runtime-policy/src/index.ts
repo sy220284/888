@@ -7,7 +7,7 @@ import type { Agent } from '@deepseek-ai/dsh-agent'
 import type {} from '@deepseek-ai/dsh-agent-loop'
 import type { TokenUsage } from '@deepseek-ai/dsh-llm'
 import { snapshotJsonValue, type EpochHeader, type Session, type SessionEvent, type StepSnapshotRefs } from '@deepseek-ai/dsh-session'
-import type { ToolDispatchExecution, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import type { ToolDispatchExecution, ToolExecution, ToolExecutionResult, ToolExecutionToken } from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-permission-presets'
 import type {} from '@deepseek-ai/dsh-sandbox-policy'
 import type {
@@ -28,7 +28,7 @@ import type {
 } from './types.ts'
 import { addBudget, assertBudgetVector, budgetExceeded, budgetSnapshot, narrowBudgetLimits } from './budget.ts'
 import { evaluateCapabilityPermission } from './permission.ts'
-import { ResourceScheduler } from './resource-scheduler.ts'
+import { ResourceScheduler, type ResourceLease } from './resource-scheduler.ts'
 
 export type * from './types.ts'
 export * from './budget.ts'
@@ -310,6 +310,7 @@ export class RuntimePolicyService extends Service {
   private readonly defaultDecision: CapabilityDecision
   private readonly requirementClassifiers: RegisteredRequirementClassifier[] = []
   private readonly requirementCache = new WeakMap<ToolExecution, readonly CapabilityRequirement[]>()
+  private readonly activeToolLeases = new Map<ToolExecutionToken, { agent: Agent | undefined; lease: ResourceLease }>()
   private nextRequirementClassifierOrder = 0
 
   constructor(ctx: Context, config: Config = {}) {
@@ -623,7 +624,12 @@ export class RuntimePolicyService extends Service {
 
   private async executeWithPolicy(exec: ToolDispatchExecution, next: () => Promise<ToolExecutionResult>): Promise<ToolExecutionResult> {
     const requirements = this.requirements(exec)
-    const lease = await this.resourceScheduler.acquire(requirements, exec.signal)
+    const enclosing = exec.parent === undefined ? undefined : this.activeToolLeases.get(exec.parent)
+    if (enclosing !== undefined && enclosing.agent !== exec.agent) {
+      throw new Error('nested resource lease belongs to another agent')
+    }
+    const lease = await this.resourceScheduler.acquire(requirements, exec.signal, enclosing?.lease)
+    this.activeToolLeases.set(exec.token, { agent: exec.agent, lease })
     try {
       exec.signal.throwIfAborted()
       const agent = exec.agent
@@ -696,6 +702,7 @@ export class RuntimePolicyService extends Service {
         throw error
       }
     } finally {
+      this.activeToolLeases.delete(exec.token)
       lease.release()
     }
   }
