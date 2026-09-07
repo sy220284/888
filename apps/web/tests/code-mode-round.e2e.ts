@@ -15,7 +15,7 @@ import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import {
-  captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
+  approveRuntimeTool, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
@@ -66,9 +66,14 @@ describe('web e2e: Code Mode round renders nested sub-calls', () => {
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
     const settled = scaffold.whenTurnSettled()
-    await input.fill(PROMPT)
-    await input.press('Enter')
-    const sessionId = await settled
+    const [sessionId] = await Promise.all([
+      settled,
+      (async () => {
+        await input.fill(PROMPT)
+        await input.press('Enter')
+        await approveRuntimeTool(page, sessionEvents, 'run_code', { timeoutMs: MODE === 'record' ? 180_000 : 30_000 })
+      })(),
+    ])
     if (MODE === 'record') {
       await recordFixture(scaffold, sessionId, FIXTURE)
     }

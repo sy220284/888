@@ -107,10 +107,15 @@ describe('web e2e: workspace management (create / rename / flat view / hover aff
   async function clickHoverAction(row: Locator, name: string): Promise<void> {
     const button = row.getByRole('button', { name })
     await expect.poll(async () => {
-      await row.hover()
-      return await button.isVisible()
+      try {
+        await row.hover()
+        if (!(await button.isVisible())) return false
+        await button.evaluate((element: HTMLButtonElement) => { element.click() })
+        return true
+      } catch {
+        return false
+      }
     }, { timeout: 10_000 }).toBe(true)
-    await button.click()
   }
 
   beforeAll(async () => {

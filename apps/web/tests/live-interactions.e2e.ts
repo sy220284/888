@@ -163,16 +163,19 @@ describe('web e2e: live-turn interactions (cancel / error / retry)', () => {
     expect(tripwire.warnings).toEqual([])
   }, 120_000)
 
-  it.skipIf(MODE === 'record')('surfaces a non-retryable AUTH failure without retrying', async () => {
-    await launch(() => ({
-      patches: [{ at: 0, entry: { kind: 'throw', chunks: [], message: AUTH_PROVIDER_MESSAGE, code: 'AUTH' } }],
-    }))
+  it.skipIf(MODE === 'record')('surfaces AUTH after the configured model fallback declines', async () => {
+    const failure: ReplayEntry = {
+      kind: 'throw', chunks: [], message: AUTH_PROVIDER_MESSAGE, code: 'AUTH',
+    }
+    await launch(() => [failure, failure])
     onTestFailed(() => saveFailureShot(page, 'web-e2e-error-auth'))
     const { settled } = await sendPrompt()
     await settled
     expect(turnEndReasons(sessionEvents).at(-1)).toBe('error')
-    // AUTH is outside llm-retry's retryable set: no retry record.
+    // AUTH is outside llm-retry's retryable set, but the shipped model router
+    // gets one chance to move Flash to Pro before the terminal error surfaces.
     expect(sessionEvents.filter(e => e.type === 'llm/retry').length).toBe(0)
+    expect(sessionEvents.filter(e => e.type === 'model/route-selected')).toHaveLength(1)
     await expect.poll(() => page.locator('textarea').first().isEnabled(), { timeout: 10_000 }).toBe(true)
     expect(await page.locator('[data-streaming="true"]').count()).toBe(0)
     const errorStatus = page.getByRole('status').filter({ hasText: 'This turn failed' })
@@ -247,14 +250,13 @@ describe('web e2e: live-turn interactions (cancel / error / retry)', () => {
   }, 120_000)
 
   it.skipIf(MODE === 'record')('surfaces the terminal turn error after transient retries exhaust', async () => {
-    // A whole-script replacement: three throw entries cover the first request
-    // plus both budgeted retries (patches cannot reach past the one-call
-    // derived script). The scenario-owned policy keeps exhaustion fast and
-    // jitter-free instead of walking the shared default's five backed-off
-    // attempts.
+    // A whole-script replacement: three entries exhaust the local retry
+    // budget, and the fourth is the shipped router's Flash → Pro fallback.
+    // The retry ledger is provider-policy scoped, so Pro does not receive a
+    // second local retry budget for the same step.
     const failure: ReplayEntry = { kind: 'throw', chunks: [], message: 'upstream 503', code: 'SERVER' }
     await launch(
-      () => [failure, failure, failure],
+      () => [failure, failure, failure, failure],
       { mode: 'normal', maxRetries: 2, retryableCodes: ['SERVER'], backoff: { initialDelayMs: 25, maxDelayMs: 50, jitterRatio: 0 } },
     )
     onTestFailed(() => saveFailureShot(page, 'web-e2e-retry-exhausted'))
@@ -262,6 +264,7 @@ describe('web e2e: live-turn interactions (cancel / error / retry)', () => {
     await settled
     expect(turnEndReasons(sessionEvents).at(-1)).toBe('error')
     expect(sessionEvents.filter(e => e.type === 'llm/retry').length).toBe(2)
+    expect(sessionEvents.filter(e => e.type === 'model/route-selected')).toHaveLength(1)
     await expect.poll(() => page.locator('textarea').first().isEnabled(), { timeout: 10_000 }).toBe(true)
     expect(await page.locator('[data-streaming="true"]').count()).toBe(0)
     // The terminal error row must render even though the turn owns a retry

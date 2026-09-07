@@ -3,21 +3,30 @@
  * extension points. It supports SessionStart, prompt/tool pre/post, Stop, and subagent
  * start/stop. It owns Claude payloads, environment, substitution, and decision
  * mapping; shared execution and parsing live in `dsh-hook-protocol`.
- * `updatedInput` is logged and warned but not honored. Bespoke behavior should
+ * `updatedInput` is honored only through the agent's pre-persistence tool-call
+ * rewrite seam, then re-enters the ordinary Harness validation and permission path. Bespoke behavior should
  * use typed native plugins on the same extension points; see the
  * [hook-bridges Agent Note](../../../../.agents/notes/implemented/feature/2026-06-30-hook-bridges.md).
  * @module @deepseek-ai/dsh-hooks-claude-code
  */
 
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
 import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { ContentBlock, MessageSource } from '@deepseek-ai/dsh-llm'
-import type { UserMessage } from '@deepseek-ai/dsh-session'
+import type { JsonValue, UserMessage } from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-session-persistence'
-import type { PostToolDecision, PreToolDecision, ToolExecution, ToolExecutionResult } from '@deepseek-ai/dsh-tools'
+import {
+  validateJsonSchemaValue,
+  type PostToolDecision,
+  type PreToolDecision,
+  type ToolExecution,
+  type ToolExecutionResult,
+} from '@deepseek-ai/dsh-tools'
 import {
   appendHookInvoked,
   appendHookResult,
@@ -34,25 +43,41 @@ import {
 // Pulls in the declaration-merged subagent events and the identity pairing their
 // start/end edges.
 import type { SubagentRunId } from '@deepseek-ai/dsh-subagent'
-import { parseClaudeCodeConfig, type ClaudeCodeHookConfig } from './config.ts'
+import { parseClaudeCodeConfig, type ClaudeCodeHookConfig, type SubstitutionVars } from './config.ts'
 
 export const name = 'hooks-claude-code'
-// `bash` is required to run hooks; the rest are read opportunistically via
-// ctx.get so a deployment can load this bridge without every extension point present.
-export const inject = ['shell']
+// Hook execution needs the shell; PostToolUse result rewrites consult the
+// registered tool's output schema before they may replace its canonical value.
+// Other extension points remain opportunistic listeners.
+export const inject = ['shell', 'tools']
 
-/** Plugin config: where the CC hook config lives + substitution roots. */
+/** Plugin config: explicit compatibility source plus opt-in Claude source discovery. */
 export interface Config {
   /**
-   * Path to a `hooks.json` or a settings file whose `hooks` key holds the config.
-   * Process-level: read once at load, a relative path resolves against the process
-   * launch cwd, so one config applies to the whole process.
-   * TODO(per-session-hook-config): per-session discovery of a project-local
-   * `hooks.json` from each `session/new.cwd`.
+   * Optional explicit `hooks.json` or settings file whose `hooks` key holds the config.
+   * This source is parsed once at plugin load for backward compatibility.
    */
-  configPath: string
+  configPath?: string
   /**
-   * Replaces `${CLAUDE_PLUGIN_ROOT}` in command strings (the plugin's root dir).
+   * Opt in to Claude project settings discovery from each session cwd:
+   * `.claude/settings.json` then `.claude/settings.local.json`.
+   * Project files are re-read for every hook point so edits take effect without
+   * restarting the process. Disabled by default because repository hook commands
+   * are executable code and Harness has no Claude workspace-trust prompt seam yet.
+   */
+  discoverProjectHooks?: boolean
+  /** Discover `settings.json` from Claude's user config directory. */
+  discoverUserHooks?: boolean
+  /** Discover the platform `managed-settings.json` policy file. */
+  discoverManagedHooks?: boolean
+  /** Discover `hooks/hooks.json` below {@link pluginRoot}. */
+  discoverPluginHooks?: boolean
+  /** Override Claude's user config directory (defaults to CLAUDE_CONFIG_DIR or `~/.claude`). */
+  claudeConfigDir?: string
+  /** Override the platform managed-settings path, primarily for embedded hosts and tests. */
+  managedSettingsPath?: string
+  /**
+   * Replaces `${CLAUDE_PLUGIN_ROOT}` in command strings.
    */
   pluginRoot?: string
   /**
@@ -67,14 +92,23 @@ export interface Config {
   defaultTimeoutMs?: number
   /** Character cap for the `hook/result` event's persisted stderr summary. */
   stderrSummaryMaxChars?: number
+  /** Maximum consecutive Stop-hook forced continuations in one turn. */
+  maxStopContinuations?: number
 }
 
 export const Config: z<Config> = z.object({
-  configPath: z.string().required(),
+  configPath: z.string(),
+  discoverProjectHooks: z.boolean().default(false),
+  discoverUserHooks: z.boolean().default(false),
+  discoverManagedHooks: z.boolean().default(false),
+  discoverPluginHooks: z.boolean().default(false),
+  claudeConfigDir: z.string(),
+  managedSettingsPath: z.string(),
   pluginRoot: z.string(),
   projectDir: z.string(),
   defaultTimeoutMs: z.number().default(DEFAULT_HOOK_TIMEOUT_MS),
   stderrSummaryMaxChars: z.number().default(DEFAULT_STDERR_SUMMARY_MAX_CHARS),
+  maxStopContinuations: z.number().default(8),
 })
 
 /** A stable per-handler id so an invoked/result pair correlates in the log. */
@@ -93,26 +127,109 @@ function assertPositiveInteger(name: string, value: number): void {
   }
 }
 
+/** Claude's file-based managed settings location for the current platform. */
+function defaultManagedSettingsPath(): string {
+  if (process.platform === 'darwin') {
+    return '/Library/Application Support/ClaudeCode/managed-settings.json'
+  }
+  if (process.platform === 'win32') {
+    return join(process.env['ProgramFiles'] ?? 'C:\\Program Files', 'ClaudeCode', 'managed-settings.json')
+  }
+  return '/etc/claude-code/managed-settings.json'
+}
+
 export function apply(ctx: Context, config: Config): void {
   // Validate before config parsing so a bad value cannot be hidden by its early return.
   const stderrSummaryMaxChars = config.stderrSummaryMaxChars ?? DEFAULT_STDERR_SUMMARY_MAX_CHARS
   assertPositiveInteger('stderrSummaryMaxChars', stderrSummaryMaxChars)
   const defaultTimeoutMs = config.defaultTimeoutMs ?? DEFAULT_HOOK_TIMEOUT_MS
-  // Parse once at load. A read or parse failure logs and registers nothing.
-  let parsed: ClaudeCodeHookConfig = {}
-  try {
-    const raw: unknown = JSON.parse(readFileSync(config.configPath, 'utf8'))
-    const result = parseClaudeCodeConfig(raw, {
+  const maxStopContinuations = config.maxStopContinuations ?? 8
+  assertPositiveInteger('maxStopContinuations', maxStopContinuations)
+  const discoverProjectHooks = config.discoverProjectHooks ?? false
+  const discoverUserHooks = config.discoverUserHooks ?? false
+  const discoverManagedHooks = config.discoverManagedHooks ?? false
+  const discoverPluginHooks = config.discoverPluginHooks ?? false
+  const explicitConfigPath = config.configPath === undefined ? undefined : resolve(config.configPath)
+  const claudeConfigDir = resolve(config.claudeConfigDir
+    ?? process.env['CLAUDE_CONFIG_DIR']
+    ?? join(homedir(), '.claude'))
+  const managedSettingsPath = resolve(config.managedSettingsPath ?? defaultManagedSettingsPath())
+  const warned = new Set<string>()
+
+  function warnOnce(key: string, message: string): void {
+    if (warned.has(key)) return
+    warned.add(key)
+    ctx.logger.warn(message)
+  }
+
+  function loadConfigSource(path: string, vars: SubstitutionVars, optional: boolean): ClaudeCodeHookConfig {
+    if (optional && !existsSync(path)) return {}
+    try {
+      const raw: unknown = JSON.parse(readFileSync(path, 'utf8'))
+      const result = parseClaudeCodeConfig(raw, vars)
+      for (const skipped of result.skipped) {
+        warnOnce(
+          `skipped:${path}:${skipped.event}:${skipped.type}`,
+          `hooks-claude-code: skipping unsupported "${skipped.type}" hook on ${skipped.event} from "${path}" (only command hooks run)`,
+        )
+      }
+      return result.config
+    } catch (error: unknown) {
+      warnOnce(
+        `load:${path}:${String(error)}`,
+        `hooks-claude-code: could not load hook config "${path}": ${String(error)} — source ignored`,
+      )
+      return {}
+    }
+  }
+
+  const staticParsed: ClaudeCodeHookConfig = explicitConfigPath === undefined
+    ? {}
+    : loadConfigSource(explicitConfigPath, {
       ...config.pluginRoot !== undefined ? { pluginRoot: config.pluginRoot } : {},
       ...config.projectDir !== undefined ? { projectDir: config.projectDir } : {},
-    })
-    parsed = result.config
-    for (const s of result.skipped) {
-      ctx.logger.warn(`hooks-claude-code: skipping unsupported "${s.type}" hook on ${s.event} (only command hooks run)`)
+    }, false)
+
+  function groupsFor(point: string, workdir: string | undefined): MatcherGroup[] {
+    const groups: MatcherGroup[] = [...staticParsed[point] ?? []]
+    const projectDir = config.projectDir ?? workdir
+    const projectVars: SubstitutionVars = {
+      ...projectDir !== undefined ? { projectDir } : {},
     }
-  } catch (error: unknown) {
-    ctx.logger.warn(`hooks-claude-code: could not load hook config "${config.configPath}": ${String(error)} — no hooks registered`)
-    return
+    const sources: Array<{ path: string; vars: SubstitutionVars }> = []
+    if (discoverUserHooks) {
+      sources.push({ path: join(claudeConfigDir, 'settings.json'), vars: projectVars })
+    }
+    if (discoverProjectHooks && workdir !== undefined) {
+      sources.push(
+        { path: join(workdir, '.claude', 'settings.json'), vars: projectVars },
+        { path: join(workdir, '.claude', 'settings.local.json'), vars: projectVars },
+      )
+    }
+    if (discoverManagedHooks) {
+      sources.push({ path: managedSettingsPath, vars: projectVars })
+    }
+    if (discoverPluginHooks && config.pluginRoot !== undefined) {
+      sources.push({
+        path: join(config.pluginRoot, 'hooks', 'hooks.json'),
+        vars: {
+          ...projectVars,
+          pluginRoot: config.pluginRoot,
+        },
+      })
+    }
+
+    const seen = new Set(explicitConfigPath === undefined ? [] : [explicitConfigPath])
+    for (const source of sources) {
+      const path = resolve(source.path)
+      // Avoid double execution when two configured discovery sources resolve
+      // to the same file or the explicit source already loaded it.
+      if (seen.has(path)) continue
+      seen.add(path)
+      const parsed = loadConfigSource(path, source.vars, true)
+      groups.push(...parsed[point] ?? [])
+    }
+    return groups
   }
 
   // Emit-shaped points run detached, so track their chains; disposal aborts
@@ -123,6 +240,28 @@ export function apply(ctx: Context, config: Config): void {
   // handle unregisters the agent. Every retained entry relies on that paired
   // end; a producer that can omit it must provide another release edge.
   const subagentChildren = new Map<SubagentRunId, Agent>()
+  // Capture the compatibility type at the same start edge. A local child may
+  // leave the registry before SubagentStop; the paired end must still match the
+  // same type and payload that SubagentStart exposed.
+  const subagentTypes = new Map<SubagentRunId, string>()
+  const sessionStartGates = new WeakMap<Agent, Promise<UserMessage | undefined>>()
+  const sessionStartConsumed = new WeakSet<Agent>()
+  const sessionStartWaiting = new WeakSet<Agent>()
+  // SessionStart runs before a turn exists, while hook audit events are
+  // deliberately turn-enclosed. Retain only its user-facing warnings and
+  // commit their ordinary invoked/result pairs at the first safe turn edge.
+  const deferredSessionStartAudits = new WeakMap<Agent, Array<{
+    handlerId: string
+    matcher?: string
+    output: HookOutput
+    durationMs: number
+  }>>()
+  const deferredStops = new WeakMap<Agent, string>()
+  const stopContinuations = new WeakMap<Agent, { turn: number; count: number }>()
+  // Model-direct PreToolUse runs before assistant/message persistence so updatedInput
+  // can become the canonical call. Cache its merged gate for tools/pre-execute;
+  // nested/non-model calls have no such edge and continue through the legacy gate.
+  const preToolOutcomes = new WeakMap<Agent, Map<string, MergedHookOutcome>>()
   ctx.effect(() => () => detached.drain(), 'hooks-claude-code: drain detached hook runs')
 
   /**
@@ -140,11 +279,12 @@ export function apply(ctx: Context, config: Config): void {
     payload: unknown,
     opts: { agent?: Agent; turn?: number; readonly signal: AbortSignal },
   ): Promise<MergedHookOutcome> {
-    const groups: MatcherGroup[] = parsed[point] ?? []
-    const outputs: HookOutput[] = []
+    let currentPayload = payload
     // Run the hook in the agent's session workspace (the `session/new` cwd on the session
     // header), not the executor or entry-point process's launch dir.
     const workdir = opts.agent?.session.header.cwd
+    const groups = groupsFor(point, workdir)
+    const outputs: HookOutput[] = []
     // CLAUDE_PROJECT_DIR: an explicit config value wins; otherwise default it to the session
     // workspace (the same dir the hook runs in).
     const projectDir = config.projectDir ?? workdir
@@ -161,7 +301,7 @@ export function apply(ctx: Context, config: Config): void {
           })
         }
         const { output, durationMs } = await runHook(ctx.shell, hook, {
-          payload,
+          payload: currentPayload,
           defaultTimeoutMs,
           ...hookEnv ? { env: hookEnv } : {},
           ...workdir !== undefined ? { cwd: workdir } : {},
@@ -173,20 +313,36 @@ export function apply(ctx: Context, config: Config): void {
         }, () => performance.now())
         outputs.push(output)
         if (output.updatedInput !== undefined) {
-          ctx.logger.warn(`hooks-claude-code: ${point} hook requested updatedInput, which is not yet honored (ignored)`)
-        }
-        if (output.systemMessage !== undefined) {
-          ctx.logger.warn(`hooks-claude-code: ${point} hook emitted a systemMessage, which is not yet surfaced (ignored)`)
+          if (point === 'PreToolUse' && typeof currentPayload === 'object' && currentPayload !== null && !Array.isArray(currentPayload)) {
+            currentPayload = { ...(currentPayload as Record<string, unknown>), tool_input: output.updatedInput }
+          } else {
+            ctx.logger.warn(`hooks-claude-code: ${point} hook requested updatedInput outside the safe PreToolUse rewrite seam (ignored)`)
+          }
         }
         if (session && opts.turn !== undefined) {
           appendHookResult(session, { turn: opts.turn, point, handlerId, output, stderrSummaryMaxChars, durationMs })
+        } else if (session && opts.agent !== undefined && point === 'SessionStart'
+          && output.systemMessage !== undefined && output.systemMessage.length > 0) {
+          const audits = deferredSessionStartAudits.get(opts.agent) ?? []
+          audits.push({
+            handlerId,
+            ...group.matcher !== undefined ? { matcher: group.matcher } : {},
+            output,
+            durationMs,
+          })
+          deferredSessionStartAudits.set(opts.agent, audits)
         }
       }
     }
     return mergeHookOutputs(outputs)
   }
 
-  // TODO(hook-continue-false): `merged.stop` is logged but needs a run-level halt mechanism.
+  /** Record a hook-requested halt for the next safe agent boundary. */
+  function deferStop(agent: Agent | undefined, merged: MergedHookOutcome, point: string): boolean {
+    if (!merged.stop || agent === undefined) return false
+    deferredStops.set(agent, merged.stopReason ?? `stopped by ${point} hook`)
+    return true
+  }
 
   /** Build additional model context from hook output, or return undefined when empty. */
   function contextFrom(merged: MergedHookOutcome): UserMessage | undefined {
@@ -200,64 +356,202 @@ export function apply(ctx: Context, config: Config): void {
     return [ours, ...theirs ?? []]
   }
 
-  // SessionStart injects context when its detached hook resolves; a slow hook
-  // may miss the first request.
-  // TODO(session-start-gating): add a startup gate before promising first-turn delivery.
+  /** Commit SessionStart warnings once the first turn supplies a valid audit enclosure. */
+  function flushSessionStartAudits(agent: Agent, turn: number): void {
+    const audits = deferredSessionStartAudits.get(agent)
+    if (audits === undefined) return
+    deferredSessionStartAudits.delete(agent)
+    for (const audit of audits) {
+      appendHookInvoked(agent.session, {
+        turn,
+        point: 'SessionStart',
+        dialect: 'claude-code',
+        handlerId: audit.handlerId,
+        ...audit.matcher !== undefined ? { matcher: audit.matcher } : {},
+      })
+      appendHookResult(agent.session, {
+        turn,
+        point: 'SessionStart',
+        handlerId: audit.handlerId,
+        output: audit.output,
+        stderrSummaryMaxChars,
+        durationMs: audit.durationMs,
+      })
+    }
+  }
+
+  // SessionStart remains an emit-shaped lifecycle event, but its bridge run is
+  // published as a per-agent gate. Context is buffered until the first pre-step
+  // instead of calling agent.inject(), which would create a second next-step
+  // occurrence after the user prompt has already been claimed.
   ctx.on('agent/session-start', ({ agent, source }) => {
-    detached.track(runPoint('SessionStart', source, sessionStartPayload(ctx, agent, source), { agent, signal: detached.signal })
+    sessionStartConsumed.delete(agent)
+    const gate = runPoint('SessionStart', source, sessionStartPayload(ctx, agent, source), { agent, signal: detached.signal })
       .then((merged) => {
+        deferStop(agent, merged, 'SessionStart')
         const context = contextFrom(merged)
-        if (context) agent.inject(context)
+        // Preserve the historical idle-session behavior: when no first pre-step
+        // is already waiting, publish startup context through the ordinary inbox.
+        // An immediate user prompt marks itself as waiting before awaiting this
+        // gate, so that path receives the same context in its first request and
+        // never creates a second next-step occurrence.
+        if (context !== undefined && !sessionStartWaiting.has(agent)) {
+          agent.inject(context)
+          return undefined
+        }
+        return context
       })
       .catch((error: unknown) => {
         ctx.logger.warn(`hooks-claude-code: SessionStart hook failed: ${String(error)}`)
-      }))
+        return undefined
+      })
+    sessionStartGates.set(agent, gate)
+    detached.track(gate)
   })
 
   // --- UserPromptSubmit → PreStepDecision. The prompt text is the payload; no
   // matcher subject (CC ignores matchers for this event). ---
   ctx.on('agent/pre-step', async ({ agent, messages, turn, signal }, next): Promise<PreStepDecision> => {
-    if (messages.length === 0) return next()
+    let startupContext: UserMessage | undefined
+    if (!sessionStartConsumed.has(agent)) {
+      sessionStartWaiting.add(agent)
+      try {
+        startupContext = await sessionStartGates.get(agent)
+      } finally {
+        sessionStartWaiting.delete(agent)
+        sessionStartConsumed.add(agent)
+      }
+    }
+    flushSessionStartAudits(agent, turn)
+    signal.throwIfAborted()
+    if (deferredStops.delete(agent)) return { kind: 'reject' }
+    if (messages.length === 0) {
+      const downstream = await next()
+      if (!startupContext || downstream.kind !== 'enter') return downstream
+      return { kind: 'enter', messages: [...downstream.messages, startupContext] }
+    }
     const content = messages.flatMap(message => message.content)
     const merged = await runPoint('UserPromptSubmit', '', promptPayload(ctx, agent, content), { agent, turn, signal })
+    if (merged.stop) return { kind: 'reject' }
     if (merged.decision === 'deny') {
       return { kind: 'reject' }
     }
-    // Delegate so later listeners may still rewrite or reject, then prepend our
-    // context only to a downstream enter decision.
+    // Delegate so later listeners may still rewrite or reject, then append the
+    // gated SessionStart context followed by this prompt hook's context.
     const downstream = await next()
+    if (downstream.kind !== 'enter') return downstream
     const ours = contextFrom(merged)
-    if (!ours || downstream.kind !== 'enter') return downstream
     return {
       kind: 'enter',
-      messages: [...downstream.messages, ours],
+      messages: [
+        ...downstream.messages,
+        ...startupContext ? [startupContext] : [],
+        ...ours ? [ours] : [],
+      ],
     }
   })
 
-  // --- PreToolUse → PreToolDecision. Matcher subject is the tool name. ---
+  // --- PreToolUse safe rewrite + decision mapping. Model-direct calls first
+  // pass this pre-persistence agent seam. The returned block is the canonical
+  // assistant/tool-call input, while the merged permission decision is cached
+  // and consumed exactly once by tools/pre-execute.
+  ctx.on('agent/tool-call-input', async ({ agent, turn, call: _call, signal }, next) => {
+    const downstream = await next()
+    signal.throwIfAborted()
+    const input = parseToolInput(downstream.arguments)
+    const merged = await runPoint(
+      'PreToolUse', downstream.name,
+      preToolPayloadValues(ctx, agent, downstream.name, input, downstream.id),
+      { agent, turn, signal },
+    )
+    let calls = preToolOutcomes.get(agent)
+    if (calls === undefined) {
+      calls = new Map()
+      preToolOutcomes.set(agent, calls)
+    }
+    calls.set(String(downstream.id), merged)
+    if (merged.updatedInput === undefined) return downstream
+    return { ...downstream, arguments: JSON.stringify(merged.updatedInput) }
+  })
+
   ctx.on('tools/pre-execute', async (exec, next): Promise<PreToolDecision> => {
     const turn = lastTurn(exec.agent)
-    const merged = await runPoint('PreToolUse', exec.name, preToolPayload(ctx, exec), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    const key = String(exec.callId)
+    const calls = exec.agent === undefined ? undefined : preToolOutcomes.get(exec.agent)
+    const cached = calls?.get(key)
+    if (cached !== undefined) {
+      calls?.delete(key)
+      if (calls?.size === 0 && exec.agent !== undefined) preToolOutcomes.delete(exec.agent)
+    }
+    const merged = cached ?? await runPoint('PreToolUse', exec.name, preToolPayload(ctx, exec), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    if (cached === undefined && merged.updatedInput !== undefined) {
+      ctx.logger.warn('hooks-claude-code: PreToolUse updatedInput was produced for a non-model/nested tool call and cannot be durably rewritten (ignored)')
+    }
+    if (deferStop(exec.agent, merged, 'PreToolUse')) {
+      return { kind: 'deny', reason: merged.stopReason ?? 'stopped by PreToolUse hook' }
+    }
     if (merged.decision === 'deny') return { kind: 'deny', reason: merged.reason ?? 'blocked by PreToolUse hook' }
     if (merged.decision === 'ask') return { kind: 'ask', ...merged.reason !== undefined ? { reason: merged.reason } : {} }
     return next()
   })
 
-  // --- PostToolUse → PostToolDecision. Matcher subject is the tool name. ---
+  // --- PostToolUse / PostToolUseFailure → PostToolDecision. The canonical
+  // execution result decides which Claude event fires; failures never pass
+  // through the success event.
   ctx.on('tools/post-execute', async (exec, result, next): Promise<PostToolDecision> => {
     const turn = lastTurn(exec.agent)
-    const merged = await runPoint('PostToolUse', exec.name, postToolPayload(ctx, exec, result), { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal })
+    const point = result.isError ? 'PostToolUseFailure' : 'PostToolUse'
+    const merged = await runPoint(
+      point,
+      exec.name,
+      postToolPayload(ctx, point, exec, result),
+      { ...exec.agent ? { agent: exec.agent } : {}, turn, signal: exec.signal },
+    )
+    deferStop(exec.agent, merged, point)
     const context = contextFrom(merged)
+    let replacement: JsonValue | undefined
+    if (merged.toolOutputRewrite !== undefined) {
+      if (point !== 'PostToolUse') {
+        ctx.logger.warn(`hooks-claude-code: ${point} hook requested a tool-output rewrite outside PostToolUse (ignored)`)
+      } else if (merged.toolOutputRewrite.scope === 'mcp-tool' && !exec.name.startsWith('mcp__')) {
+        ctx.logger.warn(`hooks-claude-code: PostToolUse updatedMCPToolOutput targeted non-MCP tool "${exec.name}" (ignored)`)
+      } else {
+        const tool = ctx.tools.get(exec.name, exec.agent)
+        const violations = tool === undefined
+          ? [`tool "${exec.name}" is no longer registered`]
+          : validateJsonSchemaValue(tool.output.schema, merged.toolOutputRewrite.value, 'value')
+        if (violations.length > 0) {
+          ctx.logger.warn(
+            `hooks-claude-code: PostToolUse tool-output rewrite for "${exec.name}" did not match its output schema (ignored): ${violations.join('; ')}`,
+          )
+        } else {
+          replacement = merged.toolOutputRewrite.value
+        }
+      }
+    }
     if (merged.decision === 'deny') {
-      return { kind: 'block', feedback: [{ type: 'text', text: merged.reason ?? 'blocked by PostToolUse hook' }], ...context ? { additionalContexts: [context] } : {} }
+      return { kind: 'block', feedback: [{ type: 'text', text: merged.reason ?? `blocked by ${point} hook` }], ...context ? { additionalContexts: [context] } : {} }
     }
     // Our hooks did not block. DELEGATE so a later listener can still block/replace,
     // then fold our context onto its decision (a downstream block carries it too).
     const downstream = await next()
-    if (!context) return downstream
     if (downstream.kind === 'block') {
-      return { ...downstream, additionalContexts: prependContext(context, downstream.additionalContexts) }
+      return context
+        ? { ...downstream, additionalContexts: prependContext(context, downstream.additionalContexts) }
+        : downstream
     }
+    // A later listener's explicit projection replacement wins. Otherwise the
+    // Claude hook's validated value travels through the ToolRuntime's ordinary
+    // materialization path, which re-renders canonical model/UI content.
+    const downstreamReplaced = Object.hasOwn(downstream, 'value') || Object.hasOwn(downstream, 'content')
+    if (replacement !== undefined && !downstreamReplaced) {
+      return {
+        kind: 'accept',
+        value: replacement,
+        ...context ? { additionalContexts: prependContext(context, downstream.additionalContexts) } : {},
+      }
+    }
+    if (!context) return downstream
     return {
       ...downstream,
       additionalContexts: prependContext(context, downstream.additionalContexts),
@@ -265,23 +559,40 @@ export function apply(ctx: Context, config: Config): void {
   })
 
   // A blocking Stop hook steers at the stopping boundary, which makes the
-  // machine observe pending input and run another step.
-  // TODO(stop-loop-guard): cap consecutive forced continuations; hooks must self-limit meanwhile.
+  // machine observe pending input and run another step. Bound consecutive
+  // continuations so an unconditional hook cannot create an infinite turn.
   ctx.on('agent/turn-stopping', async ({ agent, turn, signal }): Promise<void> => {
-    const merged = await runPoint('Stop', '', stopPayload(ctx, agent), { agent, turn, signal })
-    if (merged.decision === 'deny') {
-      // A blocking Stop hook forces continuation.
-      const text = merged.reason ?? 'continue: blocked by Stop hook'
-      agent.steer(createUserMessage({ content: [{ type: 'text', text }], source: PLUGIN_SOURCE }))
+    const previous = stopContinuations.get(agent)
+    const active = previous?.turn === turn && previous.count > 0
+    const merged = await runPoint('Stop', '', stopPayload(ctx, agent, active), { agent, turn, signal })
+    if (merged.stop) {
+      stopContinuations.delete(agent)
+      return
     }
+    if (merged.decision !== 'deny') {
+      stopContinuations.delete(agent)
+      return
+    }
+    const count = previous?.turn === turn ? previous.count + 1 : 1
+    if (count > maxStopContinuations) {
+      stopContinuations.delete(agent)
+      ctx.logger.warn(`hooks-claude-code: Stop hook continuation limit (${maxStopContinuations}) reached for turn ${turn}; allowing turn to stop`)
+      return
+    }
+    stopContinuations.set(agent, { turn, count })
+    const text = merged.reason ?? 'continue: blocked by Stop hook'
+    agent.steer(createUserMessage({ content: [{ type: 'text', text }], source: PLUGIN_SOURCE }))
   })
 
-  // SubagentStart may inject child context; SubagentStop only observes. Both
-  // use the live child's workspace and the generic agent-type matcher subject.
+  // SubagentStart may inject child context; SubagentStop only observes. A
+  // local child's persisted agent preset is the compatibility agent_type;
+  // children without one (and remote children) keep Claude's default.
   ctx.on('subagent/start', (info) => {
     const child = ctx.get('agents')?.get(info.id)
     if (child !== undefined) subagentChildren.set(info.runId, child)
-    detached.track(runPoint('SubagentStart', SUBAGENT_TYPE, subagentPayload(ctx, 'SubagentStart', info, child), { ...child ? { agent: child } : {}, signal: detached.signal })
+    const agentType = subagentType(child)
+    subagentTypes.set(info.runId, agentType)
+    detached.track(runPoint('SubagentStart', agentType, subagentPayload(ctx, 'SubagentStart', info, child, agentType), { ...child ? { agent: child } : {}, signal: detached.signal })
       .then((merged) => {
         const context = contextFrom(merged)
         if (context && child) child.inject(context)
@@ -291,17 +602,25 @@ export function apply(ctx: Context, config: Config): void {
   ctx.on('subagent/end', (info) => {
     const child = subagentChildren.get(info.runId) ?? ctx.get('agents')?.get(info.id)
     subagentChildren.delete(info.runId)
-    detached.track(runPoint('SubagentStop', SUBAGENT_TYPE, subagentPayload(ctx, 'SubagentStop', info, child), { ...child ? { agent: child } : {}, signal: detached.signal }))
+    const agentType = subagentTypes.get(info.runId) ?? subagentType(child)
+    subagentTypes.delete(info.runId)
+    detached.track(runPoint('SubagentStop', agentType, subagentPayload(ctx, 'SubagentStop', info, child, agentType), { ...child ? { agent: child } : {}, signal: detached.signal }))
   })
 }
 
+/** Claude Code's fallback `agent_type` when Harness has no stable local preset. */
+const DEFAULT_SUBAGENT_TYPE = 'general-purpose'
+
 /**
- * The `agent_type` value the bridge reports for SubagentStart/Stop. The harness
- * subagent seam carries no per-kind label, so the bridge uses Claude Code's own
- * Task-tool default — a hooks.json with a default/`*`/empty `agent_type` matcher
- * fires; a config matching a specific kind (e.g. `code-reviewer`) does not.
+ * Map a local Harness child to Claude's `agent_type` vocabulary without adding
+ * a Claude-only field to the native subagent seam. `agentPreset` is durable
+ * session metadata because it identifies the child's actual tool/prompt
+ * composition. Remote or untyped children retain Claude's own default.
  */
-const SUBAGENT_TYPE = 'general-purpose'
+function subagentType(child: Agent | undefined): string {
+  const preset = child?.session.header.agentPreset
+  return preset !== undefined && preset.length > 0 ? preset : DEFAULT_SUBAGENT_TYPE
+}
 
 // --- Per-event stdin payloads (the CC DIALECT shape). Field names match CC's
 // hook input schema; this is the part a bridge owns. ---
@@ -336,26 +655,52 @@ function sessionStartPayload(ctx: Context, agent: Agent, source: string): Record
 function promptPayload(ctx: Context, agent: Agent, content: ContentBlock[]): Record<string, unknown> {
   return { ...base(ctx, agent, 'UserPromptSubmit'), prompt: blocksToText(content) }
 }
+function parseToolInput(raw: string): unknown {
+  try {
+    return raw.length > 0 ? JSON.parse(raw) : {}
+  } catch {
+    return raw
+  }
+}
+function preToolPayloadValues(
+  ctx: Context,
+  agent: Agent | undefined,
+  name: string,
+  input: unknown,
+  callId: unknown,
+): Record<string, unknown> {
+  return { ...base(ctx, agent, 'PreToolUse'), tool_name: name, tool_input: input, tool_use_id: callId }
+}
 function preToolPayload(ctx: Context, exec: ToolExecution): Record<string, unknown> {
-  return { ...base(ctx, exec.agent, 'PreToolUse'), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }
+  return preToolPayloadValues(ctx, exec.agent, exec.name, exec.arguments, exec.callId)
 }
-function postToolPayload(ctx: Context, exec: ToolExecution, result: ToolExecutionResult): Record<string, unknown> {
-  return { ...base(ctx, exec.agent, 'PostToolUse'), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId, tool_response: blocksToText(result.content) }
+function postToolPayload(ctx: Context, point: 'PostToolUse' | 'PostToolUseFailure', exec: ToolExecution, result: ToolExecutionResult): Record<string, unknown> {
+  const common = { ...base(ctx, exec.agent, point), tool_name: exec.name, tool_input: exec.arguments, tool_use_id: exec.callId }
+  return result.isError
+    ? { ...common, error: result.error.message, is_interrupt: exec.signal.aborted }
+    : { ...common, tool_response: result.value }
 }
-function stopPayload(ctx: Context, agent: Agent): Record<string, unknown> {
-  return { ...base(ctx, agent, 'Stop'), stop_hook_active: false }
+function stopPayload(ctx: Context, agent: Agent, stopHookActive: boolean): Record<string, unknown> {
+  return { ...base(ctx, agent, 'Stop'), stop_hook_active: stopHookActive }
 }
 /**
  * Build a SubagentStart/SubagentStop payload from the CC base (the child's
  * `session_id`/`cwd` when the child agent is available) plus the subagent-hook
- * fields. `agent_type` is the CC-default {@link SUBAGENT_TYPE}; `stop_hook_active`
- * is present on SubagentStop only (the loop-guard flag, always false).
+ * fields. `agent_type` is the captured Harness preset or Claude fallback;
+ * `stop_hook_active` is present on SubagentStop only (the loop-guard flag,
+ * always false).
  */
-function subagentPayload(ctx: Context, event: 'SubagentStart' | 'SubagentStop', info: { id: string }, child: Agent | undefined): Record<string, unknown> {
+function subagentPayload(
+  ctx: Context,
+  event: 'SubagentStart' | 'SubagentStop',
+  info: { id: string },
+  child: Agent | undefined,
+  agentType: string,
+): Record<string, unknown> {
   return {
     ...base(ctx, child, event),
     agent_id: info.id,
-    agent_type: SUBAGENT_TYPE,
+    agent_type: agentType,
     ...event === 'SubagentStop' ? { stop_hook_active: false } : {},
   }
 }

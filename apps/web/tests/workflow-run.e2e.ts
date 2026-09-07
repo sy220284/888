@@ -10,7 +10,7 @@ import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { Session, SessionEvent, SessionId } from '@deepseek-ai/dsh-session'
 import {
-  assertFixtureInventory, captureStableAria, compareOrRefreshGolden,
+  approveRuntimeTool, assertFixtureInventory, captureStableAria, compareOrRefreshGolden,
   fixtureUserPrompts, launchWebScaffold, watchConsole, webSnapshotMode,
   type WebScaffold,
 } from './scaffold.ts'
@@ -32,6 +32,7 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
   let page: Page
   let tripwire: ReturnType<typeof watchConsole>
   let prompt: string
+  const sessionEvents: SessionEvent[] = []
 
   const waitForParentSettlement = (): Promise<SessionId> => new Promise((resolve, reject) => {
     let dispose = (): void => {}
@@ -55,6 +56,7 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
       replayChildFixtures: [CHILD_FIXTURE],
       paceMs: 50,
     })
+    scaffold.ctx.on('session/event', (_session, event: SessionEvent) => { sessionEvents.push(event) })
     browser = await chromium.launch()
     page = await newEnglishPage(browser)
     tripwire = watchConsole(page)
@@ -74,6 +76,8 @@ describe.skipIf(MODE === 'record')('web e2e: durable workflow run in Chat', () =
     const input = page.locator('textarea').first()
     await input.fill(prompt)
     await input.press('Enter')
+
+    await approveRuntimeTool(page, sessionEvents, 'workflow')
 
     const workflow = page.locator('[data-workflow-run][data-run-status="running"]')
     await workflow.waitFor({ timeout: 30_000 })

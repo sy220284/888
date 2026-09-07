@@ -176,11 +176,11 @@
 - id: tool-fs
   name: '@deepseek-ai/dsh-tool-fs'
 
-# `configPath` is read once at load and resolves from the server launch cwd, not
-# `session/new.cwd`; one `hooks.json` therefore applies to every session and a
-# project-local file is not discovered. Missing config registers nothing. Hook
-# commands still run in the session cwd. Warnings use `ctx.logger`, never stdout;
-# see packages/hooks/hooks-claude-code/README.md for the deferred per-session design.
+# This explicit `configPath` is read once at load and applies to every session.
+# Deployments may instead enable `discoverProjectHooks` to re-read each session
+# workspace's `.claude/settings.json` and `.claude/settings.local.json` at every
+# hook point. Hook commands run in the session cwd and warnings use `ctx.logger`,
+# never stdout.
 - id: hooks-claude-code
   name: '@deepseek-ai/dsh-hooks-claude-code'
   config:

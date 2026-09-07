@@ -391,8 +391,26 @@ export class ReactLoopAgent implements Agent {
         continue
       }
 
+      const content = assembler.blocks()
+      for (let index = 0; index < content.length; index++) {
+        const block = content[index]
+        if (block?.type !== 'tool-call') continue
+        const originalId = block.id
+        const originalName = block.name
+        const rewritten = await this.dispatch.waterfall(
+          'agent/tool-call-input', { turn, step, call: block, signal },
+          () => Promise.resolve(block),
+        )
+        signal.throwIfAborted()
+        if (rewritten.id !== originalId || rewritten.name !== originalName
+          || typeof rewritten.arguments !== 'string') {
+          throw new TypeError('agent/tool-call-input may replace only tool-call arguments; id and name are immutable')
+        }
+        content[index] = rewritten
+      }
+
       const message = createAssistantMessage({
-        content: assembler.blocks(),
+        content,
         source: {
           provider: request.provider,
           model: request.model,

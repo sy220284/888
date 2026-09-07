@@ -296,7 +296,7 @@ fn stream_output<R: Read + Send + 'static>(
 }
 
 #[cfg(unix)]
-fn signal_name(signal: i32) -> Option<&'static str> {
+pub(crate) fn signal_name(signal: i32) -> Option<&'static str> {
     match signal {
         libc::SIGTERM => Some("SIGTERM"),
         libc::SIGKILL => Some("SIGKILL"),
@@ -311,26 +311,45 @@ pub fn write_json<T: serde::Serialize>(writer: &Writer, value: &T) -> Result<(),
     let mut guard = writer
         .lock()
         .map_err(|_| "protocol writer lock poisoned".to_string())?;
-    serde_json::to_writer(&mut *guard, value)
+    write_json_to(&mut **guard, value)
+}
+
+pub fn write_json_to<T: serde::Serialize, W: Write + ?Sized>(
+    writer: &mut W,
+    value: &T,
+) -> Result<(), String> {
+    serde_json::to_writer(&mut *writer, value)
         .map_err(|e| format!("serialize response failed: {e}"))?;
-    guard
+    writer
         .write_all(b"\n")
         .map_err(|e| format!("write response failed: {e}"))?;
-    guard
+    writer
         .flush()
         .map_err(|e| format!("flush response failed: {e}"))
 }
 
 #[cfg(unix)]
+pub(crate) fn signal_number(signal: &str) -> Result<i32, String> {
+    match signal {
+        "SIGTERM" => Ok(libc::SIGTERM),
+        "SIGKILL" => Ok(libc::SIGKILL),
+        "SIGINT" => Ok(libc::SIGINT),
+        "SIGHUP" => Ok(libc::SIGHUP),
+        "SIGTSTP" => Ok(libc::SIGTSTP),
+        other => Err(format!("unsupported signal: {other}")),
+    }
+}
+
+#[cfg(not(unix))]
+pub(crate) fn signal_number(signal: &str) -> Result<i32, String> {
+    Err(format!(
+        "native signals are not implemented on this platform: {signal}"
+    ))
+}
+
+#[cfg(unix)]
 pub fn signal_tree(pid: u32, signal: &str) -> Result<(), String> {
-    let sig = match signal {
-        "SIGTERM" => libc::SIGTERM,
-        "SIGKILL" => libc::SIGKILL,
-        "SIGINT" => libc::SIGINT,
-        "SIGHUP" => libc::SIGHUP,
-        "SIGTSTP" => libc::SIGTSTP,
-        other => return Err(format!("unsupported signal: {other}")),
-    };
+    let sig = signal_number(signal)?;
     let result = unsafe { libc::kill(-(pid as i32), sig) };
     if result == 0 {
         return Ok(());

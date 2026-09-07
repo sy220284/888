@@ -112,7 +112,7 @@ export function defineCoverageCases(group: CoverageGroup): void {
       expect(existsSync(marker)).toBe(true) // substituted command ran
     }, 15_000) // Real agent and hook subprocess startup can exceed Vitest's default under coverage concurrency.
 
-    it('warns and honors updatedInput as a no-op (input rewrite deferred)', async () => {
+    it('applies updatedInput through the safe rewrite seam without warning', async () => {
       const d = dir()
       const s = sh(d, 'u.sh', '#!/usr/bin/env bash\necho \'{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"command":"rewritten"}}}\'\n')
       const path = hooks(d, { PreToolUse: [{ hooks: [{ type: 'command', command: s }] }] })
@@ -125,9 +125,8 @@ export function defineCoverageCases(group: CoverageGroup): void {
       const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
       agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
       await waitForIdle(ctx, agent)
-      // updatedInput is NOT honored — the tool ran with the ORIGINAL args.
-      expect((sawArgs as { command?: string }).command).toBe('original')
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('updatedInput'))
+      expect((sawArgs as { command?: string }).command).toBe('rewritten')
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('updatedInput'))
     })
   })
 
@@ -415,9 +414,9 @@ export function defineCoverageCases(group: CoverageGroup): void {
   })
 
   if (group === 'context') describe('hooks-claude-code coverage — continue:false, context arm, no-cwd', () => {
-    it('a {"continue":false} hook is RECORDED as decision "stop" but does not halt the run (TODO(hook-continue-false))', async () => {
-    // The extension points cannot yet honor `continue:false` as a hard halt. The log must still record the
-    // stop decision while execution and the turn continue normally.
+    it('a {"continue":false} PreToolUse hook is recorded and halts before tool execution', async () => {
+    // P5A gives `continue:false` a real run-level effect. The hook result is
+    // persisted, then the pending tool is denied before any side effect begins.
       const d = dir()
       const s = sh(d, 'stop.sh', '#!/usr/bin/env bash\necho \'{"continue":false,"stopReason":"halt"}\'\n')
       const path = hooks(d, { PreToolUse: [{ hooks: [{ type: 'command', command: s }] }] })
@@ -430,9 +429,9 @@ export function defineCoverageCases(group: CoverageGroup): void {
       await waitForIdle(ctx, agent)
       const res = events(agent).find(e => e.type === 'hook/result')
       expect(res?.type === 'hook/result' && res.data.decision).toBe('stop') // recorded
-      expect(ran).toBe(true) // NOT honored: the tool still ran (halt is deferred)
+      expect(ran).toBe(false)
       const turnEnd = events(agent).findLast(e => e.type === 'turn/end')
-      expect(turnEnd?.type === 'turn/end' && turnEnd.data.reason.kind).toBe('completed') // ran to completion
+      expect(turnEnd?.type === 'turn/end' && turnEnd.data.reason.kind).not.toBe('completed')
     })
 
     it('a PostToolUse hook that BOTH blocks AND attaches additionalContext', async () => {
@@ -724,19 +723,19 @@ export function defineCoverageCases(group: CoverageGroup): void {
     })
   })
 
-  if (group === 'config') describe('hooks-claude-code coverage — systemMessage is warned, not surfaced', () => {
-    it('a hook emitting a systemMessage is logged as not-yet-surfaced', async () => {
+  if (group === 'config') describe('hooks-claude-code coverage — systemMessage audit surface', () => {
+    it('retains a hook systemMessage in audit without exposing it to the model', async () => {
       const d = dir()
       const s = sh(d, 'sm.sh', '#!/usr/bin/env bash\necho \'{"systemMessage":"heads up"}\'\n')
       const path = hooks(d, { UserPromptSubmit: [{ hooks: [{ type: 'command', command: s }] }] })
       const adapter = new MockAdapter([textResponse('ok')])
       const ctx = await harness(path, adapter)
-      const warn = vi.fn(); ctx.logger.warn = warn as never
       const agent = ctx.agentLoop.create(SessionId('a1'), { provider: 'mock', model: 'mock' })
       agent.followup(createUserMessage({ content: [{ type: 'text', text: 'go' }], source: { kind: 'user' } }))
       await waitForIdle(ctx, agent)
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining('systemMessage'))
-      // Not surfaced: the systemMessage text never reaches the model request.
+      expect(events(agent).find(event => event.type === 'hook/result')?.data)
+        .toMatchObject({ systemMessage: 'heads up' })
+      // Audit-only: the systemMessage text never reaches the model request.
       expect(JSON.stringify(adapter.requests[0]!.messages)).not.toContain('heads up')
     })
   })

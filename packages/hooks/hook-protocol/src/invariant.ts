@@ -43,8 +43,8 @@ function validateHookEvent(
       fail('hook/invoked point and handlerId must be non-empty')
     }
     const dialect: string = event.data.dialect
-    if (dialect !== 'claude-code' && dialect !== 'codex') {
-      fail(`hook/invoked carries unknown dialect ${JSON.stringify(dialect)}`)
+    if (dialect.length === 0) {
+      fail('hook/invoked dialect must be non-empty')
     }
     return { key: hookKey(event.data), delta: 1 }
   }
@@ -54,6 +54,9 @@ function validateHookEvent(
   }
   if (!Number.isFinite(event.data.durationMs) || event.data.durationMs < 0) {
     fail('hook/result durationMs must be a non-negative finite number')
+  }
+  if (event.data.systemMessage !== undefined && event.data.systemMessage.length === 0) {
+    fail('hook/result systemMessage must be non-empty when present')
   }
   return { key, delta: -1 }
 }

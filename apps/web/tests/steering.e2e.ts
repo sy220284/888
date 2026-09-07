@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import {
-  assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
+  approveRuntimeTool, assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
@@ -45,6 +45,10 @@ const STEER_ALL_MID = join(STEER_ALL_DIR, 'mid-steer.expected.md')
 const STEER_ALL_SETTLED = join(STEER_ALL_DIR, 'settled.expected.md')
 const STEER_ONE = 'Interjection: include the word BANANA in your final reply.'
 const STEER_TWO = 'Interjection: include the word ORANGE in your final reply.'
+// This scenario performs three composer submissions before the question tool
+// replaces the textarea. Give each replay chunk enough room for the real
+// submitting -> editable projection round trip on a busy CI runner.
+const STEER_ALL_REPLAY_PACE_MS = 500
 
 /** Concatenated assistant text deltas — the model-visible reply body. */
 function assistantText(events: SessionEvent[]): string {
@@ -99,6 +103,7 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
     const settled = scaffold.whenTurnSettled(MODE === 'record' ? 180_000 : 30_000)
+    void settled.catch(() => undefined)
     await input.fill(PROMPT)
     await input.press('Enter')
 
@@ -115,6 +120,10 @@ describe('web e2e: mid-turn steering lands durably and visibly', () => {
     // A timeout while the Queue row remains means strict steer lost to a
     // closing window (`steer-unavailable`); inspect replay pacing first.
     await pendingSteering.waitFor({ timeout: 10_000 })
+
+    await approveRuntimeTool(page, sessionEvents, 'ask_user_question', {
+      timeoutMs: MODE === 'record' ? 120_000 : 30_000,
+    })
 
     // The blocked composer keeps steering pending long enough to observe the
     // Host-authoritative mirror before the loop admits it durably.
@@ -203,6 +212,7 @@ describe('web e2e: composer shortcut steers directly', () => {
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
     const settled = scaffold.whenTurnSettled(30_000)
+    void settled.catch(() => undefined)
     await input.fill(PROMPT)
     await input.press('Enter')
     await page.getByRole('button', { name: 'Stop generating' }).waitFor({ timeout: 10_000 })
@@ -212,10 +222,11 @@ describe('web e2e: composer shortcut steers directly', () => {
     await expect.poll(() => input.inputValue(), { timeout: 5_000 }).toBe('')
     expect(await page.locator('[data-queue-dock]').count()).toBe(0)
 
-    const composer = page.locator('[data-question-key]')
-    await composer.waitFor({ timeout: 30_000 })
     const pendingSteering = page.locator('[data-pending-steering]').filter({ hasText: STEER })
     await pendingSteering.waitFor({ timeout: 10_000 })
+    await approveRuntimeTool(page, sessionEvents, 'ask_user_question')
+    const composer = page.locator('[data-question-key]')
+    await composer.waitFor({ timeout: 30_000 })
     await composer.getByRole('radio', { name: 'Yes' }).click()
     await composer.getByRole('radio', { name: 'Yes' }).press('Enter')
     await settled
@@ -265,6 +276,7 @@ describe('web e2e: composer shortcut follows the swapped busy behavior', () => {
 
     const input = page.locator('textarea').first()
     const settled = scaffold.whenTurnSettled(30_000)
+    void settled.catch(() => undefined)
     await input.fill(PROMPT)
     await input.press('Enter')
     await page.getByRole('button', { name: 'Stop generating' }).waitFor({ timeout: 10_000 })
@@ -280,6 +292,7 @@ describe('web e2e: composer shortcut follows the swapped busy behavior', () => {
     // Remove the asserted Queue row, then finish the recorded question turn
     // so replay teardown still proves that every fixture call was consumed.
     await queuedRow.getByRole('button', { name: 'Remove queued message' }).click()
+    await approveRuntimeTool(page, sessionEvents, 'ask_user_question')
     const composer = page.locator('[data-question-key]')
     await composer.waitFor({ timeout: 30_000 })
     await composer.getByRole('radio', { name: 'Yes' }).click()
@@ -304,7 +317,7 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     scaffold = await launchWebScaffold({
       replayFixture: STEER_ALL_FIXTURE,
       replayOverride: STEER_ALL_OVERRIDE,
-      paceMs: REPLAY_PACE_MS,
+      paceMs: STEER_ALL_REPLAY_PACE_MS,
     })
     scaffold.ctx.on('session/event', (_session, event) => { sessionEvents.push(event) })
     browser = await chromium.launch()
@@ -326,33 +339,36 @@ describe('web e2e: empty-draft Cmd+Enter steers the whole queue', () => {
     const input = page.locator('textarea').first()
     await input.waitFor({ timeout: 10_000 })
     const settled = scaffold.whenTurnSettled(30_000)
+    void settled.catch(() => undefined)
 
     // Call 0 streams a question-tool call; the fills must land inside the
     // first replay window, before the question composer replaces the textarea.
     await input.fill(PROMPT)
     await input.press('Enter')
+    await page.getByRole('button', { name: 'Stop generating' }).waitFor({ timeout: 10_000 })
+    await expect.poll(() => input.isEditable(), { timeout: 10_000 }).toBe(true)
     await input.fill(STEER_ONE)
     await input.press('Enter')
+    await expect.poll(() => input.isEditable(), { timeout: 10_000 }).toBe(true)
     await input.fill(STEER_TWO)
     await input.press('Enter')
     const dock = page.locator('[data-queue-dock]')
-    // Both messages queued: the two-row dock shows a collapsed count header,
-    // and Playwright text matching skips the hidden rows — expand the list,
-    // then assert each row's content.
+    // Both messages queued. Keep the dock collapsed: its rows are intentionally
+    // not mounted in that state, and the empty-draft chord must land inside the
+    // first replay window before the question composer replaces the textarea.
     await dock.getByText('2 queued messages').waitFor({ timeout: 10_000 })
-    await dock.getByRole('button').click()
-    await dock.getByText(STEER_ONE, { exact: true }).waitFor({ timeout: 10_000 })
-    await dock.getByText(STEER_TWO, { exact: true }).waitFor({ timeout: 10_000 })
     expect(await page.locator('[data-pending-steering]').count()).toBe(0)
 
     // Empty draft + Cmd+Enter: both queued rows steer in FIFO order, the dock
     // empties, and the pending steering renders at the conversation tail.
+    await expect.poll(() => input.isEditable(), { timeout: 10_000 }).toBe(true)
     await input.press('Meta+Enter')
     await expect.poll(
       () => page.locator('[data-pending-steering]').filter({ hasText: /BANANA|ORANGE/ }).count(),
       { timeout: 10_000 },
     ).toBe(2)
     expect(await page.locator('[data-queue-dock]').count()).toBe(0)
+    await approveRuntimeTool(page, sessionEvents, 'ask_user_question')
     // The reasoning row streams independently of the steering handoff. Wait
     // for the block to settle so the mid snapshot does not race its transient
     // visually-hidden Running label while the question keeps the turn open.

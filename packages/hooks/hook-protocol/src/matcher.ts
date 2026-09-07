@@ -1,21 +1,24 @@
 /**
- * Matcher shared by both hook dialects. Claude treats alphanumeric/underscore/
- * pipe patterns as literal alternatives and other patterns as regex; Codex
- * treats every non-empty pattern as an unanchored regex. Missing, empty, and
- * `*` match all. Runtime matching contains invalid regexes as non-matches;
- * config parsers use {@link matcherDiagnostic} to reject them with a diagnostic.
+ * Canonical hook matcher engine. Ecosystem adapters choose a matcher strategy
+ * after parsing their native configuration; this module contains no requirement
+ * to enumerate providers. Missing, empty, and `*` match all. Runtime matching
+ * contains invalid regexes as non-matches; config parsers use
+ * {@link matcherDiagnostic} to reject them with a diagnostic.
  * @module @deepseek-ai/dsh-hook-protocol/matcher
  */
 
-import type { MatcherMode } from './types.ts'
+import type { LegacyMatcherMode, MatcherStrategy } from './types.ts'
+
+/** Compatibility input accepted while existing adapters migrate to strategies. */
+type MatcherModeInput = MatcherStrategy | LegacyMatcherMode
 
 /** True for an absent / empty / `'*'` pattern — the match-all sentinels. */
 function isMatchAll(matcher: string | undefined): boolean {
   return matcher === undefined || matcher === '' || matcher === '*'
 }
 
-/** A Claude-literal pattern is purely word chars + `|` (the regex-vs-literal discriminator). */
-const CLAUDE_LITERAL = /^[A-Za-z0-9_|]+$/
+/** Literal-alternation strategies use this as their regex-vs-literal discriminator. */
+const LITERAL_ALTERNATION = /^[A-Za-z0-9_|]+$/
 
 /** Compile an unanchored matcher regex; invalid patterns return `undefined`. */
 function compileRegex(pattern: string): RegExp | undefined {
@@ -29,36 +32,58 @@ function compileRegex(pattern: string): RegExp | undefined {
 }
 
 /**
- * Validate one matcher before a bridge accepts its config group.
+ * Convert legacy provider selectors into canonical matcher behavior. The legacy
+ * branch is deliberately closed: new ecosystem adapters select a strategy and
+ * never add their provider name here.
+ */
+function matcherStrategy(mode: MatcherModeInput): MatcherStrategy {
+  if (mode === 'claude-code') return 'literal-alternation-or-regex'
+  if (mode === 'codex') return 'regex'
+  return mode
+}
+
+/** Preserve legacy labels unless an adapter supplies its own diagnostic label. */
+function matcherDiagnosticLabel(mode: MatcherModeInput, diagnosticLabel?: string): string {
+  if (diagnosticLabel !== undefined) return diagnosticLabel
+  if (mode === 'claude-code' || mode === 'codex') return mode
+  return `${mode}-strategy`
+}
+
+/**
+ * Validate one matcher before an adapter accepts its config group.
  * @param matcher - configured pattern; match-all sentinels are valid.
- * @param mode - dialect deciding whether a word-and-pipe pattern is literal.
+ * @param mode - canonical strategy, or a legacy bridge selector during migration.
+ * @param diagnosticLabel - optional adapter-owned label used only in diagnostics.
  * @returns `undefined` for a valid matcher, otherwise a stable diagnostic.
  */
-export function matcherDiagnostic(matcher: string | undefined, mode: MatcherMode): string | undefined {
+export function matcherDiagnostic(
+  matcher: string | undefined,
+  mode: MatcherModeInput,
+  diagnosticLabel?: string,
+): string | undefined {
   if (isMatchAll(matcher)) return undefined
   const pattern = matcher as string
-  if (mode === 'claude-code' && CLAUDE_LITERAL.test(pattern)) return undefined
+  const strategy = matcherStrategy(mode)
+  if (strategy === 'literal-alternation-or-regex' && LITERAL_ALTERNATION.test(pattern)) return undefined
   return compileRegex(pattern) === undefined
-    ? `invalid ${mode} regex matcher ${JSON.stringify(pattern)}`
+    ? `invalid ${matcherDiagnosticLabel(mode, diagnosticLabel)} regex matcher ${JSON.stringify(pattern)}`
     : undefined
 }
 
 /**
- * Whether `matcher` selects `query` under the given dialect. Claude literal
- * patterns exact-match pipe-separated alternatives; all other patterns are
- * unanchored regexes. Invalid regexes return `false` rather than throwing;
- * bridge config parsers surface them through {@link matcherDiagnostic} before use.
- * @param matcher - the configured pattern; absent/empty/`'*'` are the match-all sentinels.
- * @param query - the candidate value (a tool name, a session source, …).
- * @param mode - the dialect deciding literal-vs-regex interpretation of the pattern.
- * @returns `true` when the pattern selects the query; `false` on a non-match or an invalid
- *   regex.
+ * Whether `matcher` selects `query` under a canonical matcher strategy.
+ * Literal-alternation patterns exact-match pipe-separated alternatives; all
+ * other patterns are unanchored regexes. Invalid regexes return `false` rather
+ * than throwing; config parsers surface them through {@link matcherDiagnostic}.
+ * @param matcher - configured pattern; absent/empty/`'*'` are match-all sentinels.
+ * @param query - candidate value such as a tool name or session source.
+ * @param mode - canonical strategy, or a legacy bridge selector during migration.
  */
-export function matchesMatcher(matcher: string | undefined, query: string, mode: MatcherMode): boolean {
+export function matchesMatcher(matcher: string | undefined, query: string, mode: MatcherModeInput): boolean {
   if (isMatchAll(matcher)) return true
-  // matcher is a non-empty string past the match-all guard.
   const pattern = matcher as string
-  if (mode === 'claude-code' && CLAUDE_LITERAL.test(pattern)) {
+  const strategy = matcherStrategy(mode)
+  if (strategy === 'literal-alternation-or-regex' && LITERAL_ALTERNATION.test(pattern)) {
     return pattern.split('|').includes(query)
   }
   return compileRegex(pattern)?.test(query) ?? false

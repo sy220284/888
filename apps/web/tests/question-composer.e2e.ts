@@ -16,7 +16,7 @@ import { afterAll, beforeAll, describe, expect, it, onTestFailed } from 'vitest'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import {
-  assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
+  approveRuntimeTool, assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
 } from './scaffold.ts'
 import { connectFreshWorkspace, newEnglishPage, saveFailureShot } from './support.ts'
@@ -96,6 +96,8 @@ describe('web e2e: resident question composer round trip', () => {
     const settled = scaffold.whenTurnSettled(MODE === 'record' ? 180_000 : 30_000)
     await input.fill(PROMPT)
     await input.press('Enter')
+
+    await approveRuntimeTool(page, sessionEvents, 'ask_user_question', { timeoutMs: MODE === 'record' ? 120_000 : 30_000 })
 
     // The composer takes over the input area while the tool blocks. Its
     // presence is a STABLE waiting state (not a transient): it stays until

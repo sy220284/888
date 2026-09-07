@@ -13,7 +13,6 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { resolveSessionPreset, SETTINGS_NAMESPACE } from '@deepseek-ai/dsh-agent-presets'
 import { applyChildComposition, childSessionMeta } from '@deepseek-ai/dsh-subagent'
-import { CallId } from '@deepseek-ai/dsh-llm'
 import type {} from '@deepseek-ai/dsh-compaction-basic'
 import type {} from '@deepseek-ai/dsh-skill'
 import type {} from '@deepseek-ai/dsh-tools'
@@ -306,11 +305,6 @@ describe('the shipped Web composition', () => {
       expect(tools).toEqual(expect.arrayContaining(['bash', 'read', 'edit', 'skill']))
       expect(tools).not.toContain('str_replace_editor')
 
-      // The preset's own authoring skill registers into ITS layer of the host
-      // registry: the cordis agent's view carries it, the global view does not.
-      const scoped = (await ctx.skills.list({ scope: handle.agent })).map(skill => skill.name)
-      expect(scoped).toContain('editing-cordis-compositions')
-      expect((await ctx.skills.list()).map(skill => skill.name)).not.toContain('editing-cordis-compositions')
     } finally {
       await handle.dispose()
     }
@@ -361,16 +355,6 @@ describe('the shipped Web composition', () => {
     }
   })
 
-  it('ships the composition-authoring skill inside the preset directory', async () => {
-    // The preset's skill root is derived from its own `baseUrl`, so the skill
-    // travels with the directory wherever the preset is installed.
-    const skill = join(
-      CONFIG_DIR, 'agent-presets', 'cordis', 'skills', 'editing-cordis-compositions', 'SKILL.md',
-    )
-
-    expect((await readFile(skill, 'utf8')).startsWith('---\nname: editing-cordis-compositions')).toBe(true)
-  })
-
   it('merges the global skill layer into a preset agent\'s catalog, keeping local discovery preset-side', async () => {
     const proj = await mkdtemp(join(tmpdir(), 'dsh-preset-skill-proj-'))
     await mkdir(join(proj, '.dsh', 'skills', 'project-proof'), { recursive: true })
@@ -401,16 +385,11 @@ describe('the shipped Web composition', () => {
       expect(scoped).toContain('dsh-badge')
       expect(scoped).toContain('project-proof')
 
-      // The preset's own loader tool resolves the global-layer skill.
-      const loaded = await ctx.tools.execute({
-        callId: CallId('preset-skills-load'),
-        name: 'skill',
-        arguments: { name: 'dsh-badge' },
-        signal: new AbortController().signal,
-        agent: handle.agent,
-      })
-      expect(loaded.isError).toBe(false)
-      expect(JSON.stringify(loaded.content)).toContain('powered by dsh')
+      // The same scoped catalog resolves the global provider's full body.
+      // Tool execution belongs to an active turn and is covered by the
+      // end-to-end Agent loop; this registry test stays below that boundary.
+      const loaded = await ctx.skills.get('dsh-badge', { cwd: proj, scope: handle.agent })
+      expect(loaded?.content).toContain('powered by dsh')
     } finally {
       await handle.dispose()
     }

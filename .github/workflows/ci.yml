@@ -22,9 +22,36 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
+          rustup override set 1.98.0
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm run typecheck
+      - run: node scripts/devtools/native-checks.mjs
+      - run: cargo build --locked --manifest-path native/execution-core/Cargo.toml
       - run: pnpm run test
       - run: pnpm run build
+      - run: pnpm run duplication
+      - run: pnpm run hygiene
+      - run: pnpm run test:snapshot
+      - run: pnpm run test:e2e
+      - name: Test native execution through the assembled product CLI
+        env:
+          DSH_EXECUTION_PROVIDER: native
+          DSH_EXECUTION_CORE_BIN: ${{ github.workspace }}/native/execution-core/target/debug/dsh-execution-core
+        run: >-
+          pnpm exec vitest run --config vitest.snapshot.config.ts
+          examples/headless-agent/tests/headless.snapshot.ts
+          -t "runs one task through the product headless profile command"
+      - name: Install Chromium for browser tests
+        run: pnpm --filter @deepseek-ai/dsh-web-frontend exec playwright install --with-deps chromium
+      - name: Prepare bubblewrap for sandboxed browser scenarios
+        run: bash scripts/prepare-ci-bubblewrap.sh
+      - name: Test built web application in replay mode
+        env:
+          DSH_SNAPSHOT: replay
+          DSH_WEB_SNAPSHOT_WORKERS: 4
+        run: pnpm run test:web:ci

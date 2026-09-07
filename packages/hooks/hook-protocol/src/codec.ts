@@ -5,6 +5,7 @@
  * @module @deepseek-ai/dsh-hook-protocol/codec
  */
 
+import type { JsonValue } from '@deepseek-ai/dsh-session'
 import type { HookOutput } from './types.ts'
 
 /** The exit code a hook uses to signal a blocking error (stderr → model). */
@@ -130,5 +131,19 @@ function applyStructured(output: HookOutput, parsed: Record<string, unknown>, ex
     if (addCtx !== undefined) output.additionalContext = addCtx
     const updated = obj(hso.updatedInput)
     if (updated !== undefined) output.updatedInput = updated
+    // Both fields are JSON values rather than object-only payloads. When both
+    // are present the provider-wide field wins, matching the newer universal
+    // form's precedence over the MCP compatibility alias.
+    if (Object.hasOwn(hso, 'updatedToolOutput')) {
+      output.toolOutputRewrite = {
+        value: hso.updatedToolOutput as JsonValue,
+        scope: 'any-tool',
+      }
+    } else if (Object.hasOwn(hso, 'updatedMCPToolOutput')) {
+      output.toolOutputRewrite = {
+        value: hso.updatedMCPToolOutput as JsonValue,
+        scope: 'mcp-tool',
+      }
+    }
   }
 }

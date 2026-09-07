@@ -13,6 +13,7 @@ const CLAUDE_EVENTS = [
   'UserPromptSubmit',
   'PreToolUse',
   'PostToolUse',
+  'PostToolUseFailure',
   'Stop',
   'SubagentStart',
   'SubagentStop',
@@ -109,7 +110,7 @@ export function parseClaudeCodeConfig(raw: unknown, vars: SubstitutionVars = {})
       const matcher = event === 'UserPromptSubmit' || event === 'Stop'
         ? undefined
         : typeof group.matcher === 'string' ? group.matcher : undefined
-      const diagnostic = matcherDiagnostic(matcher, 'claude-code')
+      const diagnostic = matcherDiagnostic(matcher, 'literal-alternation-or-regex', 'claude-code')
       if (diagnostic !== undefined) throw new SyntaxError(`${diagnostic} on event ${JSON.stringify(event)}`)
       groups.push({
         ...matcher !== undefined ? { matcher } : {},

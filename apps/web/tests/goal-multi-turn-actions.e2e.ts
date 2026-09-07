@@ -94,11 +94,14 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
   let page: Page
   let tripwire: ReturnType<typeof watchConsole>
   let sessionEvents: SessionEvent[]
+  let disposeApproval: (() => void) | undefined
 
   afterEach(async () => {
     const failures: unknown[] = []
     await browser?.close().catch((error: unknown) => failures.push(error))
     browser = undefined
+    disposeApproval?.()
+    disposeApproval = undefined
     const closing = scaffold
     scaffold = undefined
     await closing?.close().catch((error: unknown) => failures.push(error))
@@ -120,6 +123,16 @@ describe('web e2e: Goal keeps one assistant action row per completed turn', () =
     await page.goto(scaffold.baseUrl, { waitUntil: 'load' })
     await page.waitForSelector('[class*="frame"]', { timeout: 30_000 })
     await connectFreshWorkspace(page, scaffold.workspaceCwd)
+    const agent = scaffold.ctx.agents.list()[0]
+    if (agent === undefined) throw new Error('goal-multi-turn-actions connected no agent')
+    // Goal exercises its own multi-turn behavior, not the generic permission
+    // surface. Admit its model-authored tools on the exact Agent scope while
+    // the dedicated approval scenarios keep owning the UI.
+    disposeApproval = agent.ctx.on(
+      'approval/request',
+      () => Promise.resolve('allowed-once'),
+      { prepend: true },
+    )
   }
 
   /** Submit the Goal command after arming the two-turn barrier. */

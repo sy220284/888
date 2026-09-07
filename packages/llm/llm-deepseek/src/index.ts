@@ -2,20 +2,22 @@
  * Register a {@link DeepSeekAdapter} for the `deepseek-official` provider route on
  * `ctx.llm`, with connection facts resolved per request instead of frozen at
  * load: the plugin layers its `cordis.yml` entry config under the optional
- * `llm-deepseek` user-settings section (`ctx.settings`) and resolves the API
- * key through the optional credential seam (`ctx.credentials`), so a changed
- * base URL, catalog, or key reaches the very next request without restarting
- * anything, while an in-flight stream keeps the facts it started with. The
- * one registration-captured fact — the retry policy — re-registers the route
- * in place when it changes.
+ * `llm-deepseek` user-settings section (`ctx.settings`) and resolves API keys
+ * through the optional credential seam (`ctx.credentials`), so a changed base
+ * URL, catalog, or credential reaches the very next request without restarting
+ * anything, while an in-flight stream keeps the facts it started with. The one
+ * registration-captured fact — the retry policy — re-registers the route in
+ * place when it changes.
  * @module @deepseek-ai/dsh-llm-deepseek
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { assertUsableApiKey, LlmError, resolveRetryPolicy, RetryPolicySchema } from '@deepseek-ai/dsh-llm'
 import type { ModelModality, RetryPolicyConfig } from '@deepseek-ai/dsh-llm'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import { CredentialPool, credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { CredentialLease, CredentialRef, CredentialResolver } from '@deepseek-ai/dsh-credentials'
 import { launchEnvironmentOf, type LaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
 import { deepEqualJson, installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
@@ -79,6 +81,7 @@ const NS = settingsNamespace('llm-deepseek')
 const DEFAULT_API_KEY_ENV = 'DEEPSEEK_API_KEY'
 /** The single provider route this plugin owns. */
 const PROVIDER = 'deepseek-official'
+const CREDENTIAL_FAILURE_CODES = new Set(['AUTH', 'QUOTA', 'RATE_LIMIT'])
 
 const DEFAULT_MODELS: DeepSeekCatalogModel[] = [
   { id: 'deepseek-v4-flash', name: 'DeepSeek-V4-Flash', contextWindow: DEFAULT_CONTEXT_WINDOW },
@@ -104,8 +107,10 @@ const MODEL_MODALITIES = ['text', 'image'] as const satisfies readonly ModelModa
  * reasoning effort resolves to `high`.
  */
 export interface Config {
-  /** Credential reference (environment-variable name) resolved per request; defaults to `DEEPSEEK_API_KEY`. */
+  /** Backward-compatible single credential reference; defaults to `DEEPSEEK_API_KEY`. */
   apiKeyEnv?: string
+  /** Ordered credential references used as a rotating pool. When present, this takes precedence over apiKeyEnv. */
+  apiKeyEnvs?: string[]
   /** Endpoint base; falls back to $DEEPSEEK_BASE_URL from a trusted environment layer, then the public API. */
   baseURL?: string
   /** Deployment thinking policy; `disabled` limits every conversation request to `off`. */
@@ -158,6 +163,7 @@ const catalogModel: z<DeepSeekCatalogModel> = z.object({
 
 export const Config: z<Config> = z.object({
   apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
+  apiKeyEnvs: z.array(z.string().role('credential-ref')),
   baseURL: z.string(),
   thinking: z.union(['enabled', 'disabled']),
   reasoningEffort: z.union(['off', 'low', 'high', 'max']),
@@ -191,6 +197,26 @@ const BASE_URL_ENV = 'DEEPSEEK_BASE_URL'
  * newer key.
  */
 export type ResolvedDeepSeekOptions = DeepSeekConnectionOptions
+
+function resolveCredentialRefs(config: Config): readonly CredentialRef[] {
+  const raw = config.apiKeyEnvs !== undefined && config.apiKeyEnvs.length > 0
+    ? config.apiKeyEnvs
+    : [config.apiKeyEnv ?? DEFAULT_API_KEY_ENV]
+  const refs = raw.map(value => credentialRef(value))
+  if (new Set(refs).size !== refs.length) {
+    throw new Error('llm-deepseek: apiKeyEnvs must not contain duplicates')
+  }
+  return Object.freeze(refs)
+}
+
+function resolveProviderRetryPolicy(config: Config, credentialCount: number) {
+  const policy = resolveRetryPolicy(config.retryPolicy, 'llm-deepseek: retryPolicy')
+  if (credentialCount <= 1 || config.retryPolicy !== undefined || policy.mode !== 'normal') return policy
+  return Object.freeze({
+    ...policy,
+    retryableCodes: Object.freeze([...new Set([...policy.retryableCodes, 'AUTH', 'QUOTA'])]),
+  })
+}
 
 /** Resolve, validate, and detach the advisory model catalog. */
 function resolveModels(models: readonly DeepSeekCatalogModel[] | undefined): DeepSeekCatalogModel[] {
@@ -273,6 +299,11 @@ function resolveModels(models: readonly DeepSeekCatalogModel[] | undefined): Dee
  * @returns validated connection facts plus the credential reference.
  */
 export function resolveAdapterOptions(config: Config, environment?: LaunchEnvironmentSnapshot): ResolvedDeepSeekOptions {
+  const credentialRefs = resolveCredentialRefs(config)
+  const apiKeyEnv = credentialRefs[0]
+  if (apiKeyEnv === undefined) {
+    throw new Error('llm-deepseek: at least one credential reference is required')
+  }
   if (config.thinking === 'disabled'
     && config.reasoningEffort !== undefined
     && config.reasoningEffort !== 'off') {
@@ -355,7 +386,7 @@ export function resolveAdapterOptions(config: Config, environment?: LaunchEnviro
     throw new Error('llm-deepseek: fileQuotaCleanupBatch must be an integer from 1 through 1000')
   }
   return {
-    apiKeyEnv: credentialRef(config.apiKeyEnv ?? DEFAULT_API_KEY_ENV),
+    apiKeyEnv,
     baseURL: config.baseURL
       ?? environment?.get(BASE_URL_ENV)?.value
       ?? PUBLIC_BASE_URL,
@@ -379,26 +410,31 @@ export function resolveAdapterOptions(config: Config, environment?: LaunchEnviro
       refreshMarginSeconds: fileRefreshMarginSeconds,
       quotaCleanupBatch: fileQuotaCleanupBatch,
     },
-    retryPolicy: resolveRetryPolicy(config.retryPolicy, 'llm-deepseek: retryPolicy'),
+    retryPolicy: resolveProviderRetryPolicy(config, credentialRefs.length),
   }
+}
+
+interface CredentialRunState {
+  pool?: CredentialPool
+  lease?: CredentialLease
+  settled: boolean
 }
 
 export function apply(ctx: Context, config: Config): void {
   let current: () => Config = () => config
   let lastRaw: Config | undefined
   let lastGood: ResolvedDeepSeekOptions | undefined
+  const refsByConnection = new WeakMap<ResolvedDeepSeekOptions, readonly CredentialRef[]>()
   const options = (): ResolvedDeepSeekOptions => {
     const raw = current()
     if (raw === lastRaw && lastGood !== undefined) return lastGood
     try {
       const next = resolveAdapterOptions(raw, launchEnvironmentOf(ctx))
+      refsByConnection.set(next, resolveCredentialRefs(raw))
       lastRaw = raw
       lastGood = next
       return next
     } catch (error) {
-      // Static composition resolves before anything registers, so this branch
-      // only sees a live settings snapshot failing a beyond-schema bound:
-      // keep serving the last good facts and say so once per bad snapshot.
       if (lastGood === undefined) throw error
       lastRaw = raw
       ctx.logger.error('llm-deepseek: keeping the last good configuration after an invalid settings section')
@@ -408,28 +444,100 @@ export function apply(ctx: Context, config: Config): void {
   }
   options()
 
-  const resolveApiKey = async (connection: ResolvedDeepSeekOptions): Promise<string> => {
-    // Every credential fact comes from the caller's snapshot, so a rejected
-    // settings generation cannot leak its key onto the previous endpoint.
-    const ref = connection.apiKeyEnv
-    const credentials = ctx.get('credentials')
-    if (credentials !== undefined) {
-      const hit = await credentials.resolve(ref)
-      if (hit !== undefined) return assertUsableApiKey(hit.value, 'llm-deepseek', ref)
-    } else {
-      // Without the seam there is no managed store to rank against, so the
-      // environment is the whole credential plane.
+  const resolver: CredentialResolver = {
+    async resolve(ref) {
+      const credentials = ctx.get('credentials')
+      if (credentials !== undefined) return credentials.resolve(ref)
       const ambient = launchEnvironmentOf(ctx).get(ref)
-      if (ambient !== undefined && ambient.value.length > 0) {
-        return assertUsableApiKey(ambient.value, 'llm-deepseek', ref)
-      }
-    }
-    throw new LlmError(
-      `llm-deepseek: no API key for provider route "${PROVIDER}"; store ${ref} through the credentials`
-      + ` service (the web Models page writes it), or export ${ref} in the launching environment`,
-      'MISSING_CREDENTIAL',
-    )
+      return ambient === undefined || ambient.value.length === 0
+        ? undefined
+        : { value: ambient.value, source: 'env' }
+    },
   }
+  const pools = new WeakMap<ResolvedDeepSeekOptions, CredentialPool>()
+  const runState = new AsyncLocalStorage<CredentialRunState>()
+  const poolFor = (connection: ResolvedDeepSeekOptions): CredentialPool => {
+    const existing = pools.get(connection)
+    if (existing !== undefined) return existing
+    const refs = refsByConnection.get(connection) ?? [connection.apiKeyEnv]
+    const created = new CredentialPool(resolver, refs)
+    pools.set(connection, created)
+    return created
+  }
+
+  const resolveApiKey = async (connection: ResolvedDeepSeekOptions): Promise<string> => {
+    const pool = poolFor(connection)
+    const lease = await pool.acquire()
+    if (lease === undefined) {
+      const refs = refsByConnection.get(connection) ?? [connection.apiKeyEnv]
+      if (refs.length === 1) {
+        const ref = refs[0] ?? connection.apiKeyEnv
+        throw new LlmError(
+          `llm-deepseek: no API key for provider route "${PROVIDER}"; store ${ref} through the credentials`
+          + ` service (the web Models page writes it), or export ${ref} in the launching environment`,
+          'MISSING_CREDENTIAL',
+        )
+      }
+      throw new LlmError(
+        `llm-deepseek: no API key for provider route "${PROVIDER}"; configure one of ${refs.join(', ')}`,
+        'MISSING_CREDENTIAL',
+      )
+    }
+    try {
+      const value = assertUsableApiKey(lease.value, 'llm-deepseek', lease.ref)
+      const state = runState.getStore()
+      if (state === undefined) pool.release(lease)
+      else {
+        state.pool = pool
+        state.lease = lease
+      }
+      return value
+    } catch (error) {
+      pool.reportFailure(lease)
+      throw error
+    }
+  }
+
+  const settle = (state: CredentialRunState, outcome: 'success' | 'failure' | 'release'): void => {
+    if (state.settled || state.pool === undefined || state.lease === undefined) return
+    state.settled = true
+    if (outcome === 'success') state.pool.reportSuccess(state.lease)
+    else if (outcome === 'failure') state.pool.reportFailure(state.lease)
+    else state.pool.release(state.lease)
+  }
+
+  const track = <T>(source: AsyncIterable<T>): AsyncIterable<T> => ({
+    async *[Symbol.asyncIterator]() {
+      const state: CredentialRunState = { settled: false }
+      const iterator = source[Symbol.asyncIterator]()
+      let exhausted = false
+      try {
+        while (true) {
+          const item = await runState.run(state, () => iterator.next())
+          if (item.done) {
+            exhausted = true
+            settle(state, 'success')
+            return
+          }
+          yield item.value
+        }
+      } catch (error) {
+        if (error instanceof LlmError && CREDENTIAL_FAILURE_CODES.has(error.code)) settle(state, 'failure')
+        else settle(state, 'release')
+        throw error
+      } finally {
+        if (!exhausted) settle(state, 'release')
+        const close = iterator.return?.bind(iterator)
+        if (!exhausted && close !== undefined) {
+          try {
+            await runState.run(state, close)
+          } catch (_teardownFailure) {
+            // The model request already has its authoritative outcome.
+          }
+        }
+      }
+    },
+  })
 
   let userId: AnonymousUserId | undefined
   const resolveUserId = (): AnonymousUserId => userId ??= getOrCreateAnonymousUserId()
@@ -439,21 +547,26 @@ export function apply(ctx: Context, config: Config): void {
     resolveUserId,
     resolveAttachments: () => ctx.get('attachments'),
   })
+
+  const baseStream = adapter.stream.bind(adapter)
+  adapter.stream = (request => track(baseStream(request))) as typeof adapter.stream
+  const basePrepareCall = adapter.prepareCall.bind(adapter)
+  adapter.prepareCall = (async (...args) => {
+    const prepared = await basePrepareCall(...args)
+    return {
+      ...prepared,
+      stream: request => track(prepared.stream(request)),
+    }
+  })
+
   ctx.llm.registerConfigurableProviders([
     { provider: PROVIDER, displayName: 'DeepSeek', settingsNs: NS, settingsPath: [] },
   ])
-  // Route effects bind to this apply fiber via the stable `ctx` reference,
-  // even when a swap runs inside the scoped settings callback below.
   const registration = ctx.llm.registerAdapter([PROVIDER], adapter)
   let registeredPolicy = options().retryPolicy
   const ensureRegistrationFacts = (): void => {
     const policy = options().retryPolicy
     if (deepEqualJson(policy, registeredPolicy)) return
-    // The registry captures the retry policy at registration, so it is the one
-    // fact per-request resolution cannot refresh. `replace` re-reads it in one
-    // synchronous registry section: disposing and re-registering instead would
-    // publish an empty route set between the two, and an observer that reacted
-    // to it would see this provider disappear and come back.
     registration.replace([PROVIDER])
     registeredPolicy = policy
   }

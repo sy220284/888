@@ -9,9 +9,21 @@
  */
 
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { CredentialKey, CredentialRecord, CredentialRef } from './types.ts'
+import type {
+  CredentialKey,
+  CredentialRecord,
+  CredentialRef,
+} from './types.ts'
 
-export type { ApiKeyRecord, CredentialKey, CredentialRecord, CredentialRef, GrantRecord } from './types.ts'
+export type {
+  ApiKeyRecord,
+  CredentialKey,
+  CredentialRecord,
+  CredentialRef,
+  GrantRecord,
+} from './types.ts'
+export { CredentialPool } from './pool.ts'
+export type { CredentialLease, CredentialPoolOptions, CredentialResolver } from './pool.ts'
 
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/
 
@@ -25,7 +37,9 @@ const KEY_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/
  */
 export function credentialRef(value: string): CredentialRef {
   if (!isCredentialRefName(value)) {
-    throw new TypeError(`credential ref "${value}" must match ${String(REF_PATTERN)}`)
+    throw new TypeError(
+      `credential ref "${value}" must match ${String(REF_PATTERN)}`,
+    )
   }
   return value as CredentialRef
 }
@@ -66,7 +80,9 @@ export function isCredentialKeySegment(value: string): boolean {
 export function credentialKey(scope: string, id: string): CredentialKey {
   for (const segment of [scope, id]) {
     if (!KEY_SEGMENT_PATTERN.test(segment)) {
-      throw new TypeError(`credential key segment "${segment}" must match ${String(KEY_SEGMENT_PATTERN)}`)
+      throw new TypeError(
+        `credential key segment "${segment}" must match ${String(KEY_SEGMENT_PATTERN)}`,
+      )
     }
   }
   return `${scope}/${id}` as CredentialKey
@@ -221,7 +237,9 @@ export abstract class CredentialProvider extends Service {
    * @param key - the record to read.
    * @returns the record, or `undefined` while none is stored.
    */
-  abstract readRecord(key: CredentialKey): Promise<CredentialRecord | undefined>
+  abstract readRecord(
+    key: CredentialKey,
+  ): Promise<CredentialRecord | undefined>
 
   /**
    * Describe one record for configuration surfaces without exposing its value.
@@ -253,7 +271,9 @@ export abstract class CredentialProvider extends Service {
    */
   abstract modifyRecord(
     key: CredentialKey,
-    mutate: (current: CredentialRecord | undefined) => Promise<CredentialRecord | undefined>,
+    mutate: (
+      current: CredentialRecord | undefined,
+    ) => Promise<CredentialRecord | undefined>,
   ): Promise<CredentialRecord | undefined>
 
   /**
@@ -290,16 +310,27 @@ export abstract class CredentialProvider extends Service {
      fan-out: the contained-dispatch shape is the reviewed listener-lifecycle
      contract, and extracting it would couple the two seams' event semantics. */
   /** The contained dispatch both notifications run through; see {@link notifyUpdated}. */
-  private fanOut(event: 'credentials/reference-updated' | 'credentials/record-updated', subject: string): void {
+  private fanOut(
+    event: 'credentials/reference-updated' | 'credentials/record-updated',
+    subject: string,
+  ): void {
     let invariantFailure: unknown
     const args = [event, subject]
-    for (const listener of this.ctx.events.dispatch('emit', args) as Array<(...listenerArgs: unknown[]) => unknown>) {
+    for (const listener of this.ctx.events.dispatch('emit', args) as Array<
+      (...listenerArgs: unknown[]) => unknown
+    >) {
       try {
         const returned = listener(subject)
-        if (returned != null && typeof (returned as PromiseLike<unknown>).then === 'function') {
-          void Promise.resolve(returned as PromiseLike<unknown>).then(undefined, (error: unknown) => {
-            this.warnListenerFailure(event, subject, error)
-          })
+        if (
+          returned != null &&
+          typeof (returned as PromiseLike<unknown>).then === 'function'
+        ) {
+          void Promise.resolve(returned as PromiseLike<unknown>).then(
+            undefined,
+            (error: unknown) => {
+              this.warnListenerFailure(event, subject, error)
+            },
+          )
         }
       } catch (error) {
         if ((error as { code?: unknown } | null)?.code === 'INVARIANT') {
@@ -314,8 +345,16 @@ export abstract class CredentialProvider extends Service {
   /* jscpd:ignore-end */
 
   /** Contained-listener diagnostic shared by the sync and async failure paths. */
-  private warnListenerFailure(event: string, subject: string, error: unknown): void {
-    this.ctx.logger.warn('credentials: a %s listener for "%s" failed', event, subject)
+  private warnListenerFailure(
+    event: string,
+    subject: string,
+    error: unknown,
+  ): void {
+    this.ctx.logger.warn(
+      'credentials: a %s listener for "%s" failed',
+      event,
+      subject,
+    )
     this.ctx.logger.warn(error)
   }
 }

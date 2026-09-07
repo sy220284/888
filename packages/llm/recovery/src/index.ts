@@ -9,6 +9,7 @@ import { Context, Service } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { Agent, RequestErrorAction } from '@deepseek-ai/dsh-agent'
 import type { LlmCallConfig, LlmFailure, ResolvedRetryPolicy } from '@deepseek-ai/dsh-llm'
+import { scopeChainOf, type ScopeKey } from '@deepseek-ai/dsh-scope'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
 
 export const name = 'recovery'
@@ -36,12 +37,22 @@ export interface RecoveryResolution {
 
 /** Recovery strategy invoked after downstream retry handling declines. */
 export type RecoveryHandler = (request: RecoveryRequest) => Promise<RecoveryResolution | undefined>
-/** Ordering options for a recovery handler. */
-export interface RecoveryHandlerOptions { readonly priority?: number }
-interface RegisteredHandler { readonly id: string; readonly priority: number; readonly order: number; readonly run: RecoveryHandler }
+/** Ordering and optional scope ownership for a recovery handler. */
+export interface RecoveryHandlerOptions {
+  readonly priority?: number
+  /** Limit this strategy to one Agent or ancestor Preset scope; omitted strategies are global. */
+  readonly scope?: ScopeKey
+}
+interface RegisteredHandler {
+  readonly id: string
+  readonly priority: number
+  readonly order: number
+  readonly scope?: ScopeKey
+  readonly run: RecoveryHandler
+}
 
 declare module '@deepseek-ai/cordis' { interface Context { recovery: RecoveryService } }
-declare module '@deepseek-ai/dsh-session' {
+declare module '@deepseek-ai/dsh-session/types' {
   interface SessionEventMap {
     'recovery/decision': {
       turn: number
@@ -120,10 +131,18 @@ export class RecoveryService extends Service {
    */
   register(id: string, run: RecoveryHandler, options: RecoveryHandlerOptions = {}): () => void {
     if (id.trim().length === 0) throw new Error('recovery strategy id must be non-empty')
-    if (this.handlers.some(handler => handler.id === id)) throw new Error(`recovery strategy "${id}" is already registered`)
+    if (this.handlers.some(handler => handler.id === id && handler.scope === options.scope)) {
+      throw new Error(`recovery strategy "${id}" is already registered`)
+    }
     const priority = options.priority ?? 0
     if (!Number.isFinite(priority)) throw new Error('recovery strategy priority must be finite')
-    const handler: RegisteredHandler = { id, priority, order: this.nextOrder++, run }
+    const handler: RegisteredHandler = {
+      id,
+      priority,
+      order: this.nextOrder++,
+      ...options.scope === undefined ? {} : { scope: options.scope },
+      run,
+    }
     this.handlers.push(handler)
     this.handlers.sort((left, right) => right.priority - left.priority || left.order - right.order)
     const dispose = this.ctx.effect(() => () => {
@@ -141,6 +160,7 @@ export class RecoveryService extends Service {
   async resolve(request: RecoveryRequest): Promise<RecoveryResolution | undefined> {
     for (const handler of [...this.handlers]) {
       request.signal.throwIfAborted()
+      if (handler.scope !== undefined && !scopeChainOf(request.agent).includes(handler.scope)) continue
       const resolution = await handler.run(request)
       request.signal.throwIfAborted()
       if (resolution === undefined) continue

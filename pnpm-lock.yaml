@@ -39,15 +39,9 @@ importers:
       '@types/jsdom':
         specifier: ^28.0.3
         version: 28.0.3
-      '@types/mdast':
-        specifier: ^4.0.4
-        version: 4.0.4
       '@types/node':
         specifier: ^22.20.0
         version: 22.20.0
-      '@types/spdx-expression-parse':
-        specifier: ^4.0.0
-        version: 4.0.0
       '@vitest/coverage-v8':
         specifier: ^4.1.8
         version: 4.1.8(vitest@4.1.8)
@@ -81,18 +75,6 @@ importers:
       lightningcss:
         specifier: ^1.32.0
         version: 1.32.0
-      mdast-util-from-markdown:
-        specifier: ^2.0.3
-        version: 2.0.3
-      mdast-util-gfm:
-        specifier: ^3.1.0
-        version: 3.1.0
-      mermaid:
-        specifier: 11.16.1
-        version: 11.16.1
-      micromark-extension-gfm:
-        specifier: ^3.0.0
-        version: 3.0.0
       oxlint:
         specifier: 1.76.0
         version: 1.76.0(oxlint-tsgolint@7.0.2001)
@@ -102,12 +84,6 @@ importers:
       publint:
         specifier: ^0.3.21
         version: 0.3.21
-      smol-toml:
-        specifier: ^1.7.1
-        version: 1.7.1
-      spdx-expression-parse:
-        specifier: ^5.0.0
-        version: 5.0.0
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(oxc-resolver@11.20.0)(publint@0.3.21)(tsx@4.22.4)(typescript@6.0.3)
@@ -3442,6 +3418,9 @@ importers:
       '@deepseek-ai/dsh-recovery':
         specifier: workspace:^
         version: link:../../llm/recovery
+      '@deepseek-ai/dsh-scope':
+        specifier: workspace:^
+        version: link:../../core/scope
 
   packages/context/agent-instructions:
     dependencies:
@@ -5768,6 +5747,9 @@ importers:
       '@deepseek-ai/dsh-llm':
         specifier: workspace:^
         version: link:../llm
+      '@deepseek-ai/dsh-scope':
+        specifier: workspace:^
+        version: link:../../core/scope
       '@deepseek-ai/dsh-session':
         specifier: workspace:^
         version: link:../../core/session
@@ -9006,6 +8988,12 @@ importers:
       '@deepseek-ai/dsh-pwsh-local':
         specifier: workspace:^
         version: link:../../packages/shell/pwsh-local
+      '@deepseek-ai/dsh-recovery-compaction':
+        specifier: workspace:^
+        version: link:../../packages/compaction/recovery-compaction
+      '@deepseek-ai/dsh-recovery':
+        specifier: workspace:^
+        version: link:../../packages/llm/recovery
       '@deepseek-ai/dsh-repeat-tool-reminder':
         specifier: workspace:^
         version: link:../../packages/guard/repeat-tool-reminder

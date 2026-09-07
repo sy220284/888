@@ -33,6 +33,26 @@ describe('mergeHookOutputs — permission precedence deny > ask > allow', () => 
   })
 })
 
+describe('mergeHookOutputs — updatedInput', () => {
+  it('keeps the last updatedInput in hook order', () => {
+    const m = mergeHookOutputs([
+      out({ updatedInput: { value: 'first' } }),
+      out({ updatedInput: { value: 'second' } }),
+    ])
+    expect(m.updatedInput).toEqual({ value: 'second' })
+  })
+})
+
+describe('mergeHookOutputs — tool output rewrite', () => {
+  it('keeps the last rewrite across universal and MCP-scoped forms', () => {
+    const m = mergeHookOutputs([
+      out({ toolOutputRewrite: { value: { first: true }, scope: 'any-tool' } }),
+      out({ toolOutputRewrite: { value: { second: true }, scope: 'mcp-tool' } }),
+    ])
+    expect(m.toolOutputRewrite).toEqual({ value: { second: true }, scope: 'mcp-tool' })
+  })
+})
+
 describe('mergeHookOutputs — reasons, stop, context, systemMessages accumulate', () => {
   it('joins block/deny reasons with a blank line (only from blocking hooks)', () => {
     const m = mergeHookOutputs([

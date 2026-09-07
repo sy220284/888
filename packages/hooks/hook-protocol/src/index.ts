@@ -1,18 +1,23 @@
 /**
- * Shared, non-plugin hook protocol library: matching, command execution and
- * decoding, restrictive outcome merging, durable event helpers, and detached
- * run quiescence. Claude Code and Codex bridges own their distinct payloads,
- * environment rules, matcher mode, and typed extension-point mappings.
+ * Shared, non-plugin hook protocol library: canonical matching, command
+ * execution and decoding, restrictive outcome merging, durable event helpers,
+ * and detached run quiescence. Ecosystem adapters own their native payloads,
+ * environment rules, matcher-strategy selection, and typed extension-point
+ * mappings.
  * @module @deepseek-ai/dsh-hook-protocol
  */
 
 export type {
   CommandHook,
-  HookDialect,
+  HookAdapterId,
   HookOutput,
+  LegacyMatcherMode,
   MatcherGroup,
-  MatcherMode,
+  MatcherStrategy,
 } from './types.ts'
+// Public compatibility aliases intentionally remain exported while callers migrate.
+// oxlint-disable-next-line typescript/no-deprecated
+export type { HookDialect, MatcherMode } from './types.ts'
 export { matcherDiagnostic, matchesMatcher } from './matcher.ts'
 export { parseHookOutput } from './codec.ts'
 export { DEFAULT_HOOK_TIMEOUT_MS, runHook } from './runner.ts'

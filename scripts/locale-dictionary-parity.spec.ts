@@ -70,7 +70,11 @@ function walk(dir: string, out: string[]): void {
   for (const entry of readEntries(dir)) {
     const full = resolve(dir, entry.name)
     if (entry.isDirectory()) walk(full, out)
-    else if (entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) out.push(full)
+    else if (entry.name.endsWith('.ts')
+      && !entry.name.endsWith('.d.ts')
+      // The lint contract suite creates and removes these probes concurrently.
+      // They are not shipped source and must never enter this inventory.
+      && !entry.name.startsWith('oxlint-contract-')) out.push(full)
   }
 }
 

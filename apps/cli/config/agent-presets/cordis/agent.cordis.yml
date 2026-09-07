@@ -26,8 +26,6 @@
 
       Presets you author live one directory per preset under `${DSH_HOME:-$HOME/.dsh}/.agent-presets/<id>/`; the roster reports each preset's real path, so take the one you edit from there. NEVER edit or delete the shipped preset install (the `agent-presets` directory beside the deployment's own config): it belongs to the deployment, an upgrade overwrites it, and corrupting the `cordis` preset would disable this very mode. To change what a shipped preset does, copy its composition into a new preset directory and edit the copy.
 
-      Load the `editing-cordis-compositions` skill before writing or changing a composition.
-
 - id: agent-instructions
   name: '@deepseek-ai/dsh-agent-instructions'
   config:
@@ -131,6 +129,9 @@
   config:
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
+
+    - id: recovery-compaction
+      name: '@deepseek-ai/dsh-recovery-compaction'
 
     - id: command-compact
       name: '@deepseek-ai/dsh-command-compact'

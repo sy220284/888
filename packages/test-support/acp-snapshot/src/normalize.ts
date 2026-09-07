@@ -147,9 +147,22 @@ function replaceCwd(value: string, ctx: NormalizeContext, replacement: string): 
   return out
 }
 
+/** Replace relative references to the generated harness workspace basename. */
+function replaceGeneratedCwdBasename(value: string, ctx: NormalizeContext): string {
+  const basename = ctx.cwd.split(/[\\/]/).at(-1)
+  if (basename === undefined || !/^acp-snap-cwd-[A-Za-z0-9_-]+$/.test(basename)) return value
+  const relativeCwd = new RegExp(
+    String.raw`(?<![A-Za-z0-9._~-])${escapeRegExp(basename)}`
+    + String.raw`(?=$|[\\/\s<>'"()\[\]{},;:!?=\u0000])`,
+    'g',
+  )
+  return value.replace(relativeCwd, CWD)
+}
+
 /** Replace cwd, session ids, and any stray UUID with stable tokens in a string. */
 function scrubString(value: string, ctx: NormalizeContext, cwdPathMode: CwdPathMode): string {
   let out = replaceCwd(value, ctx, CWD)
+  out = replaceGeneratedCwdBasename(out, ctx)
   // Filesystem APIs can report one directory with several spellings. Replace
   // every known spelling longest-first so a shorter alias cannot corrupt a
   // longer one before it is tokenized. macOS additionally symlinks
@@ -196,6 +209,51 @@ function scrubValue(value: unknown, ctx: NormalizeContext, cwdPathMode: CwdPathM
   return value
 }
 
+/** Canonicalize workspace-relative instruction provenance across project-root spellings. */
+function canonicalizeAgentInstructionValue(value: unknown, key?: string): unknown {
+  if (typeof value === 'string') {
+    if (key === 'baselineIdentity') {
+      try {
+        const identity = JSON.parse(value) as Record<string, unknown>
+        if ('projectRoot' in identity) identity.projectRoot = '{{projectRoot}}'
+        return JSON.stringify(identity)
+      } catch {
+        // An invalid embedded identity stays regression-visible below.
+      }
+    }
+    return value
+      .split(`${CWD}/`).join('')
+      .split(`${CWD}\0`).join('.\0')
+  }
+  if (Array.isArray(value)) return value.map(item => canonicalizeAgentInstructionValue(item))
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([childKey, item]) => [
+      childKey,
+      canonicalizeAgentInstructionValue(item, childKey),
+    ]))
+  }
+  return value
+}
+
+/** Find messages sourced from agent-instructions and canonicalize only their payloads. */
+function canonicalizeAgentInstructionSources(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(item => canonicalizeAgentInstructionSources(item))
+  if (value !== null && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    const source = record.source
+    if (source !== null
+      && typeof source === 'object'
+      && (source as { kind?: unknown }).kind === 'agent-instructions') {
+      return canonicalizeAgentInstructionValue(record)
+    }
+    return Object.fromEntries(Object.entries(record).map(([key, item]) => [
+      key,
+      canonicalizeAgentInstructionSources(item),
+    ]))
+  }
+  return value
+}
+
 /** Escape one literal path segment for use in a regular expression. */
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -209,7 +267,15 @@ function tokenizeFixtureString(value: string, ctx: NormalizeContext, basename: s
     + String.raw`(?=$|[\\/\s<>'"()\[\]{},;:!?=])`,
     'g',
   )
-  return exact.replace(absoluteCwd, CWD).split(`/private${CWD}`).join(CWD)
+  const relativeCwd = new RegExp(
+    String.raw`(?<![A-Za-z0-9._~-])${escapeRegExp(basename)}`
+    + String.raw`(?=$|[\\/\s<>'"()\[\]{},;:!?=\u0000])`,
+    'g',
+  )
+  return exact
+    .replace(absoluteCwd, CWD)
+    .replace(relativeCwd, CWD)
+    .split(`/private${CWD}`).join(CWD)
 }
 
 /** Recursively replace generated-cwd spellings while preserving every other JSON value. */
@@ -244,7 +310,9 @@ export function tokenizeSessionFixtureCwd(rawLog: string): string {
   const firstLine = lines.find(line => line.trim().length > 0)
   const header = firstLine === undefined ? undefined : JSON.parse(firstLine) as { cwd?: unknown }
   const cwd = typeof header?.cwd === 'string' ? header.cwd : ''
-  const basename = cwd.split(/[\\/]/).at(-1)
+  const basename = cwd === CWD
+    ? rawLog.match(/(?<![A-Za-z0-9._~-])(acp-snap-cwd-[A-Za-z0-9_-]+)(?=[\\/\u0000])/)?.[1] ?? CWD
+    : cwd.split(/[\\/]/).at(-1)
   if (basename === undefined || basename.length === 0) {
     throw new Error('acp-snapshot: cannot tokenize a cwd without a basename')
   }
@@ -330,7 +398,26 @@ export function normalizeSessionLog(
       const data = record.data as Record<string, unknown>
       if ('durationMs' in data) data.durationMs = 0
     }
-    return scrubValue(record, ctx, cwdPathMode) as Record<string, unknown>
+    if (record.data !== null && typeof record.data === 'object') {
+      const data = record.data as Record<string, unknown>
+      if (record.type === 'world/effect-start' && 'startedAt' in data) data.startedAt = 0
+      if (record.type === 'world/effect-receipt' && 'endedAt' in data) data.endedAt = 0
+      if (record.type === 'runtime/budget-charge'
+        && data.charge !== null
+        && typeof data.charge === 'object'
+        && 'wallTimeMs' in data.charge) {
+        (data.charge as Record<string, unknown>).wallTimeMs = 0
+      }
+      if (record.type === 'runtime/budget'
+        && data.consumed !== null
+        && typeof data.consumed === 'object'
+        && 'wallTimeMs' in data.consumed) {
+        (data.consumed as Record<string, unknown>).wallTimeMs = 0
+      }
+    }
+    return canonicalizeAgentInstructionSources(
+      scrubValue(record, ctx, cwdPathMode),
+    ) as Record<string, unknown>
   })
   return records.map(r => JSON.stringify(r)).join('\n') + '\n'
 }

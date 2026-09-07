@@ -19,6 +19,7 @@
     "python/sdk-runtime"
   ],
   "ignoreDependencies": [
+    "@deepseek-ai/dsh-tool-session-query",
     "@yarnpkg/cli-dist",
     "lightningcss"
   ],

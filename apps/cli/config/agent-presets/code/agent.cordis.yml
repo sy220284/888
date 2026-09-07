@@ -151,6 +151,9 @@
     - id: compaction-basic
       name: '@deepseek-ai/dsh-compaction-basic'
 
+    - id: recovery-compaction
+      name: '@deepseek-ai/dsh-recovery-compaction'
+
     - id: command-compact
       name: '@deepseek-ai/dsh-command-compact'
 

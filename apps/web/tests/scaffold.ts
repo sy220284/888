@@ -64,6 +64,7 @@ import JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
 // Empty type imports carry the webServer/agents/sessionPersistence Context merges.
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-agent'
+import type {} from '@deepseek-ai/dsh-user-approval'
 import { provideCmdline } from '@deepseek-ai/dsh-cmdline'
 import { REPO_ROOT, requireDist } from './support.ts'
 
@@ -88,6 +89,30 @@ export const WELCOME_NOTICE_COPY = {
 
 /** Snapshot mode for the lane, from $DSH_SNAPSHOT (same vocabulary as the other snapshot suites). */
 export type WebSnapshotMode = 'replay' | 'record' | 'refresh'
+
+/** Answer one explicitly named runtime approval through the real browser panel. */
+export async function approveRuntimeTool(
+  page: Page,
+  events: readonly SessionEvent[],
+  toolName: string,
+  options: { timeoutMs?: number; beforeApprove?: () => Promise<void> } = {},
+): Promise<void> {
+  const panel = page.locator('[data-approval-key]')
+  await panel.waitFor({ timeout: options.timeoutMs ?? 30_000 })
+  const request = events.filter(event => event.type === 'approval/asked').at(-1)
+  expect(request?.data.toolName).toBe(toolName)
+  expect(request?.data.reason).toBe('runtime capability policy requires approval')
+  expect(events.some(event => event.type === 'world/effect-start' && event.data.callId === request?.data.callId))
+    .toBe(false)
+  await options.beforeApprove?.()
+  const approvalKey = await panel.getAttribute('data-approval-key')
+  await panel.getByRole('button', { name: 'Allow once', exact: true }).click()
+  await expect.poll(() => events.find(event => event.type === 'approval/decided' && event.data.id === request?.data.id)?.data)
+    .toEqual({ id: request?.data.id, outcome: 'allowed-once' })
+  await expect.poll(() => page.locator('[data-approval-key]').evaluateAll(
+    elements => elements[0]?.getAttribute('data-approval-key') ?? null,
+  )).not.toBe(approvalKey)
+}
 
 /**
  * Resolve and validate the lane's snapshot mode.

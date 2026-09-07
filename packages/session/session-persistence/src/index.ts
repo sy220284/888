@@ -7,12 +7,21 @@
 
 import { Context, Service } from '@deepseek-ai/cordis'
 import { SessionPreparation } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionId, SessionHeader } from '@deepseek-ai/dsh-session'
+import type {
+  SessionEvent,
+  SessionId,
+  SessionHeader,
+} from '@deepseek-ai/dsh-session'
 import type { SessionPersistenceRevision } from './revision.ts'
 
 // Re-export the metadata vocabulary so Consumers import it from the Service Definition.
 export type { SessionHeader } from '@deepseek-ai/dsh-session'
 export { SessionPersistenceRevision } from './revision.ts'
+export { SessionFormatMigrationRegistry } from './migration.ts'
+export type {
+  SessionFormatMigration,
+  SessionFormatSnapshot,
+} from './migration.ts'
 
 /** Lightweight immutable source identity returned without loading a full log. */
 export interface SessionPersistenceSnapshot {
@@ -116,11 +125,20 @@ export abstract class SessionPersistence extends Service {
    * session is absent.
    * @throws when this backend does not expose per-session raw artifacts.
    */
-  readRaw(_id: SessionId, signal?: AbortSignal): Promise<SessionRawArtifact | undefined> {
+  readRaw(
+    _id: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SessionRawArtifact | undefined> {
     if (signal?.aborted === true) {
-      return Promise.reject(signal.reason instanceof Error ? signal.reason : new Error('aborted'))
+      return Promise.reject(
+        signal.reason instanceof Error ? signal.reason : new Error('aborted'),
+      )
     }
-    return Promise.reject(new Error('this session persistence backend does not expose raw artifacts'))
+    return Promise.reject(
+      new Error(
+        'this session persistence backend does not expose raw artifacts',
+      ),
+    )
   }
 
   /**
@@ -140,7 +158,10 @@ export abstract class SessionPersistence extends Service {
    * @param id - the session the batch belongs to.
    * @param events - the contiguous batch to persist, in seq order.
    */
-  abstract append(id: SessionId, events: readonly SessionEvent[]): Promise<void>
+  abstract append(
+    id: SessionId,
+    events: readonly SessionEvent[],
+  ): Promise<void>
 
   /**
    * Prepare the exact unpublished Session used by resume. Implementations may
@@ -152,19 +173,26 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for preparation work.
    * @returns one owned unpublished Session preparation.
    */
-  async prepare(id: SessionId, signal?: AbortSignal): Promise<SessionPreparation> {
+  async prepare(
+    id: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SessionPreparation> {
     signal?.throwIfAborted()
     const loaded = await this.load(id)
     signal?.throwIfAborted()
     const sessions = this.ctx.get('sessions')
     if (sessions === undefined) {
-      throw new Error('cannot prepare a session: SessionStore is not configured')
+      throw new Error(
+        'cannot prepare a session: SessionStore is not configured',
+      )
     }
-    return SessionPreparation.create(sessions.prepare(id, {
-      seed: loaded.events.map(event => structuredClone(event)),
-      meta: structuredClone(loaded.meta),
-      seedSource: 'persistence',
-    }))
+    return SessionPreparation.create(
+      sessions.prepare(id, {
+        seed: loaded.events.map(event => structuredClone(event)),
+        meta: structuredClone(loaded.meta),
+        seedSource: 'persistence',
+      }),
+    )
   }
 
   /**
@@ -197,7 +225,10 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for queued and backend read work.
    * @returns the validated header and current logical event log.
    */
-  abstract inspect(id: SessionId, signal?: AbortSignal): Promise<SessionInspection>
+  abstract inspect(
+    id: SessionId,
+    signal?: AbortSignal,
+  ): Promise<SessionInspection>
 
   /**
    * Read the stored events from `fromSeq` onward — the read-from-seq
@@ -217,8 +248,11 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for queued and backend read work.
    * @returns the header and the stored events with `seq >= fromSeq`.
    */
-  abstract readFrom(id: SessionId, fromSeq: number, signal?: AbortSignal):
-  Promise<{ meta: SessionHeader; events: SessionEvent[] }>
+  abstract readFrom(
+    id: SessionId,
+    fromSeq: number,
+    signal?: AbortSignal,
+  ): Promise<{ meta: SessionHeader; events: SessionEvent[] }>
 
   /**
    * Lightweight listing from metadata, without a full-log parse.
@@ -237,7 +271,9 @@ export abstract class SessionPersistence extends Service {
    * @param signal - optional cancellation for backend snapshot-listing work.
    * @returns one header and opaque revision per materialized session without loading full logs.
    */
-  abstract listSnapshots(signal?: AbortSignal): Promise<SessionPersistenceSnapshot[]>
+  abstract listSnapshots(
+    signal?: AbortSignal,
+  ): Promise<SessionPersistenceSnapshot[]>
 }
 
 export default SessionPersistence

@@ -5,6 +5,7 @@ import {
   ReasoningEffortId,
   type GenerateOptions,
   type LlmResolvedModelInfo,
+  type ResolvedRetryPolicy,
   type StreamChunk,
 } from '@deepseek-ai/dsh-llm'
 
@@ -13,6 +14,17 @@ const OFF = ReasoningEffortId('off')
 
 /** Keyless headless-agent adapter: one real bash call followed by a final answer. */
 class CliMockAdapter extends LlmAdapter {
+  override providerRetryPolicy(): ResolvedRetryPolicy {
+    return {
+      mode: 'normal',
+      maxRetries: 0,
+      retryableCodes: ['SERVER'],
+      initialDelayMs: 1,
+      maxDelayMs: 1,
+      jitterRatio: 0,
+    }
+  }
+
   override async resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
     return {
       provider,

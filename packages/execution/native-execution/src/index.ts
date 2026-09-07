@@ -1,11 +1,19 @@
 /** Stable Harness seam for the native execution plane. */
 import { Context, Service } from '@deepseek-ai/cordis'
-import type { NativeExecutionHello, NativeProcessHandle, NativeProcessSpawnSpec } from './types.ts'
+import type {
+  NativeExecutionHello,
+  NativeProcessHandle,
+  NativeProcessSpawnSpec,
+  NativeTerminalHandle,
+  NativeTerminalSpawnSpec,
+} from './types.ts'
 
 export type * from './types.ts'
 
 declare module '@deepseek-ai/cordis' {
-  interface Context { nativeExecution: NativeExecutionRuntime }
+  interface Context {
+    nativeExecution: NativeExecutionRuntime
+  }
 }
 
 /**
@@ -13,7 +21,9 @@ declare module '@deepseek-ai/cordis' {
  * Session, Agent, tools, permissions, budgets, or shell semantics.
  */
 export abstract class NativeExecutionRuntime extends Service {
-  constructor(ctx: Context) { super(ctx, 'nativeExecution') }
+  constructor(ctx: Context) {
+    super(ctx, 'nativeExecution')
+  }
 
   /**
    * Read native execution host metadata.
@@ -38,6 +48,14 @@ export abstract class NativeExecutionRuntime extends Service {
    * @returns Live native process handle.
    */
   abstract spawn(spec: NativeProcessSpawnSpec): NativeProcessHandle
+  /**
+   * Allocate one native terminal process.
+   * @param spec Terminal spawn specification.
+   * @returns Live terminal handle after allocation succeeds.
+   */
+  abstract spawnTerminal(
+    spec: NativeTerminalSpawnSpec,
+  ): Promise<NativeTerminalHandle>
 }
 
 export default NativeExecutionRuntime

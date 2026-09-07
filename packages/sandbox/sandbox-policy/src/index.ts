@@ -101,6 +101,8 @@ export class SandboxPolicyService extends Service {
   readonly defaultMode: SandboxMode
   /** The absolute `workspace-write` fallback root for calls without a session cwd. */
   readonly workspaceRoot: string
+  /** One-shot grants already approved by the outer runtime-policy gate. */
+  private readonly escalationGrants = new WeakMap<object, SandboxMode>()
   constructor(ctx: Context, config: Config) {
     super(ctx, 'sandboxPolicy')
     // schemastery (static Config) already filled `mode`; the cast records that
@@ -148,6 +150,32 @@ export class SandboxPolicyService extends Service {
    */
   overrideOf(session: Session): SandboxMode | undefined {
     return effectiveSandboxMode(session.events)
+  }
+
+  /**
+   * Hand one runtime-approved escalation to the enforcing tool body. The
+   * execution object is registry-minted and identity-stable across policy and
+   * dispatch, so a grant cannot leak to another call.
+   * @param execution - exact tool execution that received approval.
+   * @param mode - approved wider sandbox mode.
+   */
+  grantEscalation(execution: object, mode: SandboxMode): void {
+    this.escalationGrants.set(execution, mode)
+  }
+
+  /**
+   * Consume an outer runtime approval exactly once. A mismatched requested
+   * mode does not consume the grant and therefore falls back to the tool's
+   * ordinary approval path.
+   * @param execution - exact executing call.
+   * @param requestedMode - mode the tool arguments request.
+   * @returns the approved mode, or undefined when this call owns no match.
+   */
+  consumeEscalation(execution: object, requestedMode: string): SandboxMode | undefined {
+    const granted = this.escalationGrants.get(execution)
+    if (granted !== requestedMode) return undefined
+    this.escalationGrants.delete(execution)
+    return granted
   }
 }
 

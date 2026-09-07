@@ -7,7 +7,7 @@
  */
 
 import type { Session } from '@deepseek-ai/dsh-session'
-import type { HookDialect, HookOutput } from './types.ts'
+import type { HookAdapterId, HookOutput } from './types.ts'
 
 /** What identifies a hook invocation across its invoked/result pair. */
 export interface HookInvocation {
@@ -15,8 +15,8 @@ export interface HookInvocation {
   turn: number
   /** The hook point (`PreToolUse`, `Stop`, …). */
   point: string
-  /** The bridge dialect that ran it. */
-  dialect: HookDialect
+  /** The ecosystem adapter that ran it; persisted under the legacy `dialect` field name. */
+  dialect: HookAdapterId
   /** A stable id correlating the invoked event with its result. */
   handlerId: string
   /** The matcher-group pattern that selected it (absent for match-all). */
@@ -85,7 +85,8 @@ export function appendHookInvoked(session: Session, invocation: HookInvocation):
 /**
  * Append the durable result paired with `hook/invoked`. The recorded decision
  * is the parsed decision, then `stop` for `continue:false`, else `pass`; stderr
- * is trimmed and capped, and an absent process exit stays omitted.
+ * is trimmed and capped, a non-empty system message is retained as audit-only
+ * data, and an absent process exit stays omitted.
  * @param session - the session whose open turn records the event.
  * @param record - the outcome to record: the decoded output plus the summary cap and duration.
  */
@@ -99,6 +100,9 @@ export function appendHookResult(session: Session, record: HookResultRecord): vo
     decision: output.decision ?? (output.continue === false ? 'stop' : 'pass'),
     ...output.exitCode !== undefined ? { exitCode: output.exitCode } : {},
     ...stderrSummary !== undefined ? { stderrSummary } : {},
+    ...output.systemMessage !== undefined && output.systemMessage.length > 0
+      ? { systemMessage: output.systemMessage }
+      : {},
     durationMs: record.durationMs,
   })
 }
