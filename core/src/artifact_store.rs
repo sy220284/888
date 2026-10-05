@@ -405,7 +405,8 @@ impl ArtifactStore {
     async fn find_by_hash(&self, hash: &str) -> Result<Option<Artifact>> {
         let row = sqlx::query_as::<_, ArtifactRow>(
             r#"
-            SELECT id, content_hash, mime, size_bytes, relative_path, source_url, created_at
+            SELECT id, content_hash, mime, size_bytes, relative_path,
+                   logical_type, source_json, source_url, created_at
             FROM artifacts
             WHERE content_hash = ?
             "#,
