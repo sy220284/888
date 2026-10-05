@@ -24,10 +24,7 @@ fn sanitize_json_with_key(value: &Value, key: &str) -> Value {
         Value::Object(map) => Value::Object(
             map.iter()
                 .map(|(child_key, child)| {
-                    (
-                        child_key.clone(),
-                        sanitize_json_with_key(child, child_key),
-                    )
+                    (child_key.clone(), sanitize_json_with_key(child, child_key))
                 })
                 .collect(),
         ),

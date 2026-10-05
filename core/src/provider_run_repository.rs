@@ -254,8 +254,16 @@ impl TryFrom<ProviderRunRow> for ProviderRunRecord {
             status,
             request_id: row.request_id,
             input: serde_json::from_str(&row.input_json)?,
-            status_payload: row.status_json.as_deref().map(|value| serde_json::from_str::<Value>(value)).transpose()?,
-            result: row.result_json.as_deref().map(|value| serde_json::from_str::<Value>(value)).transpose()?,
+            status_payload: row
+                .status_json
+                .as_deref()
+                .map(|value| serde_json::from_str::<Value>(value))
+                .transpose()?,
+            result: row
+                .result_json
+                .as_deref()
+                .map(|value| serde_json::from_str::<Value>(value))
+                .transpose()?,
             output_artifact_ids: output_artifact_ids
                 .into_iter()
                 .map(|id| Uuid::parse_str(&id))
@@ -309,9 +317,13 @@ mod tests {
         repo.mark_status(run.id, &json!({"status": "IN_PROGRESS"}))
             .await
             .unwrap();
-        repo.complete(run.id, &json!({"mesh": {"url": "https://cdn/model.glb"}}), &[])
-            .await
-            .unwrap();
+        repo.complete(
+            run.id,
+            &json!({"mesh": {"url": "https://cdn/model.glb"}}),
+            &[],
+        )
+        .await
+        .unwrap();
 
         let loaded = repo.get(run.id).await.unwrap().unwrap();
         assert_eq!(loaded.status, ProviderRunStatus::Completed);

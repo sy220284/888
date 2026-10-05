@@ -72,7 +72,10 @@ impl FalQueueClient {
         let response = self
             .http
             .post(url)
-            .header(reqwest::header::AUTHORIZATION, format!("Key {}", self.api_key))
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Key {}", self.api_key),
+            )
             .json(input)
             .send()
             .await
@@ -132,7 +135,10 @@ impl FalQueueClient {
         let status_code = response.status();
         let body: Value = response.json().await.unwrap_or(Value::Null);
         if !status_code.is_success() {
-            bail!("FAL status failed ({status_code}): {}", compact_error(&body));
+            bail!(
+                "FAL status failed ({status_code}): {}",
+                compact_error(&body)
+            );
         }
         let status = body
             .get("status")
@@ -199,7 +205,11 @@ impl FalQueueClient {
 
 fn validate_endpoint(endpoint: &str) -> Result<()> {
     let endpoint = endpoint.trim_matches('/');
-    if endpoint.is_empty() || endpoint.contains("..") || endpoint.starts_with("http://") || endpoint.starts_with("https://") {
+    if endpoint.is_empty()
+        || endpoint.contains("..")
+        || endpoint.starts_with("http://")
+        || endpoint.starts_with("https://")
+    {
         bail!("FAL endpoint must be a relative provider endpoint");
     }
     Ok(())

@@ -181,8 +181,14 @@ impl ArtifactStore {
             Err(error) => return Err(error.into()),
         }
 
-        self.insert_record(hash, mime, size, relative_path, Some(redact_source_url(url)))
-            .await
+        self.insert_record(
+            hash,
+            mime,
+            size,
+            relative_path,
+            Some(redact_source_url(url)),
+        )
+        .await
     }
 
     async fn find_by_hash(&self, hash: &str) -> Result<Option<ArtifactRecord>> {
@@ -281,12 +287,18 @@ fn decode_data_uri(value: &str) -> Result<(String, Vec<u8>)> {
     let (header, payload) = value
         .split_once(',')
         .context("invalid data URI: missing comma")?;
-    if !header.get(..5).is_some_and(|prefix| prefix.eq_ignore_ascii_case("data:")) {
+    if !header
+        .get(..5)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("data:"))
+    {
         anyhow::bail!("invalid data URI");
     }
     let meta = &header[5..];
     let mut parts = meta.split(';');
-    let mime = parts.next().filter(|part| !part.is_empty()).unwrap_or("text/plain");
+    let mime = parts
+        .next()
+        .filter(|part| !part.is_empty())
+        .unwrap_or("text/plain");
     let is_base64 = parts.any(|part| part.eq_ignore_ascii_case("base64"));
     if !is_base64 {
         bail!("only base64 data URIs are accepted for provider artifacts");
@@ -336,7 +348,10 @@ mod tests {
 
         assert_eq!(first.id, second.id);
         assert_eq!(first.content_hash, second.content_hash);
-        assert_eq!(first.relative_path, relative_path_for_hash(&first.content_hash));
+        assert_eq!(
+            first.relative_path,
+            relative_path_for_hash(&first.content_hash)
+        );
         assert!(store.absolute_path(&first).await.unwrap().exists());
     }
 

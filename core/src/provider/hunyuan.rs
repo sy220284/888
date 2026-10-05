@@ -61,9 +61,7 @@ impl Default for Hunyuan3dOptions {
 impl Hunyuan3dOptions {
     pub fn validate(&self) -> Result<()> {
         if !(MIN_FACE_COUNT..=MAX_FACE_COUNT).contains(&self.face_count) {
-            bail!(
-                "face_count must be between {MIN_FACE_COUNT} and {MAX_FACE_COUNT}"
-            );
+            bail!("face_count must be between {MIN_FACE_COUNT} and {MAX_FACE_COUNT}");
         }
         Ok(())
     }
@@ -90,7 +88,9 @@ mod tests {
     #[test]
     fn preserves_upstream_defaults_and_lowpoly_polygon_behavior() {
         let defaults = Hunyuan3dOptions::default();
-        let input = defaults.build_input("https://example.com/input.png").unwrap();
+        let input = defaults
+            .build_input("https://example.com/input.png")
+            .unwrap();
         assert_eq!(input["face_count"], 50_000);
         assert!(input.get("polygon_type").is_none());
 
@@ -98,7 +98,9 @@ mod tests {
             generate_type: HunyuanGenerateType::LowPoly,
             ..Default::default()
         };
-        let input = lowpoly.build_input("https://example.com/input.png").unwrap();
+        let input = lowpoly
+            .build_input("https://example.com/input.png")
+            .unwrap();
         assert_eq!(input["polygon_type"], "triangle");
     }
 
