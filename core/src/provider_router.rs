@@ -5,8 +5,7 @@ use serde_json::json;
 
 use crate::{
     model::{
-        CanonicalCapabilityRequest, CanonicalCapabilityRequestCapability,
-        CanonicalCapabilityRequestQualityProfile, ProviderCapability, ProviderCapabilityCapability,
+        CanonicalCapabilityRequest, ProviderCapability, ProviderCapabilityCapability,
         ProviderCapabilityHealth, ProviderCapabilityLocation,
         ProviderCapabilityQualityProfilesItem,
     },
