@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/canonical-capability-request.schema.json",
+  "title": "CanonicalCapabilityRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["request_id", "capability", "input_artifact_ids", "parameters", "creativity_profile", "verification_required"],
+  "properties": {
+    "request_id": { "type": "string", "format": "uuid" },
+    "capability": { "type": "string", "minLength": 1 },
+    "input_artifact_ids": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "uniqueItems": true
+    },
+    "world_context_ref": { "type": ["string", "null"] },
+    "parameters": { "type": "object" },
+    "quality_profile": { "type": ["string", "null"] },
+    "creativity_profile": {
+      "type": "string",
+      "enum": ["STRICT", "BALANCED", "EXPLORATORY", "DIVERGENT"]
+    },
+    "cost_budget": { "type": ["number", "null"], "minimum": 0 },
+    "latency_budget_ms": { "type": ["integer", "null"], "minimum": 0 },
+    "verification_required": { "type": "boolean" }
+  }
+}

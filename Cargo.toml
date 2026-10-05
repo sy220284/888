@@ -1,0 +1,25 @@
+[workspace]
+members = ["core"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+rust-version = "1.82"
+
+[workspace.dependencies]
+anyhow = "1.0"
+base64 = "0.22"
+blake3 = "1.5"
+chrono = { version = "0.4", features = ["serde"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "sqlite", "chrono", "uuid", "json", "migrate", "macros"] }
+thiserror = "2.0"
+tokio = { version = "1.41", features = ["fs", "io-util", "macros", "rt-multi-thread", "time"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

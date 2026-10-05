@@ -1,0 +1,43 @@
+name: Core Rust 与 Schema 校验
+
+on:
+  push:
+    paths:
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - "core/**"
+      - "packages/schema/**"
+      - "tools/validate_schemas.py"
+      - ".github/workflows/core-ci.yml"
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "rust-toolchain.toml"
+      - "core/**"
+      - "packages/schema/**"
+      - "tools/validate_schemas.py"
+      - ".github/workflows/core-ci.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.82.0
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: 校验 Schema
+        run: python tools/validate_schemas.py
+      - name: 检查格式
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: 测试
+        run: cargo test --workspace
