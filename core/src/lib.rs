@@ -15,4 +15,5 @@ pub mod provider_run_repository;
 pub mod serde_db;
 pub mod worker_protocol;
 pub mod worker_registry;
+pub mod worker_runtime;
 pub mod world_repository;
