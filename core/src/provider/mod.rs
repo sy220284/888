@@ -75,7 +75,10 @@ mod tests {
 
         assert_eq!(files.len(), 2);
         assert_eq!(
-            files.iter().filter(|file| file.url == "https://cdn/model.glb").count(),
+            files
+                .iter()
+                .filter(|file| file.url == "https://cdn/model.glb")
+                .count(),
             1
         );
         assert!(files.iter().any(|file| {
