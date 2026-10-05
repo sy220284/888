@@ -26,9 +26,30 @@ impl JobEngine {
         max_attempts: u64,
         idempotent: bool,
     ) -> Result<Job> {
+        self.create_with_input(
+            world_id,
+            task_type,
+            Value::Object(Default::default()),
+            max_attempts,
+            idempotent,
+        )
+        .await
+    }
+
+    pub async fn create_with_input(
+        &self,
+        world_id: Option<Uuid>,
+        task_type: &str,
+        input: Value,
+        max_attempts: u64,
+        idempotent: bool,
+    ) -> Result<Job> {
         let task_type = task_type.trim();
         if task_type.is_empty() {
             bail!("task_type must not be empty");
+        }
+        if !input.is_object() {
+            bail!("job input must be a JSON object");
         }
         if max_attempts < 1 {
             bail!("max_attempts must be at least 1");
@@ -39,6 +60,7 @@ impl JobEngine {
             id: Uuid::new_v4(),
             world_id,
             task_type: task_type.to_owned(),
+            input,
             state: JobState::Created,
             attempt: 0,
             max_attempts,
@@ -54,15 +76,16 @@ impl JobEngine {
         sqlx::query(
             r#"
             INSERT INTO jobs(
-                id, world_id, task_type, state, attempt, max_attempts, idempotent,
+                id, world_id, task_type, input_json, state, attempt, max_attempts, idempotent,
                 checkpoint_artifact_id, provider_run_id, error_code,
                 error_payload_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)
             "#,
         )
         .bind(job.id.to_string())
         .bind(job.world_id.map(|value| value.to_string()))
         .bind(&job.task_type)
+        .bind(to_json(&job.input)?)
         .bind(enum_to_string(&job.state)?)
         .bind(job.attempt as i64)
         .bind(i64::try_from(job.max_attempts).context("max_attempts too large")?)
@@ -78,7 +101,7 @@ impl JobEngine {
     pub async fn get(&self, id: Uuid) -> Result<Option<Job>> {
         let row = sqlx::query_as::<_, JobRow>(
             r#"
-            SELECT id, world_id, task_type, state, attempt, max_attempts, idempotent,
+            SELECT id, world_id, task_type, input_json, state, attempt, max_attempts, idempotent,
                    checkpoint_artifact_id, provider_run_id, error_code,
                    error_payload_json, created_at, updated_at
             FROM jobs
@@ -311,7 +334,7 @@ impl JobEngine {
         let running = enum_to_string(&JobState::Running)?;
         let rows = sqlx::query_as::<_, JobRow>(
             r#"
-            SELECT id, world_id, task_type, state, attempt, max_attempts, idempotent,
+            SELECT id, world_id, task_type, input_json, state, attempt, max_attempts, idempotent,
                    checkpoint_artifact_id, provider_run_id, error_code,
                    error_payload_json, created_at, updated_at
             FROM jobs
@@ -404,6 +427,7 @@ struct JobRow {
     id: String,
     world_id: Option<String>,
     task_type: String,
+    input_json: String,
     state: String,
     attempt: i64,
     max_attempts: i64,
@@ -424,6 +448,7 @@ impl TryFrom<JobRow> for Job {
             id: Uuid::parse_str(&row.id)?,
             world_id: row.world_id.as_deref().map(Uuid::parse_str).transpose()?,
             task_type: row.task_type,
+            input: from_json(&row.input_json)?,
             state: enum_from_string(&row.state)?,
             attempt: u64::try_from(row.attempt).context("negative job attempt")?,
             max_attempts: u64::try_from(row.max_attempts).context("negative max_attempts")?,
