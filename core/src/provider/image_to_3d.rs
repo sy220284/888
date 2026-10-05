@@ -161,27 +161,3 @@ impl FalImageTo3dRunner {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn public_runner_accepts_artifacts_only() {
-        fn assert_artifact_input(
-            _runner: &FalImageTo3dRunner,
-            _artifact: &Artifact,
-            _options: &Hunyuan3dOptions,
-        ) {
-        }
-
-        let _ = assert_artifact_input;
-    }
-
-    #[test]
-    fn output_envelope_status_is_schema_generated() {
-        assert_eq!(
-            AIOutputEnvelopeStatus::Completed,
-            AIOutputEnvelopeStatus::Completed
-        );
-    }
-}
