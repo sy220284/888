@@ -12,7 +12,7 @@ fn sanitize_json_with_key(value: &Value, key: &str) -> Value {
             if is_data_uri(text) || is_base64_key(key) {
                 Value::String("[stripped]".to_owned())
             } else {
-                Value::String(text.clone())
+                Value::String(redact_url_credentials(text))
             }
         }
         Value::Array(values) => Value::Array(
@@ -41,6 +41,19 @@ fn is_data_uri(value: &str) -> bool {
     value.len() >= 5 && value[..5].eq_ignore_ascii_case("data:")
 }
 
+fn redact_url_credentials(value: &str) -> String {
+    if !(value.starts_with("https://") || value.starts_with("http://")) {
+        return value.to_owned();
+    }
+    reqwest::Url::parse(value)
+        .map(|mut url| {
+            url.set_query(None);
+            url.set_fragment(None);
+            url.to_string()
+        })
+        .unwrap_or_else(|_| value.to_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;
@@ -53,7 +66,7 @@ mod tests {
             "image": "data:image/png;base64,AAAA",
             "nested": {
                 "preview_b64": "AAAA",
-                "safe": "https://example.com/file.glb"
+                "safe": "https://example.com/file.glb?token=secret#fragment"
             },
             "items": [{"base64_data": "BBBB"}]
         });
