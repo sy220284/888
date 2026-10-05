@@ -733,3 +733,85 @@ fn parse_uuid_field(value: &Value, key: &str) -> Result<Uuid> {
         .with_context(|| format!("{key} must be a UUID string"))?;
     Uuid::parse_str(raw).with_context(|| format!("{key} is not a valid UUID"))
 }
+
+
+#[cfg(test)]
+mod tests {
+    use std::{path::PathBuf, time::Duration};
+
+    use tempfile::tempdir;
+    use tokio::time;
+    use crate::{
+        artifact_store::ArtifactStore,
+        db,
+        job_engine::JobEngine,
+        model::JobState,
+        worker_runtime::{WorkerRuntime, WorkerSpec},
+    };
+
+    #[tokio::test]
+    async fn runtime_executes_ready_job_through_real_worker_process() {
+        let pool = db::connect_memory().await.unwrap();
+        let artifact_root = tempdir().unwrap();
+        let artifacts = ArtifactStore::new(artifact_root.path(), pool.clone())
+            .await
+            .unwrap();
+
+        let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .to_path_buf();
+        let python = if cfg!(windows) { "python" } else { "python3" };
+        let runtime = WorkerRuntime::start(
+            pool.clone(),
+            artifacts,
+            vec![WorkerSpec::python_module(
+                "tools-test",
+                python,
+                "workers.tools.main",
+                repo_root,
+                artifact_root.path(),
+            )],
+        )
+        .await
+        .unwrap();
+
+        let event_pool = pool.clone();
+        let jobs = JobEngine::new(pool);
+        let job = jobs
+            .create(None, "DISCOVER_TOOLS", 1, true)
+            .await
+            .unwrap();
+        jobs.transition(job.id, JobState::Ready).await.unwrap();
+
+        let completed = time::timeout(Duration::from_secs(10), async {
+            loop {
+                let current = jobs.get(job.id).await.unwrap().unwrap();
+                if current.state == JobState::Completed {
+                    break current;
+                }
+                if current.state == JobState::Failed {
+                    panic!("runtime worker job failed: {:?}", current.error_payload);
+                }
+                time::sleep(Duration::from_millis(50)).await;
+            }
+        })
+        .await
+        .expect("runtime worker job timed out");
+
+        assert_eq!(completed.state, JobState::Completed);
+        assert_eq!(completed.attempt, 1);
+        assert!(completed.assigned_worker_id.is_none());
+
+        let result_events: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM job_events WHERE job_id = ? AND event_type = 'JOB_RESULT'",
+        )
+        .bind(job.id.to_string())
+        .fetch_one(&event_pool)
+        .await
+        .unwrap();
+        assert_eq!(result_events, 1);
+
+        runtime.shutdown().await;
+    }
+}
