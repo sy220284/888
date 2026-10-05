@@ -93,6 +93,20 @@ impl ArtifactStore {
         self.download_http(source, content_type_hint).await
     }
 
+    pub async fn get(&self, id: Uuid) -> Result<Option<Artifact>> {
+        let row = sqlx::query_as::<_, ArtifactRow>(
+            r#"
+            SELECT id, content_hash, mime, size_bytes, relative_path, source_url, created_at
+            FROM artifacts
+            WHERE id = ?
+            "#,
+        )
+        .bind(id.to_string())
+        .fetch_optional(&self.pool)
+        .await?;
+        row.map(TryInto::try_into).transpose()
+    }
+
     pub async fn absolute_path(&self, artifact: &Artifact) -> Result<PathBuf> {
         let path = self.root.join(&artifact.relative_path);
         let canonical_root = fs::canonicalize(&self.root).await?;

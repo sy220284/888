@@ -1,3 +1,4 @@
+pub mod asset_generation;
 pub mod artifact_store;
 pub mod db;
 pub mod metadata;

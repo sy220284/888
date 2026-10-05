@@ -133,7 +133,7 @@ UI 组件本身与旧 Store、Radix、图标库耦合较高，不直接迁。
     → AIOutputEnvelope
     → Candidate / Artifact
 
-状态：**Rust Core 首批重写已完成：FAL submit / poll / result、Provider Run、Artifact 落盘已接入；后续继续扩展统一 Router / Capability。**
+状态：**Rust Core 重写完成：FAL submit / poll / result、Provider Run、Artifact 落盘均已接入。统一 Router 属于 888 平台层后续扩展，不再依赖旧 Node Runtime。**
 
 ### Hunyuan / Meshy
 
@@ -147,11 +147,19 @@ UI 组件本身与旧 Store、Radix、图标库耦合较高，不直接迁。
 
 禁止把 World Labs World 类型作为 888 世界模型。
 
-状态：**作为 WORLD_GENERATION Provider 待迁。**
+状态：**已重写为 Rust `provider/world_labs.rs`，保留 operation poll 与世界资产下载，输出统一进入 Artifact / AIOutputEnvelope。**
 
 ### Image Edit / SFX
 
-GPT Image Edit、Nano Banana、ElevenLabs SFX 映射到 Capability 后迁。
+GPT Image 2、Nano Banana、ElevenLabs SFX 已重写为 Rust Provider Adapter：图像编辑统一进入 `IMAGE_EDIT`，SFX 进入 `SFX_GENERATION`；SFX 的 FFmpeg 处理改为原始音频与处理后音频两个不可变 Artifact。
+
+### generate-single-asset
+
+旧 `generate-single-asset.mjs` 的“参考图生成 → 3D 模型生成”核心链路已重写为 Rust `AssetGenerationService`。
+
+新实现只编排 Artifact 与 Provider Run，不再写 `object.json`、不按目录编号恢复状态，也不把对象文件当世界真相。
+
+状态：**Runtime 重写完成。**
 
 ### World Loader
 
@@ -185,7 +193,7 @@ GPT Image Edit、Nano Banana、ElevenLabs SFX 映射到 Capability 后迁。
 
 - **M1 Viewer 基础：已完成。**
 - **M2 Editor：等待 Entity / Revision Command Schema。**
-- **M3 Provider Adapter：首批 FAL/Hunyuan/Meshy + Provider Run + Artifact Store 已完成；World Labs / Image Edit / SFX 与 Router 后续继续。**
+- **M3 Provider Runtime 重写：已完成。** FAL/Hunyuan/Meshy、World Labs、GPT Image 2、Nano Banana、ElevenLabs SFX、Provider Run、Artifact Store、单资产生成编排均已有 Rust 替代实现；统一 Router 后续按 888 平台计划继续增强。
 - **M4 PostProcessing / Character / Demo Fixture：后置。**
 
 ## 8. 每个迁移模块验收

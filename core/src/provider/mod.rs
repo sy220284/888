@@ -1,7 +1,11 @@
+pub mod audio;
 pub mod fal;
 pub mod hunyuan;
+pub mod image_edit;
 pub mod image_to_3d;
 pub mod meshy;
+pub mod sfx;
+pub mod world_labs;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
