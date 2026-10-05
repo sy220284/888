@@ -215,10 +215,13 @@ impl WorldLabsRunner {
                 }
                 value
             }
-            None => json!({
-                "type": "text",
-                "text_prompt": prompt.expect("text prompt was validated"),
-            }),
+            None => {
+                let prompt = prompt.context("text world generation requires prompt")?;
+                json!({
+                    "type": "text",
+                    "text_prompt": prompt,
+                })
+            }
         };
 
         Ok(json!({
