@@ -8,7 +8,7 @@ use crate::{
     serde_db::{enum_from_string, enum_to_string, to_json},
 };
 
-pub const WORKER_PROTOCOL_VERSION: i64 = 1;
+pub const WORKER_PROTOCOL_VERSION: u64 = 1;
 
 #[derive(Clone)]
 pub struct WorkerRegistry {
@@ -48,7 +48,10 @@ impl WorkerRegistry {
         )
         .bind(registration.worker_id.to_string())
         .bind(enum_to_string(&registration.worker_type)?)
-        .bind(registration.protocol_version)
+        .bind(
+            i64::try_from(registration.protocol_version)
+                .context("worker protocol_version too large")?,
+        )
         .bind(capabilities)
         .bind(device)
         .bind(software)
@@ -128,7 +131,7 @@ impl WorkerRegistry {
     }
 }
 
-fn validate_protocol(version: i64) -> Result<()> {
+fn validate_protocol(version: u64) -> Result<()> {
     if version != WORKER_PROTOCOL_VERSION {
         bail!(
             "worker protocol mismatch: expected {}, got {}",
