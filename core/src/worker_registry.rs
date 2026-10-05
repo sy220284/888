@@ -69,11 +69,10 @@ impl WorkerRegistry {
             bail!("worker cannot self-report LOST; Core owns lost detection");
         }
         for job_id in &heartbeat.current_job_ids {
-            let state: Option<String> =
-                sqlx::query_scalar("SELECT state FROM jobs WHERE id = ?")
-                    .bind(job_id.to_string())
-                    .fetch_optional(&self.pool)
-                    .await?;
+            let state: Option<String> = sqlx::query_scalar("SELECT state FROM jobs WHERE id = ?")
+                .bind(job_id.to_string())
+                .fetch_optional(&self.pool)
+                .await?;
             let state = state
                 .as_deref()
                 .map(enum_from_string::<JobState>)
