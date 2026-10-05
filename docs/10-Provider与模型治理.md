@@ -19,6 +19,9 @@ Provider Router 负责把“需要什么能力”映射到具体模型或服务�
 - FEATURE_MATCHING
 - TEXTURE
 - AUDIO
+- ASSOCIATIVE_REASONING
+- SCENE_HYPOTHESIS
+- VERIFICATION_QUESTION
 
 后续：
 
@@ -239,3 +242,24 @@ Router 不把新任务发送到 UNAVAILABLE。
 - 版本存在。
 - Adapter 存在。
 - Benchmark 元数据完整。
+
+## 17. 联想类 Capability 约束
+
+联想类 Capability 的输出必须是结构化 Associative Proposal，不得返回“直接修改世界”的指令。
+
+适用：
+
+- ASSOCIATIVE_REASONING：提出对象、空间、拓扑候选关系。
+- SCENE_HYPOTHESIS：提出多个可比较的世界解释。
+- VERIFICATION_QUESTION：把未决假设转换为可验证问题和所需证据。
+
+联想 Provider 必须记录：
+
+- model / version
+- source observations
+- supporting evidence
+- proposal score
+- uncertainty
+- token / monetary cost
+
+Router 不允许把联想输出绕过 Hypothesis / Validation 链直接提交 Revision。
