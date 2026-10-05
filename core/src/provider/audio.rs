@@ -208,10 +208,7 @@ async fn detect_silence(path: &Path, duration: Option<f64>) -> Result<AudioSilen
 
 fn silence_bounds(starts: &[f64], ends: &[f64], duration: Option<f64>) -> AudioSilence {
     let leading = if starts.first().is_some_and(|value| *value <= 0.05) {
-        ends.first()
-            .copied()
-            .or(duration)
-            .unwrap_or(0.0)
+        ends.first().copied().or(duration).unwrap_or(0.0)
     } else {
         0.0
     };
