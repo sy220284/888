@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     state TEXT NOT NULL,
     attempt INTEGER NOT NULL CHECK (attempt >= 0),
     max_attempts INTEGER NOT NULL CHECK (max_attempts >= 1),
+    idempotent INTEGER NOT NULL CHECK (idempotent IN (0, 1)),
     checkpoint_artifact_id TEXT,
     provider_run_id TEXT,
     error_code TEXT,
