@@ -257,12 +257,12 @@ impl TryFrom<ProviderRunRow> for ProviderRunRecord {
             status_payload: row
                 .status_json
                 .as_deref()
-                .map(|value| serde_json::from_str::<Value>(value))
+                .map(serde_json::from_str::<Value>)
                 .transpose()?,
             result: row
                 .result_json
                 .as_deref()
-                .map(|value| serde_json::from_str::<Value>(value))
+                .map(serde_json::from_str::<Value>)
                 .transpose()?,
             output_artifact_ids: output_artifact_ids
                 .into_iter()
