@@ -107,19 +107,28 @@ export interface CalibrationProfile {
   metrics: Record<string, unknown>
 }
 
+export type CanonicalCapabilityRequestCapability = "IMAGE_EDIT" | "OBJECT_3D" | "WORLD_COMPLETION" | "DEPTH" | "SEGMENTATION" | "IMAGE_EMBEDDING" | "FEATURE_MATCHING" | "TEXTURE" | "AUDIO" | "ASSOCIATIVE_REASONING" | "SCENE_HYPOTHESIS" | "VERIFICATION_QUESTION" | "CHARACTER" | "MOTION" | "RELIGHTING"
+
+export type CanonicalCapabilityRequestQualityProfile = "FAST" | "BALANCED" | "HIGH" | "MAX"
+
 export type CanonicalCapabilityRequestCreativityProfile = "STRICT" | "BALANCED" | "EXPLORATORY" | "DIVERGENT"
 
 export interface CanonicalCapabilityRequest {
   request_id: string
-  capability: string
+  capability: CanonicalCapabilityRequestCapability
   input_artifact_ids: Array<string>
   world_context_ref?: string | null
   parameters: Record<string, unknown>
-  quality_profile?: string | null
+  evidence_policy: Record<string, unknown>
+  constraints: Record<string, unknown>
+  output_schema: Record<string, unknown>
+  quality_profile: CanonicalCapabilityRequestQualityProfile
   creativity_profile: CanonicalCapabilityRequestCreativityProfile
   cost_budget?: number | null
   latency_budget_ms?: number | null
   verification_required: boolean
+  deterministic_seed?: number | null
+  provider_hints?: Record<string, unknown>
 }
 
 export type CreativityProfileLevel = "STRICT" | "BALANCED" | "EXPLORATORY" | "DIVERGENT"
@@ -180,6 +189,7 @@ export interface Job {
   state: JobState
   attempt: number
   max_attempts: number
+  idempotent: boolean
   checkpoint_artifact_id?: string | null
   provider_run_id?: string | null
   error_code?: string | null
@@ -197,6 +207,7 @@ export interface Task {
   resources: Record<string, unknown>
   timeout_ms?: number | null
   max_attempts: number
+  idempotent: boolean
   retry_policy?: Record<string, unknown>
   cache_key?: string | null
   created_at: string
