@@ -371,7 +371,9 @@ impl JobEngine {
         if matches!(current.state, JobState::Completed | JobState::Failed) {
             bail!("terminal job cannot be cancelled");
         }
-        if matches!(current.state, JobState::Running | JobState::Pausing) {
+        if current.assigned_worker_id.is_some()
+            && matches!(current.state, JobState::Running | JobState::Pausing)
+        {
             self.record_event(
                 id,
                 "CANCEL_REQUESTED",
@@ -597,6 +599,7 @@ fn can_transition(from: JobState, to: JobState) -> bool {
             | (Running, Cancelled)
             | (Running, Completed)
             | (Pausing, Paused)
+            | (Pausing, Completed)
             | (Pausing, Failed)
             | (Pausing, Cancelled)
             | (Paused, Ready)
@@ -717,6 +720,23 @@ mod tests {
         assert_eq!(cancelled.state, JobState::Cancelled);
         let repeated = jobs.request_cancel(job.id).await.unwrap();
         assert_eq!(repeated.state, JobState::Cancelled);
+    }
+
+    #[tokio::test]
+    async fn pause_race_allows_completed_result() {
+        let pool = db::connect_memory().await.unwrap();
+        let jobs = JobEngine::new(pool);
+        let job = jobs.create(None, "TEST", 1, true).await.unwrap();
+
+        jobs.transition(job.id, JobState::Ready).await.unwrap();
+        jobs.transition(job.id, JobState::Running).await.unwrap();
+        jobs.transition(job.id, JobState::Pausing).await.unwrap();
+        let completed = jobs
+            .transition(job.id, JobState::Completed)
+            .await
+            .unwrap();
+
+        assert_eq!(completed.state, JobState::Completed);
     }
 
     #[tokio::test]
