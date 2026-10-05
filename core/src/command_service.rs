@@ -178,7 +178,9 @@ impl CommandService {
                     if let Some(runtime_control) = &self.runtime_control {
                         runtime_control
                             .send(RuntimeControl::Cancel(job_id))
-                            .map_err(|_| anyhow::anyhow!("worker runtime control channel closed"))?;
+                            .map_err(|_| {
+                                anyhow::anyhow!("worker runtime control channel closed")
+                            })?;
                     }
                 }
                 completed(command.command_id, serde_json::to_value(job)?)
