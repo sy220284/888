@@ -43,6 +43,7 @@ impl ArtifactStore {
     ) -> Result<Artifact> {
         let hash = blake3::hash(bytes).to_hex().to_string();
         if let Some(existing) = self.find_by_hash(&hash).await? {
+            self.restore_existing_from_bytes(&existing, bytes).await?;
             return Ok(existing);
         }
 
@@ -163,7 +164,7 @@ impl ArtifactStore {
 
         let hash = hasher.finalize().to_hex().to_string();
         if let Some(existing) = self.find_by_hash(&hash).await? {
-            let _ = fs::remove_file(&temp_path).await;
+            self.restore_existing_from_temp(&existing, &temp_path).await?;
             return Ok(existing);
         }
 
@@ -192,6 +193,49 @@ impl ArtifactStore {
             Some(redact_source_url(url)),
         )
         .await
+    }
+
+    async fn restore_existing_from_bytes(
+        &self,
+        artifact: &Artifact,
+        bytes: &[u8],
+    ) -> Result<()> {
+        let destination = self.root.join(&artifact.relative_path);
+        if fs::try_exists(&destination).await.unwrap_or(false) {
+            return Ok(());
+        }
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        fs::write(&destination, bytes).await?;
+        Ok(())
+    }
+
+    async fn restore_existing_from_temp(
+        &self,
+        artifact: &Artifact,
+        temp_path: &Path,
+    ) -> Result<()> {
+        let destination = self.root.join(&artifact.relative_path);
+        if fs::try_exists(&destination).await.unwrap_or(false) {
+            let _ = fs::remove_file(temp_path).await;
+            return Ok(());
+        }
+        if let Some(parent) = destination.parent() {
+            fs::create_dir_all(parent).await?;
+        }
+        match fs::rename(temp_path, &destination).await {
+            Ok(()) => Ok(()),
+            Err(error) if fs::try_exists(&destination).await.unwrap_or(false) => {
+                let _ = fs::remove_file(temp_path).await;
+                tracing::debug!(
+                    error = %error,
+                    "artifact was restored by another concurrent import"
+                );
+                Ok(())
+            }
+            Err(error) => Err(error.into()),
+        }
     }
 
     async fn find_by_hash(&self, hash: &str) -> Result<Option<Artifact>> {
@@ -283,7 +327,9 @@ pub fn relative_path_for_hash(hash: &str) -> String {
 }
 
 fn is_data_uri(value: &str) -> bool {
-    value.len() >= 5 && value[..5].eq_ignore_ascii_case("data:")
+    value
+        .get(..5)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("data:"))
 }
 
 fn decode_data_uri(value: &str) -> Result<(String, Vec<u8>)> {
@@ -352,6 +398,34 @@ mod tests {
             relative_path_for_hash(&first.content_hash)
         );
         assert!(store.absolute_path(&first).await.unwrap().exists());
+    }
+
+    #[tokio::test]
+    async fn repairs_missing_file_when_content_is_reimported() {
+        let pool = db::connect_memory().await.unwrap();
+        let temp = tempdir().unwrap();
+        let store = ArtifactStore::new(temp.path(), pool).await.unwrap();
+
+        let artifact = store
+            .import_bytes(b"repair-me", "application/octet-stream", None)
+            .await
+            .unwrap();
+        let path = store.absolute_path(&artifact).await.unwrap();
+        tokio::fs::remove_file(&path).await.unwrap();
+
+        let repaired = store
+            .import_bytes(b"repair-me", "application/octet-stream", None)
+            .await
+            .unwrap();
+
+        assert_eq!(artifact.id, repaired.id);
+        assert_eq!(tokio::fs::read(path).await.unwrap(), b"repair-me");
+    }
+
+    #[test]
+    fn data_uri_detection_is_utf8_safe() {
+        assert!(!super::is_data_uri("你好世界"));
+        assert!(super::is_data_uri("data:text/plain;base64,QQ=="));
     }
 
     #[tokio::test]
