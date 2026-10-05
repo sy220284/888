@@ -203,6 +203,9 @@ impl JobEngine {
         if current.state == target {
             return Ok(current);
         }
+        if current.state == JobState::Created && target == JobState::Blocked {
+            self.transition(id, JobState::Pending).await?;
+        }
         self.transition(id, target).await
     }
 
