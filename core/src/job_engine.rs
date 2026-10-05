@@ -147,26 +147,20 @@ impl JobEngine {
     }
 
     pub async fn set_checkpoint(&self, id: Uuid, artifact_id: Uuid) -> Result<()> {
-        let result = sqlx::query(
-            "UPDATE jobs SET checkpoint_artifact_id = ?, updated_at = ? WHERE id = ?",
-        )
-        .bind(artifact_id.to_string())
-        .bind(Utc::now().to_rfc3339())
-        .bind(id.to_string())
-        .execute(&self.pool)
-        .await?;
+        let result =
+            sqlx::query("UPDATE jobs SET checkpoint_artifact_id = ?, updated_at = ? WHERE id = ?")
+                .bind(artifact_id.to_string())
+                .bind(Utc::now().to_rfc3339())
+                .bind(id.to_string())
+                .execute(&self.pool)
+                .await?;
         if result.rows_affected() != 1 {
             bail!("job does not exist");
         }
         Ok(())
     }
 
-    pub async fn fail(
-        &self,
-        id: Uuid,
-        code: &str,
-        payload: Option<Value>,
-    ) -> Result<Job> {
+    pub async fn fail(&self, id: Uuid, code: &str, payload: Option<Value>) -> Result<Job> {
         let current = self.get(id).await?.context("job does not exist")?;
         if matches!(current.state, JobState::Completed | JobState::Cancelled) {
             bail!("completed or cancelled job cannot fail");
@@ -219,15 +213,13 @@ impl JobEngine {
                 JobState::Failed
             };
             let now = Utc::now();
-            sqlx::query(
-                "UPDATE jobs SET state = ?, updated_at = ? WHERE id = ? AND state = ?",
-            )
-            .bind(enum_to_string(&target)?)
-            .bind(now.to_rfc3339())
-            .bind(job.id.to_string())
-            .bind(enum_to_string(&JobState::Running)?)
-            .execute(&self.pool)
-            .await?;
+            sqlx::query("UPDATE jobs SET state = ?, updated_at = ? WHERE id = ? AND state = ?")
+                .bind(enum_to_string(&target)?)
+                .bind(now.to_rfc3339())
+                .bind(job.id.to_string())
+                .bind(enum_to_string(&JobState::Running)?)
+                .execute(&self.pool)
+                .await?;
 
             if let Some(updated) = self.get(job.id).await? {
                 recovered.push(updated);
@@ -302,11 +294,7 @@ impl TryFrom<JobRow> for Job {
     fn try_from(row: JobRow) -> Result<Self> {
         Ok(Self {
             id: Uuid::parse_str(&row.id)?,
-            world_id: row
-                .world_id
-                .as_deref()
-                .map(Uuid::parse_str)
-                .transpose()?,
+            world_id: row.world_id.as_deref().map(Uuid::parse_str).transpose()?,
             task_type: row.task_type,
             state: enum_from_string(&row.state)?,
             attempt: u64::try_from(row.attempt).context("negative job attempt")?,
@@ -327,10 +315,8 @@ impl TryFrom<JobRow> for Job {
                 .as_deref()
                 .map(from_json)
                 .transpose()?,
-            created_at: DateTime::parse_from_rfc3339(&row.created_at)?
-                .with_timezone(&Utc),
-            updated_at: DateTime::parse_from_rfc3339(&row.updated_at)?
-                .with_timezone(&Utc),
+            created_at: DateTime::parse_from_rfc3339(&row.created_at)?.with_timezone(&Utc),
+            updated_at: DateTime::parse_from_rfc3339(&row.updated_at)?.with_timezone(&Utc),
         })
     }
 }
