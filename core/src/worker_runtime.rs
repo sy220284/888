@@ -734,7 +734,6 @@ fn parse_uuid_field(value: &Value, key: &str) -> Result<Uuid> {
     Uuid::parse_str(raw).with_context(|| format!("{key} is not a valid UUID"))
 }
 
-
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, time::Duration};
@@ -748,6 +747,8 @@ mod tests {
         model::JobState,
         worker_runtime::{WorkerRuntime, WorkerSpec},
     };
+    use tempfile::tempdir;
+    use tokio::time;
 
     #[tokio::test]
     async fn runtime_executes_ready_job_through_real_worker_process() {
@@ -778,10 +779,7 @@ mod tests {
 
         let event_pool = pool.clone();
         let jobs = JobEngine::new(pool);
-        let job = jobs
-            .create(None, "DISCOVER_TOOLS", 1, true)
-            .await
-            .unwrap();
+        let job = jobs.create(None, "DISCOVER_TOOLS", 1, true).await.unwrap();
         jobs.transition(job.id, JobState::Ready).await.unwrap();
 
         let completed = time::timeout(Duration::from_secs(10), async {
