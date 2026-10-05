@@ -116,6 +116,27 @@ impl JobEngine {
         row.map(TryInto::try_into).transpose()
     }
 
+    pub async fn list_ready(&self, limit: u64) -> Result<Vec<Job>> {
+        let limit = i64::try_from(limit.max(1)).context("ready job limit too large")?;
+        let rows = sqlx::query_as::<_, JobRow>(
+            r#"
+            SELECT id, world_id, task_type, input_json, state, attempt, max_attempts, idempotent,
+                   assigned_worker_id, checkpoint_artifact_id, provider_run_id, error_code,
+                   error_payload_json, created_at, updated_at
+            FROM jobs
+            WHERE state = ? AND assigned_worker_id IS NULL
+            ORDER BY created_at, id
+            LIMIT ?
+            "#,
+        )
+        .bind(enum_to_string(&JobState::Ready)?)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter().map(TryInto::try_into).collect()
+    }
+
     pub async fn add_dependency(
         &self,
         job_id: Uuid,
@@ -349,6 +370,15 @@ impl JobEngine {
         }
         if matches!(current.state, JobState::Completed | JobState::Failed) {
             bail!("terminal job cannot be cancelled");
+        }
+        if matches!(current.state, JobState::Running | JobState::Pausing) {
+            self.record_event(
+                id,
+                "CANCEL_REQUESTED",
+                serde_json::json!({"assigned_worker_id": current.assigned_worker_id}),
+            )
+            .await?;
+            return Ok(current);
         }
         self.transition(id, JobState::Cancelled).await
     }
