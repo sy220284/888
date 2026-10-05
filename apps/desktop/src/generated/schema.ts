@@ -146,6 +146,8 @@ export type ProviderCapabilityLocation = "LOCAL" | "REMOTE"
 
 export type ProviderCapabilityHealth = "HEALTHY" | "DEGRADED" | "UNAVAILABLE" | "RATE_LIMITED" | "AUTH_ERROR"
 
+export type ProviderCapabilityQualityProfilesItem = "FAST" | "BALANCED" | "HIGH" | "MAX"
+
 export interface ProviderCapability {
   provider_id: string
   capability: ProviderCapabilityCapability
