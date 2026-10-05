@@ -108,10 +108,10 @@
 - **视觉 / 重建 / AI Worker**：Python
 - **世界状态与任务元数据**：SQLite
 - **大体积资产**：本地内容寻址文件存储
-- **空间优化 / 因子图**：GTSAM / 自研约束层
+- **空间优化 / 因子图**：GTSAM（Python Worker）+ 888 自研约束抽象层
 - **相机与几何重建**：COLMAP / PyCOLMAP + 可替换特征与匹配器
 - **深度 / 分割 / 语义**：可替换视觉模型适配层
-- **NeRF / Gaussian Splat**：Nerfstudio / gsplat 等可替换实现
+- **NeRF / Gaussian Splat**：gsplat 作为生产核心候选，Nerfstudio 用于实验 / 基线与可替换实现
 - **网格处理**：Open3D / trimesh / Blender Headless
 - **模型与服务接入**：Provider Router
 - **工作流**：显式 Task Graph + Job Engine
