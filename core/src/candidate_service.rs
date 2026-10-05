@@ -44,11 +44,8 @@ impl CandidateService {
             created_at: Utc::now(),
         };
 
-        let artifact_ids: Vec<String> = candidate
-            .artifact_ids
-            .iter()
-            .map(Uuid::to_string)
-            .collect();
+        let artifact_ids: Vec<String> =
+            candidate.artifact_ids.iter().map(Uuid::to_string).collect();
 
         sqlx::query(
             r#"
@@ -189,14 +186,12 @@ impl CandidateService {
         )
         .await?;
 
-        let update = sqlx::query(
-            "UPDATE candidates SET status = ? WHERE id = ? AND status = ?",
-        )
-        .bind(enum_to_string(&CandidateStatus::Accepted)?)
-        .bind(candidate_id.to_string())
-        .bind(enum_to_string(&CandidateStatus::Pending)?)
-        .execute(&mut *tx)
-        .await?;
+        let update = sqlx::query("UPDATE candidates SET status = ? WHERE id = ? AND status = ?")
+            .bind(enum_to_string(&CandidateStatus::Accepted)?)
+            .bind(candidate_id.to_string())
+            .bind(enum_to_string(&CandidateStatus::Pending)?)
+            .execute(&mut *tx)
+            .await?;
 
         if update.rows_affected() != 1 {
             bail!("candidate changed concurrently");
@@ -207,14 +202,12 @@ impl CandidateService {
     }
 
     pub async fn reject(&self, candidate_id: Uuid) -> Result<()> {
-        let result = sqlx::query(
-            "UPDATE candidates SET status = ? WHERE id = ? AND status = ?",
-        )
-        .bind(enum_to_string(&CandidateStatus::Rejected)?)
-        .bind(candidate_id.to_string())
-        .bind(enum_to_string(&CandidateStatus::Pending)?)
-        .execute(&self.pool)
-        .await?;
+        let result = sqlx::query("UPDATE candidates SET status = ? WHERE id = ? AND status = ?")
+            .bind(enum_to_string(&CandidateStatus::Rejected)?)
+            .bind(candidate_id.to_string())
+            .bind(enum_to_string(&CandidateStatus::Pending)?)
+            .execute(&self.pool)
+            .await?;
 
         if result.rows_affected() != 1 {
             bail!("candidate is missing or no longer pending");
@@ -261,8 +254,7 @@ impl TryFrom<CandidateRow> for Candidate {
                 .collect::<std::result::Result<Vec<_>, _>>()?,
             payload: from_json(&row.payload_json)?,
             status: enum_from_string(&row.status)?,
-            created_at: DateTime::parse_from_rfc3339(&row.created_at)?
-                .with_timezone(&Utc),
+            created_at: DateTime::parse_from_rfc3339(&row.created_at)?.with_timezone(&Utc),
         })
     }
 }
@@ -274,8 +266,7 @@ mod tests {
     use crate::{
         db,
         model::{
-            CandidateCandidateType, CandidateStatus, ValidationResultStatus,
-            WorldRevisionActorType,
+            CandidateCandidateType, CandidateStatus, ValidationResultStatus, WorldRevisionActorType,
         },
         world_repository::WorldRepository,
     };
@@ -302,12 +293,7 @@ mod tests {
             .unwrap();
 
         assert!(service
-            .accept(
-                candidate.id,
-                None,
-                None,
-                WorldRevisionActorType::System,
-            )
+            .accept(candidate.id, None, None, WorldRevisionActorType::System,)
             .await
             .is_err());
 
@@ -323,12 +309,7 @@ mod tests {
             .unwrap();
 
         let revision = service
-            .accept(
-                candidate.id,
-                None,
-                None,
-                WorldRevisionActorType::System,
-            )
+            .accept(candidate.id, None, None, WorldRevisionActorType::System)
             .await
             .unwrap();
 
