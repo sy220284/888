@@ -191,6 +191,27 @@
 
 888 的目标是让模型与 Agent 都成为可替换部件，而让**证据、约束、世界状态、验证闭环和世界编译**成为长期稳定的核心。
 
+## 当前代码框架
+
+当前 Monorepo 已按权威架构落实为真实代码边界：
+
+```text
+apps/desktop/          React / Three.js / Tauri 2 桌面入口
+core/                  Rust Canonical World / Command / Job / Provider / Worker 生命周期
+compiler/              只读 Canonical World State 的目标编译器
+workers/sdk/           Python stdio + JSONL Worker SDK
+workers/vision/        视觉 / 重建 Worker 进程入口
+workers/tools/         FFmpeg / Blender / COLMAP 等工具 Worker 入口
+packages/schema/       跨语言 JSON Schema 单一真相源
+packages/provider-sdk/ Provider Adapter 公共边界
+packages/plugin-sdk/   Reconstruction / Provider / Evaluator / Compiler 插件边界
+tests/                 跨模块基础与集成测试入口
+testdata/              Fixture / Ground Truth / Expected 长期测试资产
+tools/                 Schema、架构守卫、Benchmark 等统一工具
+```
+
+这些目录由 CI 架构守卫检查，禁止回退成 UI 直连数据库、Worker 直写世界状态、Provider 修改 Canonical World State 或 Compiler 反向写世界状态。
+
 ## 当前阶段
 
 当前仓库已经完成第一批可运行基础设施：

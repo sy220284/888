@@ -3,9 +3,13 @@
   "private": true,
   "scripts": {
     "dev:desktop": "pnpm --filter @888/desktop dev",
+    "dev:tauri": "pnpm --filter @888/desktop tauri:dev",
     "build:desktop": "pnpm --filter @888/desktop build",
+    "build:tauri": "pnpm --filter @888/desktop tauri:build",
     "typecheck": "pnpm --filter @888/desktop typecheck",
-    "test": "pnpm --filter @888/desktop test"
+    "test": "pnpm --filter @888/desktop test",
+    "check:architecture": "python tools/check_architecture.py",
+    "test:python": "python -m unittest discover -s tests/python"
   },
   "packageManager": "pnpm@10.34.6",
   "pnpm": {
