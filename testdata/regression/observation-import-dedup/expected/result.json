@@ -1,0 +1,7 @@
+{
+  "observation_count": 2,
+  "physical_artifact_count": 1,
+  "analysis_job_count": 2,
+  "analysis_job_state": "READY",
+  "artifact_logical_type": "ORIGINAL_IMAGE"
+}
