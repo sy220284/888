@@ -75,7 +75,7 @@ impl WorldLabsRunner {
         let endpoint = format!("{}/worlds:generate", self.base_url);
         let run = self
             .runs
-            .create("WORLD_GENERATION", WORLD_LABS_PROVIDER, &endpoint, &request)
+            .create("WORLD_COMPLETION", WORLD_LABS_PROVIDER, &endpoint, &request)
             .await?;
 
         let execution = async {

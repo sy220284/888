@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/calibration-profile.schema.json",
+  "title": "CalibrationProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider_id",
+    "model_id",
+    "model_version",
+    "capability",
+    "dataset_version",
+    "method",
+    "parameters",
+    "metrics"
+  ],
+  "properties": {
+    "provider_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capability": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dataset_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "RELIABILITY_CURVE",
+        "ISOTONIC",
+        "TEMPERATURE_SCALING"
+      ]
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "metrics": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/provider-capability.schema.json",
+  "title": "ProviderCapability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider_id",
+    "capability",
+    "location",
+    "health",
+    "quality_profiles",
+    "input_types",
+    "output_types"
+  ],
+  "properties": {
+    "provider_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "IMAGE_EDIT",
+        "OBJECT_3D",
+        "WORLD_COMPLETION",
+        "DEPTH",
+        "SEGMENTATION",
+        "IMAGE_EMBEDDING",
+        "FEATURE_MATCHING",
+        "TEXTURE",
+        "AUDIO",
+        "ASSOCIATIVE_REASONING",
+        "SCENE_HYPOTHESIS",
+        "VERIFICATION_QUESTION",
+        "CHARACTER",
+        "MOTION",
+        "RELIGHTING"
+      ]
+    },
+    "location": {
+      "type": "string",
+      "enum": [
+        "LOCAL",
+        "REMOTE"
+      ]
+    },
+    "health": {
+      "type": "string",
+      "enum": [
+        "HEALTHY",
+        "DEGRADED",
+        "UNAVAILABLE",
+        "RATE_LIMITED",
+        "AUTH_ERROR"
+      ]
+    },
+    "model_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "model_version": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "quality_profiles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "FAST",
+          "BALANCED",
+          "HIGH",
+          "MAX"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "input_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "output_types": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "estimated_cost": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "average_latency_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "metadata": {
+      "type": "object"
+    }
+  }
+}

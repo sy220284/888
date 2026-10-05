@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/world/entity.schema.json",
+  "title": "Entity",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "world_id",
+    "semantic_class",
+    "transform",
+    "scale",
+    "physical_properties",
+    "lifecycle",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "world_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "semantic_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "display_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "zone_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "transform": {
+      "type": "object"
+    },
+    "scale": {
+      "type": "object"
+    },
+    "physical_properties": {
+      "type": "object"
+    },
+    "lifecycle": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "HIDDEN",
+        "DELETED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

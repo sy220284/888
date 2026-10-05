@@ -1,8 +1,16 @@
 pub mod artifact_store;
 pub mod asset_generation;
+pub mod candidate_service;
+pub mod command_service;
 pub mod db;
+pub mod job_engine;
 pub mod metadata;
 pub mod model;
 pub mod project_repository;
 pub mod provider;
+pub mod provider_router;
 pub mod provider_run_repository;
+pub mod serde_db;
+pub mod worker_protocol;
+pub mod worker_registry;
+pub mod world_repository;

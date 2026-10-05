@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/command/command-response.schema.json",
+  "title": "CommandResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "command_id",
+    "status",
+    "job_ids"
+  ],
+  "properties": {
+    "command_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ACCEPTED",
+        "COMPLETED",
+        "REJECTED"
+      ]
+    },
+    "job_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "uniqueItems": true
+    },
+    "result": {},
+    "error": {}
+  }
+}

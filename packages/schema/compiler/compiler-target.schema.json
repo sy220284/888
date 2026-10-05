@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/compiler/compiler-target.schema.json",
+  "title": "CompilerTarget",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "target",
+    "quality_profile",
+    "options"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "enum": [
+        "GLB",
+        "BLENDER",
+        "UNITY",
+        "GODOT",
+        "UNREAL",
+        "WEB",
+        "XR"
+      ]
+    },
+    "quality_profile": {
+      "type": "string",
+      "enum": [
+        "FAST",
+        "BALANCED",
+        "HIGH",
+        "MAX"
+      ]
+    },
+    "options": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/world/observation.schema.json",
+  "title": "Observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "world_id",
+    "source_type",
+    "quality",
+    "immutable",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "world_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "artifact_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "source_type": {
+      "type": "string",
+      "enum": [
+        "IMAGE",
+        "VIDEO_FRAME",
+        "DEPTH",
+        "LIDAR",
+        "GPS",
+        "IMU",
+        "USER_HINT",
+        "MANUAL_MEASUREMENT"
+      ]
+    },
+    "timestamp": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "camera_intrinsics": {
+      "type": "object"
+    },
+    "camera_pose_candidate": {
+      "type": "object"
+    },
+    "quality": {
+      "type": "object"
+    },
+    "immutable": {
+      "type": "boolean"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

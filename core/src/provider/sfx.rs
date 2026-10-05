@@ -110,7 +110,7 @@ impl FalSfxRunner {
         let run = self
             .runs
             .create(
-                "SFX_GENERATION",
+                "AUDIO",
                 ELEVENLABS_SFX_PROVIDER,
                 ELEVENLABS_SFX_ENDPOINT,
                 &input,

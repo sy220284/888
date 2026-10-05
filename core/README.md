@@ -1,8 +1,10 @@
-# 888 Rust Core（Image Blaster Runtime 重写）
+# 888 Rust Core
 
-本目录承接原 `neilsonnn/image-blaster` 中不应继续留在 Node `.mjs` Runtime 的能力。
+Rust Core 负责 888 的正式状态、任务、Provider、Artifact、Worker 协议与事务边界。
 
-本次已重写：
+当前已经包含两类能力：
+
+## 1. Image Blaster Runtime 重写
 
 | Image Blaster 旧逻辑 | 888 Rust Core |
 |---|---|
@@ -11,34 +13,113 @@
 | `hunyuan-3d.mjs` | `provider/hunyuan.rs` |
 | `meshy-3d.mjs` | `provider/meshy.rs` |
 | `request-metadata.mjs` | `provider_run_repository.rs` + SQLite |
-| `ensure-local-assets.mjs` | `artifact_store.rs` + BLAKE3 内容寻址 |
-| `project-state.mjs` 项目身份部分 | `project_repository.rs` + SQLite |
-| `gpt-image-2-edit.mjs` / `nano-banana-edit.mjs` / `image-edit.mjs` | `provider/image_edit.rs` |
-| `generate-world.mjs` | `provider/world_labs.rs` |
-| `fal-elevenlabs-sfx.mjs` | `provider/sfx.rs` + `provider/audio.rs` |
+| `ensure-local-assets.mjs` / 下载逻辑 | `artifact_store.rs` + BLAKE3 内容寻址 |
+| `project-state.mjs` 项目身份 | `project_repository.rs` + SQLite |
+| GPT Image / Nano Banana Edit | `provider/image_edit.rs` |
+| World Labs | `provider/world_labs.rs` |
+| ElevenLabs SFX | `provider/sfx.rs` + `provider/audio.rs` |
 | `generate-single-asset.mjs` | `asset_generation.rs` |
-| `project/download.mjs` | `artifact_store.rs` |
 
-`project-state.mjs` 中通过扫描目录推断 `has_world / has_scene / object_counts` 的行为没有迁移。该旧状态机已经被明确淘汰；888 后续由 Canonical World State 与 Job State 提供这些事实，禁止重新引入“扫文件猜状态”。
+旧 `.claude` Runtime、bun、`scene.json / project.json` 状态源和目录扫描状态机均不进入 888。
 
-旧 Image Blaster 中需要继续承担 Runtime 职责的 Provider / Artifact / 项目身份 / 单资产生成逻辑已经全部有 Rust 替代实现；`.claude` 脚本不再作为 888 Runtime 依赖。
+## 2. 888 基础架构
 
-## 关键边界
+### Canonical World / Revision
 
-- Provider 私有结构止步于 Adapter。
-- Provider 输出只进入 Artifact / Candidate / Proposal 链。
-- 大型产物下载后立即进入本地 Artifact Store。
-- Provider Run 元数据进入 SQLite，base64 / data URI 不写入数据库。
-- 项目身份进入 SQLite；世界状态不从目录结构反推。
-- 正式跨语言协议以 `packages/schema/` 为唯一来源。
+- `world_repository.rs`
+- SQLite World / Revision 基础状态
+- active revision CAS 并发保护
+- Revision / Command 世界归属约束
 
-## 校验
+### Candidate / Validation
+
+- `candidate_service.rs`
+- Candidate 必须引用真实 Artifact
+- 最新 Validation 必须为 PASSED 才允许接受
+- 接受 Candidate 会形成 World Revision
+
+### Command
+
+- `command_service.rs`
+- command_id 幂等
+- 并发首次提交只允许一个执行者
+- 已支持基础 World / Candidate / Job 控制命令
+- 未实现命令明确返回 REJECTED
+
+### Task / Job
+
+- `job_engine.rs`
+- Core-owned Job 状态机
+- DAG 依赖
+- required / optional dependency
+- 循环依赖保护
+- checkpoint / crash recovery 基础
+- 非幂等任务无 checkpoint 时禁止自动重跑
+
+### Provider
+
+- `provider_router.rs`
+- Canonical Capability 路由
+- Quality Profile
+- Health / cost / latency 约束
+- 预算存在时，未知成本 / 时延不会被默认为满足条件
+
+### Worker
+
+- `worker_protocol.rs`
+- stdio + JSONL 单消息边界
+- 协议版本校验
+- 1 MiB 消息上限
+- 禁止 data URI 绕过 Artifact Store
+- Job 消息必须携带 job_id
+
+- `worker_registry.rs`
+- Worker 注册
+- Heartbeat
+- Core-owned LOST 判定
+- Worker 当前任务必须对应 Core 已知运行 Job
+
+## 3. 数据边界
+
+- SQLite 保存正式结构化状态。
+- 大文件进入本地内容寻址 Artifact Store。
+- Provider 只产生 Artifact / Candidate / Proposal。
+- Worker 不直接访问 SQLite。
+- UI 不直接访问 SQLite / Provider 原始 API。
+- Canonical World State 的正式修改必须经过 Core。
+- Candidate 接受必须经过 Validation + Revision。
+
+## 4. 当前仍未完成
+
+本目录已经具备阶段 0 / 阶段 1 的主要协议与状态骨架，但以下能力仍需要后续阶段实现：
+
+- 完整 Observation Import Pipeline
+- EXIF / Preview / Quality Analysis
+- Python Vision Worker 实际进程生命周期与任务执行
+- 完整 Scheduler / Retry / Backoff / Resource Queue
+- Camera / Zone / Entity 等 Canonical World Query / Mutation Service
+- Reconstruction / SfM / MVS / Splat
+- Associative Engine / Hypothesis Solver
+- Render & Verify / Repair Planner
+- World Compiler
+
+这些能力应继续按 `docs/05-详细落地执行路线.md` 顺序推进，禁止因为已有 Provider Runtime 就跳过基础世界求解阶段。
+
+## 5. 校验
 
 仓库统一入口：
 
 ```bash
+just architecture-check
 just check
 just test-fast
 ```
 
-CI 还会执行 Rust format、Clippy 和完整 workspace test。
+CI 会执行：
+
+- 架构边界检查
+- Schema / 三语言生成一致性
+- Python 生成类型编译
+- Rust format
+- Clippy
+- workspace tests

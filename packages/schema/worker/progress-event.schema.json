@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/worker/progress-event.schema.json",
+  "title": "ProgressEvent",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "job_id",
+    "protocol_version",
+    "stage",
+    "progress",
+    "message_code",
+    "metrics"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "protocol_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stage": {
+      "type": "string",
+      "minLength": 1
+    },
+    "progress": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "message_code": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metrics": {
+      "type": "object"
+    }
+  }
+}

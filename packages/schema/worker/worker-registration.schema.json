@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/worker/worker-registration.schema.json",
+  "title": "WorkerRegistration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "worker_id",
+    "worker_type",
+    "protocol_version",
+    "capabilities",
+    "device",
+    "software"
+  ],
+  "properties": {
+    "worker_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "worker_type": {
+      "type": "string",
+      "enum": [
+        "VISION",
+        "TOOL",
+        "AI_LOCAL"
+      ]
+    },
+    "protocol_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "device": {
+      "type": "object"
+    },
+    "software": {
+      "type": "object"
+    }
+  }
+}

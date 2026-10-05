@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/command/command.schema.json",
+  "title": "Command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "command_id",
+    "type",
+    "payload",
+    "schema_version",
+    "caller_context",
+    "requested_at"
+  ],
+  "properties": {
+    "command_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "CREATE_WORLD",
+        "OPEN_WORLD",
+        "IMPORT_OBSERVATIONS",
+        "DELETE_OBSERVATION",
+        "RECONSTRUCT_ZONE",
+        "ANALYZE_RELATIONS",
+        "GENERATE_ASSOCIATIVE_PROPOSALS",
+        "VERIFY_HYPOTHESIS",
+        "SUGGEST_NEXT_OBSERVATION",
+        "GENERATE_COMPLETION",
+        "VALIDATE_CANDIDATE",
+        "ACCEPT_CANDIDATE",
+        "REJECT_CANDIDATE",
+        "EXPORT_WORLD",
+        "PAUSE_JOB",
+        "RESUME_JOB",
+        "CANCEL_JOB",
+        "UPDATE_ENTITY_TRANSFORM",
+        "DELETE_ENTITY",
+        "DUPLICATE_ENTITY"
+      ]
+    },
+    "world_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "caller_context": {
+      "type": "object"
+    },
+    "requested_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

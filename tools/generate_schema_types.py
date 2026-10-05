@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_ROOT = ROOT / "packages" / "schema" / "provider"
+SCHEMA_ROOT = ROOT / "packages" / "schema"
 
 OUTPUTS = {
     ROOT / "core" / "src" / "model" / "generated.rs": "rust",
@@ -24,6 +24,21 @@ def pascal(value: str) -> str:
 
 def enum_name(root: str, prop: str) -> str:
     return root + pascal(prop)
+
+
+RUST_KEYWORDS = {
+    "as", "break", "const", "continue", "crate", "else", "enum", "extern",
+    "false", "fn", "for", "if", "impl", "in", "let", "loop", "match",
+    "mod", "move", "mut", "pub", "ref", "return", "self", "Self", "static",
+    "struct", "super", "trait", "true", "type", "unsafe", "use", "where",
+    "while", "async", "await", "dyn", "abstract", "become", "box", "do",
+    "final", "macro", "override", "priv", "typeof", "unsized", "virtual",
+    "yield", "try",
+}
+
+
+def rust_field_name(prop: str) -> str:
+    return f"r#{prop}" if prop in RUST_KEYWORDS else prop
 
 
 def type_parts(spec: dict[str, Any]) -> tuple[str | None, bool]:
@@ -46,6 +61,14 @@ def enum_variants(values: list[str]) -> list[tuple[str, str]]:
     return variants
 
 
+def enum_specs(prop: str, spec: dict[str, Any]):
+    if "enum" in spec:
+        yield prop, spec
+    kind, _ = type_parts(spec)
+    if kind == "array":
+        yield from enum_specs(prop + "Item", spec.get("items", {}))
+
+
 def rust_base(spec: dict[str, Any], root: str, prop: str) -> str:
     if "enum" in spec:
         return enum_name(root, prop)
@@ -57,7 +80,8 @@ def rust_base(spec: dict[str, Any], root: str, prop: str) -> str:
             return "DateTime<Utc>"
         return "String"
     if kind == "integer":
-        return "u64" if spec.get("minimum") == 0 else "i64"
+        minimum = spec.get("minimum")
+        return "u64" if isinstance(minimum, (int, float)) and minimum >= 0 else "i64"
     if kind == "number":
         return "f64"
     if kind == "boolean":
@@ -109,10 +133,10 @@ def python_base(spec: dict[str, Any], root: str, prop: str) -> str:
 
 def load_schemas() -> list[dict[str, Any]]:
     schemas: list[dict[str, Any]] = []
-    for path in sorted(SCHEMA_ROOT.glob("*.schema.json")):
+    for path in sorted(SCHEMA_ROOT.rglob("*.schema.json")):
         schemas.append(json.loads(path.read_text(encoding="utf-8")))
     if not schemas:
-        raise SystemExit("没有找到 Provider Schema")
+        raise SystemExit("没有找到 Schema")
     return schemas
 
 
@@ -131,17 +155,16 @@ def render_rust(schemas: list[dict[str, Any]]) -> str:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         for prop, spec in props.items():
-            if "enum" not in spec:
-                continue
-            name = enum_name(title, prop)
-            lines.extend([
+            for enum_prop, enum_spec in enum_specs(prop, spec):
+                name = enum_name(title, enum_prop)
+                lines.extend([
                 "#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]",
                 f"pub enum {name} {{",
             ])
-            for variant, raw in enum_variants(spec["enum"]):
-                lines.append(f'    #[serde(rename = "{raw}")]')
-                lines.append(f"    {variant},")
-            lines.extend(["}", ""])
+                for variant, raw in enum_variants(enum_spec["enum"]):
+                    lines.append(f'    #[serde(rename = "{raw}")]')
+                    lines.append(f"    {variant},")
+                lines.extend(["}", ""])
 
         lines.extend([
             "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]",
@@ -152,7 +175,7 @@ def render_rust(schemas: list[dict[str, Any]]) -> str:
             _, nullable = type_parts(spec)
             optional = prop not in required or nullable
             field_type = f"Option<{base}>" if optional else base
-            lines.append(f"    pub {prop}: {field_type},")
+            lines.append(f"    pub {rust_field_name(prop)}: {field_type},")
         lines.extend(["}", ""])
     return "\n".join(lines).rstrip() + "\n"
 
@@ -164,10 +187,9 @@ def render_ts(schemas: list[dict[str, Any]]) -> str:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         for prop, spec in props.items():
-            if "enum" not in spec:
-                continue
-            values = " | ".join(json.dumps(value) for value in spec["enum"])
-            lines.extend([f"export type {enum_name(title, prop)} = {values}", ""])
+            for enum_prop, enum_spec in enum_specs(prop, spec):
+                values = " | ".join(json.dumps(value) for value in enum_spec["enum"])
+                lines.extend([f"export type {enum_name(title, enum_prop)} = {values}", ""])
 
         lines.append(f"export interface {title} {{")
         for prop, spec in props.items():
@@ -197,13 +219,12 @@ def render_python(schemas: list[dict[str, Any]]) -> str:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         for prop, spec in props.items():
-            if "enum" not in spec:
-                continue
-            values = ", ".join(repr(value) for value in spec["enum"])
-            lines.extend([
-                f"{enum_name(title, prop)}: TypeAlias = Literal[{values}]",
-                "",
-            ])
+            for enum_prop, enum_spec in enum_specs(prop, spec):
+                values = ", ".join(repr(value) for value in enum_spec["enum"])
+                lines.extend([
+                    f"{enum_name(title, enum_prop)}: TypeAlias = Literal[{values}]",
+                    "",
+                ])
 
         lines.extend(["@dataclass(slots=True)", f"class {title}:"])
         ordered = [
