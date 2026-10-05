@@ -73,7 +73,7 @@ AI 不得在存在未解决文档冲突时继续扩展实现。
 3. 联想只能提出 Prior / Proposal，不能直接生成 Observed 或 Verified。
 4. 多假设可以并存，新证据推动收敛。
 5. Canonical World State 是唯一正式世界状态。
-6. Provider 只产生 Candidate，不直接写正式世界。
+6. Provider 只产生 Candidate / Proposal / Artifact，不直接写正式世界。
 7. Candidate 经过 Validation 后才能进入 Revision。
 8. 原始 Observation 不被生成内容覆盖。
 9. 模型、Agent、渲染表示都必须可替换。
@@ -199,7 +199,7 @@ AI 不得在存在未解决文档冲突时继续扩展实现。
     ↓
     Worker
 
-    Provider → Candidate
+    Provider → Candidate / Proposal / Artifact
     Canonical World State → Compiler
 
 禁止：
