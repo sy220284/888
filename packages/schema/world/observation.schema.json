@@ -8,6 +8,7 @@
     "id",
     "world_id",
     "source_type",
+    "payload",
     "quality",
     "immutable",
     "created_at"
@@ -52,6 +53,9 @@
       "type": "object"
     },
     "camera_pose_candidate": {
+      "type": "object"
+    },
+    "payload": {
       "type": "object"
     },
     "quality": {
