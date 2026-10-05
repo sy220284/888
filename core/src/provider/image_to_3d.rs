@@ -160,4 +160,3 @@ impl FalImageTo3dRunner {
         execution
     }
 }
-
