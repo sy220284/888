@@ -957,6 +957,7 @@ pub struct Observation {
     pub timestamp: Option<DateTime<Utc>>,
     pub camera_intrinsics: Option<Value>,
     pub camera_pose_candidate: Option<Value>,
+    pub payload: Value,
     pub quality: Value,
     pub immutable: bool,
     pub created_at: DateTime<Utc>,
