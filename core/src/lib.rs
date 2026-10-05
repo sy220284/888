@@ -6,6 +6,7 @@ pub mod db;
 pub mod job_engine;
 pub mod metadata;
 pub mod model;
+pub mod observation_analysis;
 pub mod observation_import;
 pub mod observation_repository;
 pub mod project_repository;
