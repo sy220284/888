@@ -7,6 +7,7 @@
   "required": [
     "id",
     "task_type",
+    "input",
     "state",
     "attempt",
     "max_attempts",
@@ -29,6 +30,9 @@
     "task_type": {
       "type": "string",
       "minLength": 1
+    },
+    "input": {
+      "type": "object"
     },
     "state": {
       "type": "string",
