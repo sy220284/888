@@ -56,6 +56,9 @@ Rust Core 负责 888 的正式状态、任务、Provider、Artifact、Worker 协
 - `IMPORT_OBSERVATIONS` 已接入幂等 Command
 - 每条 Observation 自动创建持久化 `ANALYZE_OBSERVATION` Job
 - Job 持久化输入参数，重启后不会丢失任务对象
+- Vision Worker 实际执行 EXIF / Preview / Quality Analysis
+- Worker 只读取 Artifact token；Preview 由 Core 验证后导入 Artifact Store
+- Observation 正式分析结果只由 Core 回写 SQLite
 - 固定 Fixture 验证 Observation=2 / Artifact=1 / Job=2
 
 ### Task / Job
@@ -91,6 +94,14 @@ Rust Core 负责 888 的正式状态、任务、Provider、Artifact、Worker 协
 - Core-owned LOST 判定
 - Worker 当前任务必须对应 Core 已知运行 Job
 
+- `worker_runtime.rs`
+- Core 持有 Python Worker 进程生命周期
+- READY Job 按 capability 调度并绑定 assigned_worker_id
+- stdio + JSONL 双向 JOB_DISPATCH / PROGRESS / JOB_RESULT
+- PAUSE / CANCEL 控制链
+- Worker 退出 / 心跳超时后的 Job 恢复
+- Core 启动时执行 interrupted Job 恢复
+
 ## 3. 数据边界
 
 - SQLite 保存正式结构化状态。
@@ -103,14 +114,12 @@ Rust Core 负责 888 的正式状态、任务、Provider、Artifact、Worker 协
 
 ## 4. 当前仍未完成
 
-本目录已经具备阶段 0 / 阶段 1 的主要协议与状态骨架，但以下能力仍需要后续阶段实现：
+阶段 1 的 Worker 生命周期与基础调度已经进入真实运行链，阶段 2 的图片 Observation 分析闭环已经落地。以下能力继续按执行路线推进：
 
-- EXIF / Preview / Quality Analysis
 - 视频导入 / 关键帧 Observation
-- Python Vision Worker 实际进程生命周期与任务执行
-- 完整 Scheduler / Retry / Backoff / Resource Queue
-- Camera / Zone / Entity 等 Canonical World Query / Mutation Service
+- 更完整的 Retry / Backoff / Resource Queue 与硬件资源调度
 - Reconstruction / SfM / MVS / Splat
+- Camera / Zone / Entity 等 Canonical World Query / Mutation Service
 - Associative Engine / Hypothesis Solver
 - Render & Verify / Repair Planner
 - World Compiler
