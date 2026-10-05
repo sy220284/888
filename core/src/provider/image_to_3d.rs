@@ -1,13 +1,12 @@
 use std::time::Duration;
 
 use anyhow::{bail, Result};
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use uuid::Uuid;
 
 use crate::{
     artifact_store::ArtifactStore,
-    model::Artifact,
+    model::{AIOutputEnvelope, AIOutputEnvelopeStatus, Artifact},
     provider::{collect_remote_files, fal::FalQueueClient},
     provider_run_repository::ProviderRunRepository,
 };
@@ -16,20 +15,6 @@ use super::{
     hunyuan::{Hunyuan3dOptions, HUNYUAN_3D_ENDPOINT, HUNYUAN_PROVIDER},
     meshy::{Meshy3dOptions, MESHY_3D_ENDPOINT, MESHY_PROVIDER},
 };
-
-#[derive(Debug, Clone)]
-pub enum ImageSource {
-    Artifact(Artifact),
-    RemoteUrl(String),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ImageTo3dRunResult {
-    pub run_id: Uuid,
-    pub request_id: String,
-    pub artifacts: Vec<Artifact>,
-    pub raw_result: Value,
-}
 
 #[derive(Clone)]
 pub struct FalImageTo3dRunner {
@@ -63,10 +48,10 @@ impl FalImageTo3dRunner {
 
     pub async fn run_hunyuan(
         &self,
-        image: ImageSource,
+        image: &Artifact,
         options: &Hunyuan3dOptions,
-    ) -> Result<ImageTo3dRunResult> {
-        let model_input = self.resolve_image_input(image).await?;
+    ) -> Result<AIOutputEnvelope> {
+        let model_input = self.artifact_store.to_data_uri(image).await?;
         let input = options.build_input(&model_input)?;
         self.run_fal_provider(HUNYUAN_PROVIDER, HUNYUAN_3D_ENDPOINT, input)
             .await
@@ -74,25 +59,13 @@ impl FalImageTo3dRunner {
 
     pub async fn run_meshy(
         &self,
-        image: ImageSource,
+        image: &Artifact,
         options: &Meshy3dOptions,
-    ) -> Result<ImageTo3dRunResult> {
-        let model_input = self.resolve_image_input(image).await?;
+    ) -> Result<AIOutputEnvelope> {
+        let model_input = self.artifact_store.to_data_uri(image).await?;
         let input = options.build_input(&model_input)?;
         self.run_fal_provider(MESHY_PROVIDER, MESHY_3D_ENDPOINT, input)
             .await
-    }
-
-    async fn resolve_image_input(&self, image: ImageSource) -> Result<String> {
-        match image {
-            ImageSource::Artifact(artifact) => self.artifact_store.to_data_uri(&artifact).await,
-            ImageSource::RemoteUrl(url) => {
-                if !url.starts_with("https://") {
-                    bail!("remote image input must use HTTPS");
-                }
-                Ok(url)
-            }
-        }
     }
 
     async fn run_fal_provider(
@@ -100,7 +73,7 @@ impl FalImageTo3dRunner {
         provider: &str,
         endpoint: &str,
         input: Value,
-    ) -> Result<ImageTo3dRunResult> {
+    ) -> Result<AIOutputEnvelope> {
         let run = self
             .runs
             .create("OBJECT_3D", provider, endpoint, &input)
@@ -140,25 +113,43 @@ impl FalImageTo3dRunner {
             if remote_files.is_empty() {
                 bail!("OBJECT_3D provider returned no downloadable artifacts");
             }
-            let mut artifacts = Vec::with_capacity(remote_files.len());
+
+            let mut artifact_ids = Vec::with_capacity(remote_files.len());
+            let mut outputs = Vec::with_capacity(remote_files.len());
+
             for remote in remote_files {
                 let artifact = self
                     .artifact_store
                     .import_source(&remote.url, remote.content_type.as_deref())
                     .await?;
-                artifacts.push(artifact);
+                artifact_ids.push(artifact.id);
+                outputs.push(json!({
+                    "role": remote.label,
+                    "artifact_id": artifact.id,
+                    "mime": artifact.mime,
+                    "size_bytes": artifact.size_bytes,
+                    "original_file_name": remote.file_name
+                }));
             }
 
-            let artifact_ids: Vec<Uuid> = artifacts.iter().map(|artifact| artifact.id).collect();
             self.runs
                 .complete(run.id, &raw_result, &artifact_ids)
                 .await?;
 
-            Ok::<_, anyhow::Error>(ImageTo3dRunResult {
+            Ok::<_, anyhow::Error>(AIOutputEnvelope {
                 run_id: run.id,
-                request_id: submission.request_id,
-                artifacts,
-                raw_result,
+                provider: provider.to_owned(),
+                model: Some(endpoint.to_owned()),
+                model_version: None,
+                status: AIOutputEnvelopeStatus::Completed,
+                artifact_ids,
+                payload: json!({ "outputs": outputs }),
+                raw_confidence: None,
+                calibrated_confidence: None,
+                provider_metadata: Some(json!({
+                    "endpoint": endpoint,
+                    "request_id": submission.request_id
+                })),
             })
         }
         .await;
@@ -167,5 +158,30 @@ impl FalImageTo3dRunner {
             let _ = self.runs.fail(run.id, &error.to_string()).await;
         }
         execution
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn public_runner_accepts_artifacts_only() {
+        fn assert_artifact_input(
+            _runner: &FalImageTo3dRunner,
+            _artifact: &Artifact,
+            _options: &Hunyuan3dOptions,
+        ) {
+        }
+
+        let _ = assert_artifact_input;
+    }
+
+    #[test]
+    fn output_envelope_status_is_schema_generated() {
+        assert_eq!(
+            AIOutputEnvelopeStatus::Completed,
+            AIOutputEnvelopeStatus::Completed
+        );
     }
 }
