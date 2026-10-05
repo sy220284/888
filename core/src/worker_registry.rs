@@ -126,10 +126,7 @@ impl WorkerRegistry {
         Ok(())
     }
 
-    pub async fn mark_lost_workers_before(
-        &self,
-        cutoff: DateTime<Utc>,
-    ) -> Result<Vec<Uuid>> {
+    pub async fn mark_lost_workers_before(&self, cutoff: DateTime<Utc>) -> Result<Vec<Uuid>> {
         let workers: Vec<String> = sqlx::query_scalar(
             r#"
             SELECT worker_id
