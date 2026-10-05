@@ -64,7 +64,10 @@ impl ObservationRepository {
         if !quality.is_object() {
             bail!("observation analysis quality must be an object");
         }
-        if camera_intrinsics.as_ref().is_some_and(|value| !value.is_object()) {
+        if camera_intrinsics
+            .as_ref()
+            .is_some_and(|value| !value.is_object())
+        {
             bail!("camera_intrinsics must be an object when present");
         }
 
