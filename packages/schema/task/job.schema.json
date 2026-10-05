@@ -64,6 +64,13 @@
     "idempotent": {
       "type": "boolean"
     },
+    "assigned_worker_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
     "checkpoint_artifact_id": {
       "type": [
         "string",

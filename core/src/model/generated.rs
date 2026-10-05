@@ -532,6 +532,7 @@ pub struct Job {
     pub attempt: u64,
     pub max_attempts: u64,
     pub idempotent: bool,
+    pub assigned_worker_id: Option<Uuid>,
     pub checkpoint_artifact_id: Option<Uuid>,
     pub provider_run_id: Option<Uuid>,
     pub error_code: Option<String>,

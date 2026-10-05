@@ -1,21 +1,28 @@
-name: Desktop 前端校验
+name: Desktop 前端与 Tauri 校验
 
 on:
   push:
     paths:
       - "apps/desktop/**"
+      - "core/**"
+      - "packages/schema/**"
       - "package.json"
       - "pnpm-workspace.yaml"
+      - "rust-toolchain.toml"
       - ".github/workflows/desktop-ci.yml"
   pull_request:
     paths:
       - "apps/desktop/**"
+      - "core/**"
+      - "packages/schema/**"
       - "package.json"
       - "pnpm-workspace.yaml"
+      - "rust-toolchain.toml"
       - ".github/workflows/desktop-ci.yml"
 
 jobs:
-  verify:
+  frontend:
+    name: 前端
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,3 +34,18 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build:desktop
+
+  tauri:
+    name: Tauri Rust 壳
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.98.1
+      - name: 安装 Linux Tauri 编译依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y             libwebkit2gtk-4.1-dev             build-essential             curl             wget             file             libxdo-dev             libssl-dev             libayatana-appindicator3-dev             librsvg2-dev
+      - name: 编译 Tauri 壳
+        run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
