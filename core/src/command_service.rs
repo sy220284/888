@@ -44,7 +44,21 @@ impl CommandService {
             }));
         }
 
-        self.insert_command(command).await?;
+        let inserted = self.insert_command(command).await?;
+        if !inserted {
+            let existing = self
+                .load(command.command_id)
+                .await?
+                .context("command conflict row disappeared")?;
+            ensure_same_command(&existing, command)?;
+            return Ok(existing.response.unwrap_or_else(|| CommandResponse {
+                command_id: command.command_id,
+                status: CommandResponseStatus::Accepted,
+                job_ids: Vec::new(),
+                result: None,
+                error: None,
+            }));
+        }
 
         let response = match self.execute_new(command).await {
             Ok(response) => response,
@@ -153,7 +167,7 @@ impl CommandService {
         }
     }
 
-    async fn insert_command(&self, command: &Command) -> Result<()> {
+    async fn insert_command(&self, command: &Command) -> Result<bool> {
         let result = sqlx::query(
             r#"
             INSERT INTO commands(
@@ -174,14 +188,7 @@ impl CommandService {
         .execute(&self.pool)
         .await?;
 
-        if result.rows_affected() == 0 {
-            let existing = self
-                .load(command.command_id)
-                .await?
-                .context("command conflict row disappeared")?;
-            ensure_same_command(&existing, command)?;
-        }
-        Ok(())
+        Ok(result.rows_affected() == 1)
     }
 
     async fn persist_response(&self, response: &CommandResponse) -> Result<()> {
