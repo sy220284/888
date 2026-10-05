@@ -76,9 +76,7 @@ impl CommandService {
                 completed(command.command_id, serde_json::to_value(world)?)
             }
             CommandType::OpenWorld => {
-                let world_id = command
-                    .world_id
-                    .context("OPEN_WORLD requires world_id")?;
+                let world_id = command.world_id.context("OPEN_WORLD requires world_id")?;
                 let world = self
                     .worlds
                     .get(world_id)
@@ -258,9 +256,9 @@ fn optional_uuid(payload: &Value, key: &str) -> Result<Option<Uuid>> {
     let value = value
         .as_str()
         .with_context(|| format!("payload.{key} must be a UUID string or null"))?;
-    Ok(Some(
-        Uuid::parse_str(value).with_context(|| format!("payload.{key} is not a valid UUID"))?,
-    ))
+    Ok(Some(Uuid::parse_str(value).with_context(|| {
+        format!("payload.{key} is not a valid UUID")
+    })?))
 }
 
 fn actor_type(caller_context: &Value) -> Result<WorldRevisionActorType> {
