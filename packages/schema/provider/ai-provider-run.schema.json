@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/ai-provider-run.schema.json",
+  "title": "AIProviderRun",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "capability", "provider", "endpoint", "status", "input", "output_artifact_ids", "created_at", "updated_at"],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "capability": { "type": "string", "minLength": 1 },
+    "provider": { "type": "string", "minLength": 1 },
+    "endpoint": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["CREATED", "SUBMITTED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]
+    },
+    "request_id": { "type": ["string", "null"] },
+    "input": {},
+    "status_payload": {},
+    "result": {},
+    "output_artifact_ids": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" }
+    },
+    "error": { "type": ["string", "null"] },
+    "submitted_at": { "type": ["string", "null"], "format": "date-time" },
+    "completed_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  }
+}
