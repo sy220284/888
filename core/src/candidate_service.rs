@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
@@ -32,6 +34,21 @@ impl CandidateService {
         artifact_ids: Vec<Uuid>,
         payload: Value,
     ) -> Result<Candidate> {
+        let unique_artifacts: HashSet<Uuid> = artifact_ids.iter().copied().collect();
+        if unique_artifacts.len() != artifact_ids.len() {
+            bail!("candidate artifact_ids must be unique");
+        }
+        for artifact_id in &artifact_ids {
+            let exists: Option<i64> =
+                sqlx::query_scalar("SELECT 1 FROM artifacts WHERE id = ?")
+                    .bind(artifact_id.to_string())
+                    .fetch_optional(&self.pool)
+                    .await?;
+            if exists.is_none() {
+                bail!("candidate references missing artifact {artifact_id}");
+            }
+        }
+
         let candidate = Candidate {
             id: Uuid::new_v4(),
             world_id,
@@ -97,8 +114,12 @@ impl CandidateService {
         if validator.trim().is_empty() {
             bail!("validator must not be empty");
         }
-        if self.get(candidate_id).await?.is_none() {
-            bail!("candidate does not exist");
+        let candidate = self
+            .get(candidate_id)
+            .await?
+            .context("candidate does not exist")?;
+        if candidate.status != CandidateStatus::Pending {
+            bail!("only PENDING candidates can be validated");
         }
 
         let result = ValidationResult {
@@ -157,17 +178,25 @@ impl CandidateService {
             bail!("only PENDING candidates can be accepted");
         }
 
-        let passed_status = enum_to_string(&ValidationResultStatus::Passed)?;
-        let passed_count: i64 = sqlx::query_scalar(
-            "SELECT COUNT(*) FROM validation_results WHERE candidate_id = ? AND status = ?",
+        let latest_validation: Option<String> = sqlx::query_scalar(
+            r#"
+            SELECT status
+            FROM validation_results
+            WHERE candidate_id = ?
+            ORDER BY created_at DESC, rowid DESC
+            LIMIT 1
+            "#,
         )
         .bind(candidate_id.to_string())
-        .bind(passed_status)
-        .fetch_one(&mut *tx)
+        .fetch_optional(&mut *tx)
         .await?;
 
-        if passed_count == 0 {
-            bail!("candidate cannot be accepted before a PASSED validation");
+        let latest_validation = latest_validation
+            .as_deref()
+            .map(enum_from_string::<ValidationResultStatus>)
+            .transpose()?;
+        if latest_validation != Some(ValidationResultStatus::Passed) {
+            bail!("candidate latest validation must be PASSED before acceptance");
         }
 
         let revision = commit_revision_in_tx(
@@ -272,6 +301,72 @@ mod tests {
     };
 
     use super::CandidateService;
+
+    #[tokio::test]
+    async fn rejects_missing_or_duplicate_artifact_references() {
+        let pool = db::connect_memory().await.unwrap();
+        let worlds = WorldRepository::new(pool.clone());
+        let service = CandidateService::new(pool);
+        let world = worlds.create("Artifact Validation").await.unwrap();
+        let missing = uuid::Uuid::new_v4();
+
+        assert!(service
+            .create(
+                world.id,
+                CandidateCandidateType::Geometry,
+                None,
+                None,
+                vec![missing],
+                json!({}),
+            )
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn latest_failed_validation_blocks_acceptance() {
+        let pool = db::connect_memory().await.unwrap();
+        let worlds = WorldRepository::new(pool.clone());
+        let service = CandidateService::new(pool);
+        let world = worlds.create("Validation Ordering").await.unwrap();
+        let candidate = service
+            .create(
+                world.id,
+                CandidateCandidateType::Geometry,
+                None,
+                None,
+                vec![],
+                json!({}),
+            )
+            .await
+            .unwrap();
+
+        service
+            .add_validation(
+                candidate.id,
+                ValidationResultStatus::Passed,
+                vec![],
+                json!({}),
+                "validator",
+            )
+            .await
+            .unwrap();
+        service
+            .add_validation(
+                candidate.id,
+                ValidationResultStatus::Failed,
+                vec![json!({"type": "POSITION_ERROR"})],
+                json!({}),
+                "validator",
+            )
+            .await
+            .unwrap();
+
+        assert!(service
+            .accept(candidate.id, None, None, WorldRevisionActorType::System)
+            .await
+            .is_err());
+    }
 
     #[tokio::test]
     async fn candidate_requires_passed_validation_before_revision_acceptance() {
