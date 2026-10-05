@@ -145,6 +145,7 @@ CREATE TABLE IF NOT EXISTS portals (
     confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
+    CHECK (to_zone_id IS NULL OR to_zone_id != from_zone_id),
     FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE,
     FOREIGN KEY(from_zone_id) REFERENCES zones(id) ON DELETE RESTRICT,
     FOREIGN KEY(to_zone_id) REFERENCES zones(id) ON DELETE SET NULL,
@@ -180,6 +181,10 @@ CREATE TABLE IF NOT EXISTS geometry_representations (
     lod_level INTEGER CHECK (lod_level IS NULL OR lod_level >= 0),
     verification_state TEXT NOT NULL,
     created_at TEXT NOT NULL,
+    CHECK (
+        (entity_id IS NOT NULL AND zone_id IS NULL)
+        OR (entity_id IS NULL AND zone_id IS NOT NULL)
+    ),
     FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE,
     FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE CASCADE,
     FOREIGN KEY(zone_id) REFERENCES zones(id) ON DELETE CASCADE,
@@ -265,3 +270,63 @@ CREATE TABLE IF NOT EXISTS worker_registrations (
     last_heartbeat_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_world_revisions_command_unique
+    ON world_revisions(command_id)
+    WHERE command_id IS NOT NULL;
+
+CREATE TRIGGER IF NOT EXISTS trg_world_active_revision_belongs_to_world
+BEFORE UPDATE OF active_revision_id ON worlds
+WHEN NEW.active_revision_id IS NOT NULL
+     AND NOT EXISTS (
+         SELECT 1
+         FROM world_revisions
+         WHERE id = NEW.active_revision_id
+           AND world_id = NEW.id
+     )
+BEGIN
+    SELECT RAISE(ABORT, 'active revision must belong to world');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_revision_command_world_matches
+BEFORE INSERT ON world_revisions
+WHEN NEW.command_id IS NOT NULL
+     AND EXISTS (
+         SELECT 1
+         FROM commands
+         WHERE command_id = NEW.command_id
+           AND world_id IS NOT NULL
+           AND world_id != NEW.world_id
+     )
+BEGIN
+    SELECT RAISE(ABORT, 'revision command world mismatch');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_validation_requires_pending_candidate
+BEFORE INSERT ON validation_results
+WHEN NOT EXISTS (
+    SELECT 1
+    FROM candidates
+    WHERE id = NEW.candidate_id
+      AND status = 'PENDING'
+)
+BEGIN
+    SELECT RAISE(ABORT, 'validation requires pending candidate');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_evidence_source_job_exists
+BEFORE INSERT ON evidence
+WHEN NEW.source_job_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM jobs WHERE id = NEW.source_job_id)
+BEGIN
+    SELECT RAISE(ABORT, 'evidence source job does not exist');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_proposal_source_job_exists
+BEFORE INSERT ON associative_proposals
+WHEN NEW.created_by_job_id IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM jobs WHERE id = NEW.created_by_job_id)
+BEGIN
+    SELECT RAISE(ABORT, 'proposal source job does not exist');
+END;
