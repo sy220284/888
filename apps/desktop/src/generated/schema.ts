@@ -400,6 +400,25 @@ export interface Hypothesis {
   updated_at: string
 }
 
+export type ObservationAnalysisStatus = "COMPLETED" | "PARTIAL" | "FAILED"
+
+export interface ObservationAnalysis {
+  id: string
+  observation_id: string
+  source_artifact_id: string
+  status: ObservationAnalysisStatus
+  preview_artifact_id?: string | null
+  width?: number | null
+  height?: number | null
+  orientation?: number | null
+  captured_at?: string | null
+  exif: Record<string, unknown>
+  quality: Record<string, unknown>
+  analyzer_version: string
+  error?: string | null
+  analyzed_at: string
+}
+
 export type ObservationSourceType = "IMAGE" | "VIDEO_FRAME" | "DEPTH" | "LIDAR" | "GPS" | "IMU" | "USER_HINT" | "MANUAL_MEASUREMENT"
 
 export interface Observation {
