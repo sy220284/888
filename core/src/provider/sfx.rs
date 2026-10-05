@@ -150,7 +150,10 @@ impl FalSfxRunner {
                 tokio::time::sleep(self.poll_interval).await;
             }
 
-            let raw_result = self.fal.result(ELEVENLABS_SFX_ENDPOINT, &submission).await?;
+            let raw_result = self
+                .fal
+                .result(ELEVENLABS_SFX_ENDPOINT, &submission)
+                .await?;
             let audio = raw_result
                 .get("audio")
                 .context("SFX result did not include audio")?;
@@ -159,18 +162,11 @@ impl FalSfxRunner {
                 .and_then(Value::as_str)
                 .context("SFX result did not include audio.url")?;
             let content_type = audio.get("content_type").and_then(Value::as_str);
-            let raw_artifact = self
-                .artifact_store
-                .import_source(url, content_type)
-                .await?;
+            let raw_artifact = self.artifact_store.import_source(url, content_type).await?;
 
             let should_postprocess = options.postprocess && !options.loop_audio;
-            let analysis = postprocess_audio(
-                &self.artifact_store,
-                &raw_artifact,
-                should_postprocess,
-            )
-            .await?;
+            let analysis =
+                postprocess_audio(&self.artifact_store, &raw_artifact, should_postprocess).await?;
             let output_artifact = self
                 .artifact_store
                 .get(analysis.output_artifact_id)

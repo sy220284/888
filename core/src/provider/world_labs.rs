@@ -97,12 +97,19 @@ impl WorldLabsRunner {
             self.runs.mark_submitted(run.id, &operation_id).await?;
             let started = tokio::time::Instant::now();
 
-            while !operation.get("done").and_then(Value::as_bool).unwrap_or(false) {
+            while !operation
+                .get("done")
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+            {
                 if operation.get("error").is_some() {
                     bail!("World Labs operation failed: {}", operation["error"]);
                 }
                 if started.elapsed() >= self.timeout {
-                    bail!("World Labs operation timed out after {}s", self.timeout.as_secs());
+                    bail!(
+                        "World Labs operation timed out after {}s",
+                        self.timeout.as_secs()
+                    );
                 }
                 self.runs.mark_status(run.id, &operation).await?;
                 tokio::time::sleep(self.poll_interval).await;
@@ -152,7 +159,9 @@ impl WorldLabsRunner {
                 }));
             }
 
-            self.runs.complete(run.id, &operation, &artifact_ids).await?;
+            self.runs
+                .complete(run.id, &operation, &artifact_ids)
+                .await?;
             Ok::<_, anyhow::Error>(AIOutputEnvelope {
                 run_id: run.id,
                 provider: WORLD_LABS_PROVIDER.to_owned(),
@@ -242,7 +251,10 @@ mod tests {
 
     #[test]
     fn extracts_operation_id_from_all_supported_shapes() {
-        assert_eq!(operation_id(&json!({"operation_id": "abc"})).unwrap(), "abc");
+        assert_eq!(
+            operation_id(&json!({"operation_id": "abc"})).unwrap(),
+            "abc"
+        );
         assert_eq!(
             operation_id(&json!({"name": "operations/xyz"})).unwrap(),
             "xyz"

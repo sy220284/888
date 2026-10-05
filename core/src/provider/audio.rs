@@ -147,7 +147,10 @@ async fn probe_duration(path: &Path) -> Result<Option<f64>> {
         .await
         .context("failed to run ffprobe")?;
     if !output.status.success() {
-        bail!("ffprobe failed: {}", String::from_utf8_lossy(&output.stderr));
+        bail!(
+            "ffprobe failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
     let value: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     Ok(value["format"]["duration"]
@@ -205,7 +208,8 @@ async fn detect_silence(path: &Path, duration: Option<f64>) -> Result<AudioSilen
 }
 
 fn parse_metric(text: &str, marker: &str) -> Option<f64> {
-    text.lines().find_map(|line| parse_line_metric(line, marker))
+    text.lines()
+        .find_map(|line| parse_line_metric(line, marker))
 }
 
 fn parse_all_metric(text: &str, marker: &str) -> Vec<f64> {
@@ -263,7 +267,10 @@ mod tests {
     #[test]
     fn parses_ffmpeg_metrics() {
         assert_eq!(
-            parse_line_metric("[Parsed_volumedetect] mean_volume: -18.4 dB", "mean_volume:"),
+            parse_line_metric(
+                "[Parsed_volumedetect] mean_volume: -18.4 dB",
+                "mean_volume:"
+            ),
             Some(-18.4)
         );
     }
