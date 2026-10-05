@@ -121,6 +121,8 @@ UI 组件本身与旧 Store、Radix、图标库耦合较高，不直接迁。
 
 ## 4. Provider 逻辑：复用逻辑，不原样搬 Node CLI
 
+> Provider Runtime 的“已迁”表示替代实现已经完成并可独立验证；其业务主链启用仍受 `docs/05-详细落地执行路线.md` 阶段门禁约束。在 Canonical World / Reconstruction 所属阶段到达前，不为了提高“代码使用率”提前把 Provider 接入正式世界求解链。
+
 ### FAL Queue / 3D Provider
 
 保留 submit/poll、request id、错误处理、远程文件发现下载、data URI 适配。
