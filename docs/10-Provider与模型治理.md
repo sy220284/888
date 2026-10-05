@@ -43,7 +43,7 @@ Provider 必须实现：
 - cancel（如支持）
 - health
 
-Provider 只能返回 Candidate / Artifact，不直接修改 World State。
+Provider 只能返回 Candidate / Proposal / Artifact，不直接修改 World State。
 
 ## 4. Provider 元数据
 
