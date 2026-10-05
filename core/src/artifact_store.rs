@@ -147,7 +147,8 @@ impl ArtifactStore {
             .find_existing_with_metadata(&hash, logical_type, &source)
             .await?
         {
-            self.restore_existing_from_temp(&existing, &temp_path).await?;
+            self.restore_existing_from_temp(&existing, &temp_path)
+                .await?;
             return Ok(existing);
         }
 
@@ -210,13 +211,8 @@ impl ArtifactStore {
         if !source.starts_with("https://") {
             bail!("remote artifact source must use HTTPS or data URI");
         }
-        self.download_http(
-            source,
-            content_type_hint,
-            logical_type,
-            provenance,
-        )
-        .await
+        self.download_http(source, content_type_hint, logical_type, provenance)
+            .await
     }
 
     pub async fn get(&self, id: Uuid) -> Result<Option<Artifact>> {
