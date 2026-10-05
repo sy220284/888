@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/worker/worker-message.schema.json",
+  "title": "WorkerMessage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "message_id",
+    "message_type",
+    "protocol_version",
+    "payload"
+  ],
+  "properties": {
+    "message_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "message_type": {
+      "type": "string",
+      "enum": [
+        "REGISTER",
+        "HEARTBEAT",
+        "JOB_DISPATCH",
+        "PROGRESS",
+        "JOB_RESULT",
+        "PAUSE",
+        "CANCEL",
+        "SHUTDOWN"
+      ]
+    },
+    "protocol_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "job_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}
