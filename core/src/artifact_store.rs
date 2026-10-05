@@ -164,7 +164,8 @@ impl ArtifactStore {
 
         let hash = hasher.finalize().to_hex().to_string();
         if let Some(existing) = self.find_by_hash(&hash).await? {
-            self.restore_existing_from_temp(&existing, &temp_path).await?;
+            self.restore_existing_from_temp(&existing, &temp_path)
+                .await?;
             return Ok(existing);
         }
 
@@ -195,11 +196,7 @@ impl ArtifactStore {
         .await
     }
 
-    async fn restore_existing_from_bytes(
-        &self,
-        artifact: &Artifact,
-        bytes: &[u8],
-    ) -> Result<()> {
+    async fn restore_existing_from_bytes(&self, artifact: &Artifact, bytes: &[u8]) -> Result<()> {
         let destination = self.root.join(&artifact.relative_path);
         if fs::try_exists(&destination).await.unwrap_or(false) {
             return Ok(());
