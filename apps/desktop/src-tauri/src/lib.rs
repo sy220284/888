@@ -94,31 +94,66 @@ fn pick_observation_images() -> Vec<String> {
         .collect()
 }
 
-fn worker_specs(artifact_root: &PathBuf) -> Vec<WorkerSpec> {
-    let repo_root = std::env::var_os("WORLD888_REPO_ROOT")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."));
-    let python = std::env::var("WORLD888_PYTHON").unwrap_or_else(|_| {
-        if cfg!(windows) {
-            "python".to_owned()
-        } else {
-            "python3".to_owned()
-        }
-    });
+fn worker_specs(artifact_root: &PathBuf, app_data_dir: &PathBuf) -> Vec<WorkerSpec> {
+    let configured_python = std::env::var_os("WORLD888_PYTHON").map(PathBuf::from);
+    let configured_worker_root = std::env::var_os("WORLD888_WORKER_ROOT").map(PathBuf::from);
 
+    let locations = if let (Some(python), Some(worker_root)) =
+        (configured_python, configured_worker_root)
+    {
+        Some((python, worker_root))
+    } else if cfg!(debug_assertions) {
+        let python = if cfg!(windows) {
+            PathBuf::from("python")
+        } else {
+            PathBuf::from("python3")
+        };
+        let worker_root = std::env::var_os("WORLD888_REPO_ROOT")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."));
+        Some((python, worker_root))
+    } else {
+        let runtime_root = app_data_dir.join("worker-runtime");
+        let worker_root = runtime_root.join("app");
+        let candidates = if cfg!(windows) {
+            vec![
+                runtime_root.join("python").join("python.exe"),
+                runtime_root.join("python.exe"),
+            ]
+        } else {
+            vec![
+                runtime_root.join("bin").join("python3"),
+                runtime_root.join("bin").join("python"),
+                runtime_root.join("python").join("bin").join("python3"),
+            ]
+        };
+        candidates
+            .into_iter()
+            .find(|python| python.is_file() && worker_root.is_dir())
+            .map(|python| (python, worker_root))
+    };
+
+    let Some((python, worker_root)) = locations else {
+        tracing::warn!(
+            "受控 Python Worker Runtime 未安装；Worker capability 暂不可用，桌面 Core 继续启动"
+        );
+        return Vec::new();
+    };
+
+    let python = python.to_string_lossy().into_owned();
     vec![
         WorkerSpec::python_module(
             "vision",
             python.clone(),
             "workers.vision.main",
-            repo_root.clone(),
+            worker_root.clone(),
             artifact_root.clone(),
         ),
         WorkerSpec::python_module(
             "tools",
             python,
             "workers.tools.main",
-            repo_root,
+            worker_root,
             artifact_root.clone(),
         ),
     ]
@@ -156,7 +191,7 @@ pub fn run() {
             let runtime = tauri::async_runtime::block_on(WorkerRuntime::start(
                 pool.clone(),
                 artifacts.clone(),
-                worker_specs(&artifact_root),
+                worker_specs(&artifact_root, &app_data_dir),
             ))
             .map_err(|error| io::Error::other(format!("初始化 Worker Runtime 失败：{error}")))?;
 
