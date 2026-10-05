@@ -256,7 +256,9 @@ fn collect_world_assets(world: &Value) -> Vec<RemoteFileRef> {
         &mut files,
         &mut seen,
         "collider",
-        assets.pointer("/mesh/collider_mesh_url").and_then(Value::as_str),
+        assets
+            .pointer("/mesh/collider_mesh_url")
+            .and_then(Value::as_str),
         Some("model/gltf-binary"),
     );
     push_world_asset(
@@ -274,7 +276,10 @@ fn collect_world_assets(world: &Value) -> Vec<RemoteFileRef> {
         None,
     );
 
-    if let Some(spz_urls) = assets.pointer("/splats/spz_urls").and_then(Value::as_object) {
+    if let Some(spz_urls) = assets
+        .pointer("/splats/spz_urls")
+        .and_then(Value::as_object)
+    {
         for (key, value) in spz_urls {
             push_world_asset(
                 &mut files,
@@ -329,9 +334,7 @@ fn extension_for_mime(mime: &str) -> &'static str {
 mod tests {
     use serde_json::json;
 
-    use super::{
-        collect_world_assets, extension_for_mime, operation_error, operation_id,
-    };
+    use super::{collect_world_assets, extension_for_mime, operation_error, operation_id};
 
     #[test]
     fn extracts_operation_id_from_all_supported_shapes() {
@@ -371,7 +374,9 @@ mod tests {
         assert_eq!(files.len(), 5);
         assert!(files.iter().any(|file| file.label == "collider"));
         assert!(files.iter().any(|file| file.label == "splat-full"));
-        assert!(files.iter().any(|file| file.url == "https://cdn/mobile.spz"));
+        assert!(files
+            .iter()
+            .any(|file| file.url == "https://cdn/mobile.spz"));
     }
 
     #[test]
