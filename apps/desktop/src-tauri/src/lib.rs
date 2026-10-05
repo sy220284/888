@@ -134,7 +134,7 @@ fn worker_specs(artifact_root: &PathBuf, app_data_dir: &PathBuf) -> Vec<WorkerSp
     };
 
     let Some((python, worker_root)) = locations else {
-        tracing::warn!(
+        eprintln!(
             "受控 Python Worker Runtime 未安装；Worker capability 暂不可用，桌面 Core 继续启动"
         );
         return Vec::new();
