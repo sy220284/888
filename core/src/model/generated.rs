@@ -237,6 +237,52 @@ pub struct CalibrationProfile {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CanonicalCapabilityRequestCapability {
+    #[serde(rename = "IMAGE_EDIT")]
+    ImageEdit,
+    #[serde(rename = "OBJECT_3D")]
+    Object3d,
+    #[serde(rename = "WORLD_COMPLETION")]
+    WorldCompletion,
+    #[serde(rename = "DEPTH")]
+    Depth,
+    #[serde(rename = "SEGMENTATION")]
+    Segmentation,
+    #[serde(rename = "IMAGE_EMBEDDING")]
+    ImageEmbedding,
+    #[serde(rename = "FEATURE_MATCHING")]
+    FeatureMatching,
+    #[serde(rename = "TEXTURE")]
+    Texture,
+    #[serde(rename = "AUDIO")]
+    Audio,
+    #[serde(rename = "ASSOCIATIVE_REASONING")]
+    AssociativeReasoning,
+    #[serde(rename = "SCENE_HYPOTHESIS")]
+    SceneHypothesis,
+    #[serde(rename = "VERIFICATION_QUESTION")]
+    VerificationQuestion,
+    #[serde(rename = "CHARACTER")]
+    Character,
+    #[serde(rename = "MOTION")]
+    Motion,
+    #[serde(rename = "RELIGHTING")]
+    Relighting,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CanonicalCapabilityRequestQualityProfile {
+    #[serde(rename = "FAST")]
+    Fast,
+    #[serde(rename = "BALANCED")]
+    Balanced,
+    #[serde(rename = "HIGH")]
+    High,
+    #[serde(rename = "MAX")]
+    Max,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CanonicalCapabilityRequestCreativityProfile {
     #[serde(rename = "STRICT")]
     Strict,
@@ -251,15 +297,20 @@ pub enum CanonicalCapabilityRequestCreativityProfile {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CanonicalCapabilityRequest {
     pub request_id: Uuid,
-    pub capability: String,
+    pub capability: CanonicalCapabilityRequestCapability,
     pub input_artifact_ids: Vec<Uuid>,
     pub world_context_ref: Option<String>,
     pub parameters: Value,
-    pub quality_profile: Option<String>,
+    pub evidence_policy: Value,
+    pub constraints: Value,
+    pub output_schema: Value,
+    pub quality_profile: CanonicalCapabilityRequestQualityProfile,
     pub creativity_profile: CanonicalCapabilityRequestCreativityProfile,
     pub cost_budget: Option<f64>,
     pub latency_budget_ms: Option<u64>,
     pub verification_required: bool,
+    pub deterministic_seed: Option<u64>,
+    pub provider_hints: Option<Value>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -441,6 +492,7 @@ pub struct Job {
     pub state: JobState,
     pub attempt: u64,
     pub max_attempts: i64,
+    pub idempotent: bool,
     pub checkpoint_artifact_id: Option<Uuid>,
     pub provider_run_id: Option<Uuid>,
     pub error_code: Option<String>,
@@ -459,6 +511,7 @@ pub struct Task {
     pub resources: Value,
     pub timeout_ms: Option<u64>,
     pub max_attempts: i64,
+    pub idempotent: bool,
     pub retry_policy: Option<Value>,
     pub cache_key: Option<String>,
     pub created_at: DateTime<Utc>,
