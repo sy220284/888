@@ -1,0 +1,10 @@
+fixture_id: smoke-empty
+version: 1
+category: infrastructure
+source: repository-authored synthetic scaffold
+license: MIT
+observation_count: 0
+expected_capabilities: [SCHEMA_CODEGEN, WORKER_PROTOCOL, BENCHMARK_RUNNER]
+ground_truth_available: false
+required_gpu: false
+notes: Empty smoke fixture for validating repository infrastructure.

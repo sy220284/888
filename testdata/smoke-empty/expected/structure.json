@@ -1,0 +1,9 @@
+{
+  "minimum_observation_count": 0,
+  "requires_gpu": false,
+  "expected_infrastructure": [
+    "schema-codegen",
+    "worker-protocol",
+    "benchmark-runner"
+  ]
+}
