@@ -71,7 +71,7 @@ pub enum CommandType {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Command {
     pub command_id: Uuid,
-    pub type: CommandType,
+    pub r#type: CommandType,
     pub world_id: Option<Uuid>,
     pub payload: Value,
     pub schema_version: i64,
@@ -452,7 +452,7 @@ pub struct Job {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Task {
     pub id: Uuid,
-    pub type: String,
+    pub r#type: String,
     pub world_id: Option<Uuid>,
     pub dependency_ids: Vec<Uuid>,
     pub optional_dependency_ids: Vec<Uuid>,
@@ -469,7 +469,7 @@ pub struct Task {
 pub struct JobDispatch {
     pub job_id: Uuid,
     pub protocol_version: i64,
-    pub type: String,
+    pub r#type: String,
     pub input_refs: Vec<String>,
     pub parameters: Value,
     pub artifact_ids: Vec<Uuid>,
@@ -708,7 +708,7 @@ pub struct Entity {
 pub struct Evidence {
     pub id: Uuid,
     pub world_id: Uuid,
-    pub type: String,
+    pub r#type: String,
     pub subject_ref: String,
     pub object_ref: String,
     pub source_job_id: Option<Uuid>,
