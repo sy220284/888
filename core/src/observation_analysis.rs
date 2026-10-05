@@ -161,9 +161,9 @@ impl ObservationAnalysisService {
                     source_artifact_id: artifact_id,
                     status: ObservationAnalysisStatus::Completed,
                     preview_artifact_id: Some(preview.id),
-                    width: Some(i64::from(decoded.width)),
-                    height: Some(i64::from(decoded.height)),
-                    orientation: decoded.orientation.map(i64::from),
+                    width: Some(u64::from(decoded.width)),
+                    height: Some(u64::from(decoded.height)),
+                    orientation: decoded.orientation.map(u64::from),
                     captured_at: decoded.captured_at,
                     exif: decoded.exif,
                     quality: decoded.quality,
@@ -180,7 +180,7 @@ impl ObservationAnalysisService {
                 preview_artifact_id: None,
                 width: None,
                 height: None,
-                orientation: error.orientation.map(i64::from),
+                orientation: error.orientation.map(u64::from),
                 captured_at: error.captured_at,
                 exif: error.exif,
                 quality: json!({
@@ -202,7 +202,7 @@ impl ObservationAnalysisService {
                 preview_artifact_id: None,
                 width: None,
                 height: None,
-                orientation: error.orientation.map(i64::from),
+                orientation: error.orientation.map(u64::from),
                 captured_at: error.captured_at,
                 exif: error.exif,
                 quality: json!({
@@ -605,9 +605,13 @@ impl TryFrom<ObservationAnalysisRow> for ObservationAnalysis {
                 .as_deref()
                 .map(Uuid::parse_str)
                 .transpose()?,
-            width: row.width,
-            height: row.height,
-            orientation: row.orientation,
+            width: row.width.map(u64::try_from).transpose().context("negative analysis width")?,
+            height: row.height.map(u64::try_from).transpose().context("negative analysis height")?,
+            orientation: row
+                .orientation
+                .map(u64::try_from)
+                .transpose()
+                .context("negative analysis orientation")?,
             captured_at: parse_optional_datetime(row.captured_at.as_deref(), "captured_at")?,
             exif: from_json(&row.exif_json)?,
             quality: from_json(&row.quality_json)?,
