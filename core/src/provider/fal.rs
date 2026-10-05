@@ -222,10 +222,11 @@ fn validate_endpoint(endpoint: &str) -> Result<()> {
 }
 
 fn compact_error(body: &Value) -> String {
-    body.get("detail")
-        .or_else(|| body.get("error"))
-        .map(Value::to_string)
-        .unwrap_or_else(|| body.to_string())
+    let value = body.get("detail").or_else(|| body.get("error")).unwrap_or(body);
+    match value {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    }
 }
 
 #[cfg(test)]
@@ -254,6 +255,6 @@ mod tests {
         assert!(completed.is_completed());
         assert!(failed.is_failed());
         assert_eq!(failed.error_message().as_deref(), Some("boom"));
-        assert_eq!(compact_error(&json!({"detail": "bad"})), ""bad"");
+        assert_eq!(compact_error(&json!({"detail": "bad"})), "bad");
     }
 }
