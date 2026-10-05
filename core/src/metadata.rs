@@ -38,7 +38,9 @@ fn is_base64_key(key: &str) -> bool {
 }
 
 fn is_data_uri(value: &str) -> bool {
-    value.len() >= 5 && value[..5].eq_ignore_ascii_case("data:")
+    value
+        .get(..5)
+        .is_some_and(|prefix| prefix.eq_ignore_ascii_case("data:"))
 }
 
 fn redact_url_credentials(value: &str) -> String {
