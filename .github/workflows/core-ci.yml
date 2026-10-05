@@ -9,8 +9,9 @@ on:
       - "packages/schema/**"
       - "tools/validate_schemas.py"
       - "tools/generate_schema_types.py"
-      - "workers/sdk/**"
-      - "apps/desktop/src/generated/**"
+      - "tools/check_architecture.py"
+      - "workers/**"
+      - "apps/desktop/src/**"
       - ".github/workflows/core-ci.yml"
   pull_request:
     paths:
@@ -20,8 +21,9 @@ on:
       - "packages/schema/**"
       - "tools/validate_schemas.py"
       - "tools/generate_schema_types.py"
-      - "workers/sdk/**"
-      - "apps/desktop/src/generated/**"
+      - "tools/check_architecture.py"
+      - "workers/**"
+      - "apps/desktop/src/**"
       - ".github/workflows/core-ci.yml"
 
 jobs:
@@ -39,6 +41,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: 检查架构边界
+        run: python tools/check_architecture.py
       - name: 校验 Schema
         run: python tools/validate_schemas.py
       - name: 校验三语言生成物
