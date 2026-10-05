@@ -12,4 +12,17 @@
 - `provider/ai-provider-run.schema.json`
 - `provider/project.schema.json`
 
-后续 codegen 必须从这里生成 Rust / TypeScript / Python 正式协议类型；不得把 Provider 私有响应结构提升为正式 Schema。
+已建立统一 codegen：
+
+```bash
+python tools/generate_schema_types.py
+python tools/generate_schema_types.py --check
+```
+
+生成位置：
+
+- Rust：`core/src/model/generated.rs`
+- TypeScript：`apps/desktop/src/generated/schema.ts`
+- Python：`workers/sdk/generated_models.py`
+
+CI 会校验生成物与 Schema 完全一致。正式字段必须先改 Schema，再重新生成三语言类型；不得手写第二套同义协议结构，也不得把 Provider 私有响应结构提升为正式 Schema。
