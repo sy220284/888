@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/ai-output-envelope.schema.json",
+  "title": "AIOutputEnvelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "provider", "status", "artifact_ids", "payload"],
+  "properties": {
+    "run_id": { "type": "string", "format": "uuid" },
+    "provider": { "type": "string", "minLength": 1 },
+    "model": { "type": ["string", "null"] },
+    "model_version": { "type": ["string", "null"] },
+    "status": { "type": "string", "enum": ["COMPLETED", "FAILED"] },
+    "artifact_ids": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "uniqueItems": true
+    },
+    "payload": {},
+    "raw_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "calibrated_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "provider_metadata": { "type": "object" }
+  }
+}
