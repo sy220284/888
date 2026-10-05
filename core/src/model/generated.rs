@@ -6,6 +6,145 @@ use serde_json::Value;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CommandResponseStatus {
+    #[serde(rename = "ACCEPTED")]
+    Accepted,
+    #[serde(rename = "COMPLETED")]
+    Completed,
+    #[serde(rename = "REJECTED")]
+    Rejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CommandResponse {
+    pub command_id: Uuid,
+    pub status: CommandResponseStatus,
+    pub job_ids: Vec<Uuid>,
+    pub result: Option<Value>,
+    pub error: Option<Value>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CommandType {
+    #[serde(rename = "CREATE_WORLD")]
+    CreateWorld,
+    #[serde(rename = "OPEN_WORLD")]
+    OpenWorld,
+    #[serde(rename = "IMPORT_OBSERVATIONS")]
+    ImportObservations,
+    #[serde(rename = "DELETE_OBSERVATION")]
+    DeleteObservation,
+    #[serde(rename = "RECONSTRUCT_ZONE")]
+    ReconstructZone,
+    #[serde(rename = "ANALYZE_RELATIONS")]
+    AnalyzeRelations,
+    #[serde(rename = "GENERATE_ASSOCIATIVE_PROPOSALS")]
+    GenerateAssociativeProposals,
+    #[serde(rename = "VERIFY_HYPOTHESIS")]
+    VerifyHypothesis,
+    #[serde(rename = "SUGGEST_NEXT_OBSERVATION")]
+    SuggestNextObservation,
+    #[serde(rename = "GENERATE_COMPLETION")]
+    GenerateCompletion,
+    #[serde(rename = "VALIDATE_CANDIDATE")]
+    ValidateCandidate,
+    #[serde(rename = "ACCEPT_CANDIDATE")]
+    AcceptCandidate,
+    #[serde(rename = "REJECT_CANDIDATE")]
+    RejectCandidate,
+    #[serde(rename = "EXPORT_WORLD")]
+    ExportWorld,
+    #[serde(rename = "PAUSE_JOB")]
+    PauseJob,
+    #[serde(rename = "RESUME_JOB")]
+    ResumeJob,
+    #[serde(rename = "CANCEL_JOB")]
+    CancelJob,
+    #[serde(rename = "UPDATE_ENTITY_TRANSFORM")]
+    UpdateEntityTransform,
+    #[serde(rename = "DELETE_ENTITY")]
+    DeleteEntity,
+    #[serde(rename = "DUPLICATE_ENTITY")]
+    DuplicateEntity,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Command {
+    pub command_id: Uuid,
+    pub type: CommandType,
+    pub world_id: Option<Uuid>,
+    pub payload: Value,
+    pub schema_version: i64,
+    pub caller_context: Value,
+    pub requested_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CompilerTargetTarget {
+    #[serde(rename = "GLB")]
+    Glb,
+    #[serde(rename = "BLENDER")]
+    Blender,
+    #[serde(rename = "UNITY")]
+    Unity,
+    #[serde(rename = "GODOT")]
+    Godot,
+    #[serde(rename = "UNREAL")]
+    Unreal,
+    #[serde(rename = "WEB")]
+    Web,
+    #[serde(rename = "XR")]
+    Xr,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CompilerTargetQualityProfile {
+    #[serde(rename = "FAST")]
+    Fast,
+    #[serde(rename = "BALANCED")]
+    Balanced,
+    #[serde(rename = "HIGH")]
+    High,
+    #[serde(rename = "MAX")]
+    Max,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CompilerTarget {
+    pub id: String,
+    pub target: CompilerTargetTarget,
+    pub quality_profile: CompilerTargetQualityProfile,
+    pub options: Value,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AIModelProfileStatus {
+    #[serde(rename = "CERTIFIED")]
+    Certified,
+    #[serde(rename = "EXPERIMENTAL")]
+    Experimental,
+    #[serde(rename = "DEGRADED")]
+    Degraded,
+    #[serde(rename = "BLOCKED")]
+    Blocked,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AIModelProfile {
+    pub provider_id: String,
+    pub model_id: String,
+    pub version: String,
+    pub status: AIModelProfileStatus,
+    pub supported_capabilities: Vec<String>,
+    pub benchmark_version: String,
+    pub metrics: Value,
+    pub known_quirks: Option<Vec<String>>,
+    pub context_limit: Option<u64>,
+    pub image_limit: Option<u64>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AIOutputEnvelopeStatus {
     #[serde(rename = "COMPLETED")]
     Completed,
@@ -74,6 +213,30 @@ pub struct Artifact {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CalibrationProfileMethod {
+    #[serde(rename = "NONE")]
+    None,
+    #[serde(rename = "RELIABILITY_CURVE")]
+    ReliabilityCurve,
+    #[serde(rename = "ISOTONIC")]
+    Isotonic,
+    #[serde(rename = "TEMPERATURE_SCALING")]
+    TemperatureScaling,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CalibrationProfile {
+    pub provider_id: String,
+    pub model_id: String,
+    pub model_version: String,
+    pub capability: String,
+    pub dataset_version: String,
+    pub method: CalibrationProfileMethod,
+    pub parameters: Value,
+    pub metrics: Value,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CanonicalCapabilityRequestCreativityProfile {
     #[serde(rename = "STRICT")]
     Strict,
@@ -99,11 +262,680 @@ pub struct CanonicalCapabilityRequest {
     pub verification_required: bool,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CreativityProfileLevel {
+    #[serde(rename = "STRICT")]
+    Strict,
+    #[serde(rename = "BALANCED")]
+    Balanced,
+    #[serde(rename = "EXPLORATORY")]
+    Exploratory,
+    #[serde(rename = "DIVERGENT")]
+    Divergent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct CreativityProfile {
+    pub level: CreativityProfileLevel,
+    pub top_k: i64,
+    pub beam_width: i64,
+    pub validation_budget: u64,
+    pub sampling: Option<Value>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Project {
     pub id: Uuid,
     pub slug: String,
     pub display_name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ProviderCapabilityCapability {
+    #[serde(rename = "IMAGE_EDIT")]
+    ImageEdit,
+    #[serde(rename = "OBJECT_3D")]
+    Object3d,
+    #[serde(rename = "WORLD_COMPLETION")]
+    WorldCompletion,
+    #[serde(rename = "DEPTH")]
+    Depth,
+    #[serde(rename = "SEGMENTATION")]
+    Segmentation,
+    #[serde(rename = "IMAGE_EMBEDDING")]
+    ImageEmbedding,
+    #[serde(rename = "FEATURE_MATCHING")]
+    FeatureMatching,
+    #[serde(rename = "TEXTURE")]
+    Texture,
+    #[serde(rename = "AUDIO")]
+    Audio,
+    #[serde(rename = "ASSOCIATIVE_REASONING")]
+    AssociativeReasoning,
+    #[serde(rename = "SCENE_HYPOTHESIS")]
+    SceneHypothesis,
+    #[serde(rename = "VERIFICATION_QUESTION")]
+    VerificationQuestion,
+    #[serde(rename = "CHARACTER")]
+    Character,
+    #[serde(rename = "MOTION")]
+    Motion,
+    #[serde(rename = "RELIGHTING")]
+    Relighting,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ProviderCapabilityLocation {
+    #[serde(rename = "LOCAL")]
+    Local,
+    #[serde(rename = "REMOTE")]
+    Remote,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ProviderCapabilityHealth {
+    #[serde(rename = "HEALTHY")]
+    Healthy,
+    #[serde(rename = "DEGRADED")]
+    Degraded,
+    #[serde(rename = "UNAVAILABLE")]
+    Unavailable,
+    #[serde(rename = "RATE_LIMITED")]
+    RateLimited,
+    #[serde(rename = "AUTH_ERROR")]
+    AuthError,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProviderCapability {
+    pub provider_id: String,
+    pub capability: ProviderCapabilityCapability,
+    pub location: ProviderCapabilityLocation,
+    pub health: ProviderCapabilityHealth,
+    pub model_id: Option<String>,
+    pub model_version: Option<String>,
+    pub quality_profiles: Vec<ProviderCapabilityQualityProfilesItem>,
+    pub input_types: Vec<String>,
+    pub output_types: Vec<String>,
+    pub estimated_cost: Option<f64>,
+    pub average_latency_ms: Option<u64>,
+    pub metadata: Option<Value>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ToolIntentTool {
+    #[serde(rename = "INSPECT_WORLD")]
+    InspectWorld,
+    #[serde(rename = "QUERY_EVIDENCE")]
+    QueryEvidence,
+    #[serde(rename = "SEARCH_OBSERVATIONS")]
+    SearchObservations,
+    #[serde(rename = "INSPECT_HYPOTHESES")]
+    InspectHypotheses,
+    #[serde(rename = "PROPOSE_RELATION")]
+    ProposeRelation,
+    #[serde(rename = "REQUEST_VALIDATION")]
+    RequestValidation,
+    #[serde(rename = "SUGGEST_NEXT_OBSERVATION")]
+    SuggestNextObservation,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ToolIntent {
+    pub tool: ToolIntentTool,
+    pub arguments: Value,
+    pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum JobState {
+    #[serde(rename = "CREATED")]
+    Created,
+    #[serde(rename = "PENDING")]
+    Pending,
+    #[serde(rename = "READY")]
+    Ready,
+    #[serde(rename = "RUNNING")]
+    Running,
+    #[serde(rename = "PAUSING")]
+    Pausing,
+    #[serde(rename = "PAUSED")]
+    Paused,
+    #[serde(rename = "RECOVERABLE")]
+    Recoverable,
+    #[serde(rename = "FAILED")]
+    Failed,
+    #[serde(rename = "CANCELLED")]
+    Cancelled,
+    #[serde(rename = "COMPLETED")]
+    Completed,
+    #[serde(rename = "BLOCKED")]
+    Blocked,
+    #[serde(rename = "WAITING_RESOURCE")]
+    WaitingResource,
+    #[serde(rename = "WAITING_PROVIDER")]
+    WaitingProvider,
+    #[serde(rename = "WAITING_USER")]
+    WaitingUser,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Job {
+    pub id: Uuid,
+    pub world_id: Option<Uuid>,
+    pub task_type: String,
+    pub state: JobState,
+    pub attempt: u64,
+    pub max_attempts: i64,
+    pub checkpoint_artifact_id: Option<Uuid>,
+    pub provider_run_id: Option<Uuid>,
+    pub error_code: Option<String>,
+    pub error_payload: Option<Value>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Task {
+    pub id: Uuid,
+    pub type: String,
+    pub world_id: Option<Uuid>,
+    pub dependency_ids: Vec<Uuid>,
+    pub optional_dependency_ids: Vec<Uuid>,
+    pub resources: Value,
+    pub timeout_ms: Option<u64>,
+    pub max_attempts: i64,
+    pub retry_policy: Option<Value>,
+    pub cache_key: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct JobDispatch {
+    pub job_id: Uuid,
+    pub protocol_version: i64,
+    pub type: String,
+    pub input_refs: Vec<String>,
+    pub parameters: Value,
+    pub artifact_ids: Vec<Uuid>,
+    pub checkpoint_artifact_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum JobResultState {
+    #[serde(rename = "COMPLETED")]
+    Completed,
+    #[serde(rename = "FAILED")]
+    Failed,
+    #[serde(rename = "PAUSED")]
+    Paused,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct JobResult {
+    pub job_id: Uuid,
+    pub protocol_version: i64,
+    pub state: JobResultState,
+    pub outputs: Vec<Value>,
+    pub error: Option<Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProgressEvent {
+    pub job_id: Uuid,
+    pub protocol_version: i64,
+    pub stage: String,
+    pub progress: f64,
+    pub message_code: String,
+    pub metrics: Value,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum WorkerHeartbeatHealth {
+    #[serde(rename = "HEALTHY")]
+    Healthy,
+    #[serde(rename = "DEGRADED")]
+    Degraded,
+    #[serde(rename = "LOST")]
+    Lost,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkerHeartbeat {
+    pub worker_id: Uuid,
+    pub protocol_version: i64,
+    pub timestamp: DateTime<Utc>,
+    pub current_job_ids: Vec<Uuid>,
+    pub cpu_usage: f64,
+    pub ram_mb: u64,
+    pub gpu_usage: Option<f64>,
+    pub vram_mb: Option<u64>,
+    pub health: WorkerHeartbeatHealth,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum WorkerRegistrationWorkerType {
+    #[serde(rename = "VISION")]
+    Vision,
+    #[serde(rename = "TOOL")]
+    Tool,
+    #[serde(rename = "AI_LOCAL")]
+    AiLocal,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkerRegistration {
+    pub worker_id: Uuid,
+    pub worker_type: WorkerRegistrationWorkerType,
+    pub protocol_version: i64,
+    pub capabilities: Vec<String>,
+    pub device: Value,
+    pub software: Value,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AnchorAnchorType {
+    #[serde(rename = "DOOR")]
+    Door,
+    #[serde(rename = "WINDOW")]
+    Window,
+    #[serde(rename = "STAIR")]
+    Stair,
+    #[serde(rename = "CORNER")]
+    Corner,
+    #[serde(rename = "FIXED_OBJECT")]
+    FixedObject,
+    #[serde(rename = "FACADE_FEATURE")]
+    FacadeFeature,
+    #[serde(rename = "GPS_POINT")]
+    GpsPoint,
+    #[serde(rename = "MANUAL")]
+    Manual,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Anchor {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub anchor_type: AnchorAnchorType,
+    pub zone_id: Option<Uuid>,
+    pub local_pose: Value,
+    pub confidence: Option<f64>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AssociativeProposalPriorType {
+    #[serde(rename = "SPATIAL_TOPOLOGY_PRIOR")]
+    SpatialTopologyPrior,
+    #[serde(rename = "ROOM_TYPE_PRIOR")]
+    RoomTypePrior,
+    #[serde(rename = "OBJECT_COOCCURRENCE_PRIOR")]
+    ObjectCooccurrencePrior,
+    #[serde(rename = "SAME_ENTITY_PRIOR")]
+    SameEntityPrior,
+    #[serde(rename = "SAME_ANCHOR_PRIOR")]
+    SameAnchorPrior,
+    #[serde(rename = "SAME_ZONE_PRIOR")]
+    SameZonePrior,
+    #[serde(rename = "PORTAL_PRIOR")]
+    PortalPrior,
+    #[serde(rename = "MISSING_REGION_PRIOR")]
+    MissingRegionPrior,
+    #[serde(rename = "MATERIAL_STYLE_PRIOR")]
+    MaterialStylePrior,
+    #[serde(rename = "NEXT_OBSERVATION_PRIOR")]
+    NextObservationPrior,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum AssociativeProposalState {
+    #[serde(rename = "ACTIVE")]
+    Active,
+    #[serde(rename = "PROMOTED_TO_HYPOTHESIS")]
+    PromotedToHypothesis,
+    #[serde(rename = "REJECTED")]
+    Rejected,
+    #[serde(rename = "EXPIRED")]
+    Expired,
+    #[serde(rename = "SUPERSEDED")]
+    Superseded,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AssociativeProposal {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub prior_type: AssociativeProposalPriorType,
+    pub subject_ref: String,
+    pub target_ref: String,
+    pub score: f64,
+    pub uncertainty: f64,
+    pub supporting_evidence_ids: Vec<Uuid>,
+    pub contradicting_evidence_ids: Vec<Uuid>,
+    pub source: String,
+    pub source_version: String,
+    pub created_by_job_id: Option<Uuid>,
+    pub state: AssociativeProposalState,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CandidateCandidateType {
+    #[serde(rename = "GEOMETRY")]
+    Geometry,
+    #[serde(rename = "MATERIAL")]
+    Material,
+    #[serde(rename = "WORLD_COMPLETION")]
+    WorldCompletion,
+    #[serde(rename = "ENTITY")]
+    Entity,
+    #[serde(rename = "RELATION")]
+    Relation,
+    #[serde(rename = "AUDIO")]
+    Audio,
+    #[serde(rename = "TEXTURE")]
+    Texture,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum CandidateStatus {
+    #[serde(rename = "PENDING")]
+    Pending,
+    #[serde(rename = "ACCEPTED")]
+    Accepted,
+    #[serde(rename = "REJECTED")]
+    Rejected,
+    #[serde(rename = "SUPERSEDED")]
+    Superseded,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Candidate {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub candidate_type: CandidateCandidateType,
+    pub source_job_id: Option<Uuid>,
+    pub provider_run_id: Option<Uuid>,
+    pub artifact_ids: Vec<Uuid>,
+    pub payload: Value,
+    pub status: CandidateStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum EntityLifecycle {
+    #[serde(rename = "ACTIVE")]
+    Active,
+    #[serde(rename = "HIDDEN")]
+    Hidden,
+    #[serde(rename = "DELETED")]
+    Deleted,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Entity {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub semantic_class: String,
+    pub display_name: Option<String>,
+    pub zone_id: Option<Uuid>,
+    pub transform: Value,
+    pub scale: Value,
+    pub physical_properties: Value,
+    pub lifecycle: EntityLifecycle,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Evidence {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub type: String,
+    pub subject_ref: String,
+    pub object_ref: String,
+    pub source_job_id: Option<Uuid>,
+    pub weight: f64,
+    pub confidence: Option<f64>,
+    pub payload: Value,
+    pub created_at: DateTime<Utc>,
+    pub invalidated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GeometryRepresentationRepresentationType {
+    #[serde(rename = "MESH")]
+    Mesh,
+    #[serde(rename = "SPLAT")]
+    Splat,
+    #[serde(rename = "NERF")]
+    Nerf,
+    #[serde(rename = "POINT_CLOUD")]
+    PointCloud,
+    #[serde(rename = "PRIMITIVE")]
+    Primitive,
+    #[serde(rename = "BILLBOARD")]
+    Billboard,
+    #[serde(rename = "COLLIDER")]
+    Collider,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GeometryRepresentationSourceKind {
+    #[serde(rename = "OBSERVED")]
+    Observed,
+    #[serde(rename = "VERIFIED")]
+    Verified,
+    #[serde(rename = "INFERRED")]
+    Inferred,
+    #[serde(rename = "ASSOCIATIVE")]
+    Associative,
+    #[serde(rename = "GENERATED")]
+    Generated,
+    #[serde(rename = "USER_CONFIRMED")]
+    UserConfirmed,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum GeometryRepresentationVerificationState {
+    #[serde(rename = "UNVERIFIED")]
+    Unverified,
+    #[serde(rename = "VERIFIED")]
+    Verified,
+    #[serde(rename = "REJECTED")]
+    Rejected,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GeometryRepresentation {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub entity_id: Option<Uuid>,
+    pub zone_id: Option<Uuid>,
+    pub representation_type: GeometryRepresentationRepresentationType,
+    pub artifact_id: Uuid,
+    pub quality_profile: Option<String>,
+    pub source_kind: GeometryRepresentationSourceKind,
+    pub valid_region: Option<Value>,
+    pub lod_level: Option<u64>,
+    pub verification_state: GeometryRepresentationVerificationState,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum HypothesisStatus {
+    #[serde(rename = "ACTIVE")]
+    Active,
+    #[serde(rename = "VERIFIED")]
+    Verified,
+    #[serde(rename = "REJECTED")]
+    Rejected,
+    #[serde(rename = "SUPERSEDED")]
+    Superseded,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Hypothesis {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub hypothesis_type: String,
+    pub status: HypothesisStatus,
+    pub score: f64,
+    pub uncertainty: f64,
+    pub payload: Value,
+    pub supporting_evidence_ids: Vec<Uuid>,
+    pub contradicting_evidence_ids: Vec<Uuid>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ObservationSourceType {
+    #[serde(rename = "IMAGE")]
+    Image,
+    #[serde(rename = "VIDEO_FRAME")]
+    VideoFrame,
+    #[serde(rename = "DEPTH")]
+    Depth,
+    #[serde(rename = "LIDAR")]
+    Lidar,
+    #[serde(rename = "GPS")]
+    Gps,
+    #[serde(rename = "IMU")]
+    Imu,
+    #[serde(rename = "USER_HINT")]
+    UserHint,
+    #[serde(rename = "MANUAL_MEASUREMENT")]
+    ManualMeasurement,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Observation {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub artifact_id: Option<Uuid>,
+    pub source_type: ObservationSourceType,
+    pub timestamp: Option<DateTime<Utc>>,
+    pub camera_intrinsics: Option<Value>,
+    pub camera_pose_candidate: Option<Value>,
+    pub quality: Value,
+    pub immutable: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Portal {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub from_zone_id: Uuid,
+    pub to_zone_id: Option<Uuid>,
+    pub anchor_id: Option<Uuid>,
+    pub transform: Value,
+    pub passable: bool,
+    pub confidence: f64,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ValidationResultStatus {
+    #[serde(rename = "PASSED")]
+    Passed,
+    #[serde(rename = "FAILED")]
+    Failed,
+    #[serde(rename = "NEEDS_REVIEW")]
+    NeedsReview,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ValidationResult {
+    pub id: Uuid,
+    pub candidate_id: Uuid,
+    pub status: ValidationResultStatus,
+    pub issues: Vec<Value>,
+    pub metrics: Value,
+    pub validator: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum WorldRevisionActorType {
+    #[serde(rename = "USER")]
+    User,
+    #[serde(rename = "SYSTEM")]
+    System,
+    #[serde(rename = "AGENT")]
+    Agent,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorldRevision {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub parent_revision_id: Option<Uuid>,
+    pub command_id: Option<Uuid>,
+    pub actor_type: WorldRevisionActorType,
+    pub changeset: Value,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum WorldCoordinateSystem {
+    #[serde(rename = "RIGHT_HANDED_Y_UP")]
+    RightHandedYUp,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum WorldUnit {
+    #[serde(rename = "METER")]
+    Meter,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct World {
+    pub id: Uuid,
+    pub name: String,
+    pub schema_version: i64,
+    pub active_revision_id: Option<Uuid>,
+    pub coordinate_system: WorldCoordinateSystem,
+    pub unit: WorldUnit,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ZoneZoneType {
+    #[serde(rename = "ROOM")]
+    Room,
+    #[serde(rename = "CORRIDOR")]
+    Corridor,
+    #[serde(rename = "FLOOR")]
+    Floor,
+    #[serde(rename = "BUILDING")]
+    Building,
+    #[serde(rename = "OUTDOOR")]
+    Outdoor,
+    #[serde(rename = "GARDEN")]
+    Garden,
+    #[serde(rename = "STREET")]
+    Street,
+    #[serde(rename = "UNKNOWN")]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Zone {
+    pub id: Uuid,
+    pub world_id: Uuid,
+    pub zone_type: ZoneZoneType,
+    pub display_name: Option<String>,
+    pub local_transform: Value,
+    pub confidence: Option<f64>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

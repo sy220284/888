@@ -6,7 +6,56 @@ from datetime import datetime
 from typing import Any, Literal, TypeAlias
 from uuid import UUID
 
-AIOutputEnvelopeStatus: TypeAlias = Literal['COMPLETED', 'FAILED']
+CommandResponseStatus: TypeAlias = Literal["ACCEPTED", "COMPLETED", "REJECTED"]
+
+@dataclass(slots=True)
+class CommandResponse:
+    command_id: UUID
+    status: CommandResponseStatus
+    job_ids: list[UUID]
+    result: Any | None = None
+    error: Any | None = None
+
+CommandType: TypeAlias = Literal["CREATE_WORLD", "OPEN_WORLD", "IMPORT_OBSERVATIONS", "DELETE_OBSERVATION", "RECONSTRUCT_ZONE", "ANALYZE_RELATIONS", "GENERATE_ASSOCIATIVE_PROPOSALS", "VERIFY_HYPOTHESIS", "SUGGEST_NEXT_OBSERVATION", "GENERATE_COMPLETION", "VALIDATE_CANDIDATE", "ACCEPT_CANDIDATE", "REJECT_CANDIDATE", "EXPORT_WORLD", "PAUSE_JOB", "RESUME_JOB", "CANCEL_JOB", "UPDATE_ENTITY_TRANSFORM", "DELETE_ENTITY", "DUPLICATE_ENTITY"]
+
+@dataclass(slots=True)
+class Command:
+    command_id: UUID
+    type: CommandType
+    payload: dict[str, Any]
+    schema_version: int
+    caller_context: dict[str, Any]
+    requested_at: datetime
+    world_id: UUID | None = None
+
+CompilerTargetTarget: TypeAlias = Literal["GLB", "BLENDER", "UNITY", "GODOT", "UNREAL", "WEB", "XR"]
+
+CompilerTargetQualityProfile: TypeAlias = Literal["FAST", "BALANCED", "HIGH", "MAX"]
+
+@dataclass(slots=True)
+class CompilerTarget:
+    id: str
+    target: CompilerTargetTarget
+    quality_profile: CompilerTargetQualityProfile
+    options: dict[str, Any]
+
+AIModelProfileStatus: TypeAlias = Literal["CERTIFIED", "EXPERIMENTAL", "DEGRADED", "BLOCKED"]
+
+@dataclass(slots=True)
+class AIModelProfile:
+    provider_id: str
+    model_id: str
+    version: str
+    status: AIModelProfileStatus
+    supported_capabilities: list[str]
+    benchmark_version: str
+    metrics: dict[str, Any]
+    known_quirks: list[str] | None = None
+    context_limit: int | None = None
+    image_limit: int | None = None
+    updated_at: datetime | None = None
+
+AIOutputEnvelopeStatus: TypeAlias = Literal["COMPLETED", "FAILED"]
 
 @dataclass(slots=True)
 class AIOutputEnvelope:
@@ -21,7 +70,7 @@ class AIOutputEnvelope:
     calibrated_confidence: float | None = None
     provider_metadata: dict[str, Any] | None = None
 
-AIProviderRunStatus: TypeAlias = Literal['CREATED', 'SUBMITTED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']
+AIProviderRunStatus: TypeAlias = Literal["CREATED", "SUBMITTED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]
 
 @dataclass(slots=True)
 class AIProviderRun:
@@ -51,7 +100,20 @@ class Artifact:
     created_at: datetime
     source_url: str | None = None
 
-CanonicalCapabilityRequestCreativityProfile: TypeAlias = Literal['STRICT', 'BALANCED', 'EXPLORATORY', 'DIVERGENT']
+CalibrationProfileMethod: TypeAlias = Literal["NONE", "RELIABILITY_CURVE", "ISOTONIC", "TEMPERATURE_SCALING"]
+
+@dataclass(slots=True)
+class CalibrationProfile:
+    provider_id: str
+    model_id: str
+    model_version: str
+    capability: str
+    dataset_version: str
+    method: CalibrationProfileMethod
+    parameters: dict[str, Any]
+    metrics: dict[str, Any]
+
+CanonicalCapabilityRequestCreativityProfile: TypeAlias = Literal["STRICT", "BALANCED", "EXPLORATORY", "DIVERGENT"]
 
 @dataclass(slots=True)
 class CanonicalCapabilityRequest:
@@ -66,6 +128,16 @@ class CanonicalCapabilityRequest:
     cost_budget: float | None = None
     latency_budget_ms: int | None = None
 
+CreativityProfileLevel: TypeAlias = Literal["STRICT", "BALANCED", "EXPLORATORY", "DIVERGENT"]
+
+@dataclass(slots=True)
+class CreativityProfile:
+    level: CreativityProfileLevel
+    top_k: int
+    beam_width: int
+    validation_budget: int
+    sampling: dict[str, Any] | None = None
+
 @dataclass(slots=True)
 class Project:
     id: UUID
@@ -73,3 +145,315 @@ class Project:
     display_name: str
     created_at: datetime
     updated_at: datetime
+
+ProviderCapabilityCapability: TypeAlias = Literal["IMAGE_EDIT", "OBJECT_3D", "WORLD_COMPLETION", "DEPTH", "SEGMENTATION", "IMAGE_EMBEDDING", "FEATURE_MATCHING", "TEXTURE", "AUDIO", "ASSOCIATIVE_REASONING", "SCENE_HYPOTHESIS", "VERIFICATION_QUESTION", "CHARACTER", "MOTION", "RELIGHTING"]
+
+ProviderCapabilityLocation: TypeAlias = Literal["LOCAL", "REMOTE"]
+
+ProviderCapabilityHealth: TypeAlias = Literal["HEALTHY", "DEGRADED", "UNAVAILABLE", "RATE_LIMITED", "AUTH_ERROR"]
+
+@dataclass(slots=True)
+class ProviderCapability:
+    provider_id: str
+    capability: ProviderCapabilityCapability
+    location: ProviderCapabilityLocation
+    health: ProviderCapabilityHealth
+    quality_profiles: list[ProviderCapabilityQualityProfilesItem]
+    input_types: list[str]
+    output_types: list[str]
+    model_id: str | None = None
+    model_version: str | None = None
+    estimated_cost: float | None = None
+    average_latency_ms: int | None = None
+    metadata: dict[str, Any] | None = None
+
+ToolIntentTool: TypeAlias = Literal["INSPECT_WORLD", "QUERY_EVIDENCE", "SEARCH_OBSERVATIONS", "INSPECT_HYPOTHESES", "PROPOSE_RELATION", "REQUEST_VALIDATION", "SUGGEST_NEXT_OBSERVATION"]
+
+@dataclass(slots=True)
+class ToolIntent:
+    tool: ToolIntentTool
+    arguments: dict[str, Any]
+    reason: str | None = None
+
+JobState: TypeAlias = Literal["CREATED", "PENDING", "READY", "RUNNING", "PAUSING", "PAUSED", "RECOVERABLE", "FAILED", "CANCELLED", "COMPLETED", "BLOCKED", "WAITING_RESOURCE", "WAITING_PROVIDER", "WAITING_USER"]
+
+@dataclass(slots=True)
+class Job:
+    id: UUID
+    task_type: str
+    state: JobState
+    attempt: int
+    max_attempts: int
+    created_at: datetime
+    updated_at: datetime
+    world_id: UUID | None = None
+    checkpoint_artifact_id: UUID | None = None
+    provider_run_id: UUID | None = None
+    error_code: str | None = None
+    error_payload: Any | None = None
+
+@dataclass(slots=True)
+class Task:
+    id: UUID
+    type: str
+    dependency_ids: list[UUID]
+    optional_dependency_ids: list[UUID]
+    resources: dict[str, Any]
+    max_attempts: int
+    created_at: datetime
+    updated_at: datetime
+    world_id: UUID | None = None
+    timeout_ms: int | None = None
+    retry_policy: dict[str, Any] | None = None
+    cache_key: str | None = None
+
+@dataclass(slots=True)
+class JobDispatch:
+    job_id: UUID
+    protocol_version: int
+    type: str
+    input_refs: list[str]
+    parameters: dict[str, Any]
+    artifact_ids: list[UUID]
+    checkpoint_artifact_id: UUID | None = None
+
+JobResultState: TypeAlias = Literal["COMPLETED", "FAILED", "PAUSED"]
+
+@dataclass(slots=True)
+class JobResult:
+    job_id: UUID
+    protocol_version: int
+    state: JobResultState
+    outputs: list[dict[str, Any]]
+    error: Any | None = None
+
+@dataclass(slots=True)
+class ProgressEvent:
+    job_id: UUID
+    protocol_version: int
+    stage: str
+    progress: float
+    message_code: str
+    metrics: dict[str, Any]
+
+WorkerHeartbeatHealth: TypeAlias = Literal["HEALTHY", "DEGRADED", "LOST"]
+
+@dataclass(slots=True)
+class WorkerHeartbeat:
+    worker_id: UUID
+    protocol_version: int
+    timestamp: datetime
+    current_job_ids: list[UUID]
+    cpu_usage: float
+    ram_mb: int
+    health: WorkerHeartbeatHealth
+    gpu_usage: float | None = None
+    vram_mb: int | None = None
+
+WorkerRegistrationWorkerType: TypeAlias = Literal["VISION", "TOOL", "AI_LOCAL"]
+
+@dataclass(slots=True)
+class WorkerRegistration:
+    worker_id: UUID
+    worker_type: WorkerRegistrationWorkerType
+    protocol_version: int
+    capabilities: list[str]
+    device: dict[str, Any]
+    software: dict[str, Any]
+
+AnchorAnchorType: TypeAlias = Literal["DOOR", "WINDOW", "STAIR", "CORNER", "FIXED_OBJECT", "FACADE_FEATURE", "GPS_POINT", "MANUAL"]
+
+@dataclass(slots=True)
+class Anchor:
+    id: UUID
+    world_id: UUID
+    anchor_type: AnchorAnchorType
+    local_pose: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+    zone_id: UUID | None = None
+    confidence: float | None = None
+
+AssociativeProposalPriorType: TypeAlias = Literal["SPATIAL_TOPOLOGY_PRIOR", "ROOM_TYPE_PRIOR", "OBJECT_COOCCURRENCE_PRIOR", "SAME_ENTITY_PRIOR", "SAME_ANCHOR_PRIOR", "SAME_ZONE_PRIOR", "PORTAL_PRIOR", "MISSING_REGION_PRIOR", "MATERIAL_STYLE_PRIOR", "NEXT_OBSERVATION_PRIOR"]
+
+AssociativeProposalState: TypeAlias = Literal["ACTIVE", "PROMOTED_TO_HYPOTHESIS", "REJECTED", "EXPIRED", "SUPERSEDED"]
+
+@dataclass(slots=True)
+class AssociativeProposal:
+    id: UUID
+    world_id: UUID
+    prior_type: AssociativeProposalPriorType
+    subject_ref: str
+    target_ref: str
+    score: float
+    uncertainty: float
+    supporting_evidence_ids: list[UUID]
+    contradicting_evidence_ids: list[UUID]
+    source: str
+    source_version: str
+    state: AssociativeProposalState
+    created_at: datetime
+    created_by_job_id: UUID | None = None
+
+CandidateCandidateType: TypeAlias = Literal["GEOMETRY", "MATERIAL", "WORLD_COMPLETION", "ENTITY", "RELATION", "AUDIO", "TEXTURE"]
+
+CandidateStatus: TypeAlias = Literal["PENDING", "ACCEPTED", "REJECTED", "SUPERSEDED"]
+
+@dataclass(slots=True)
+class Candidate:
+    id: UUID
+    world_id: UUID
+    candidate_type: CandidateCandidateType
+    artifact_ids: list[UUID]
+    payload: dict[str, Any]
+    status: CandidateStatus
+    created_at: datetime
+    source_job_id: UUID | None = None
+    provider_run_id: UUID | None = None
+
+EntityLifecycle: TypeAlias = Literal["ACTIVE", "HIDDEN", "DELETED"]
+
+@dataclass(slots=True)
+class Entity:
+    id: UUID
+    world_id: UUID
+    semantic_class: str
+    transform: dict[str, Any]
+    scale: dict[str, Any]
+    physical_properties: dict[str, Any]
+    lifecycle: EntityLifecycle
+    created_at: datetime
+    updated_at: datetime
+    display_name: str | None = None
+    zone_id: UUID | None = None
+
+@dataclass(slots=True)
+class Evidence:
+    id: UUID
+    world_id: UUID
+    type: str
+    subject_ref: str
+    object_ref: str
+    weight: float
+    payload: dict[str, Any]
+    created_at: datetime
+    source_job_id: UUID | None = None
+    confidence: float | None = None
+    invalidated_at: datetime | None = None
+
+GeometryRepresentationRepresentationType: TypeAlias = Literal["MESH", "SPLAT", "NERF", "POINT_CLOUD", "PRIMITIVE", "BILLBOARD", "COLLIDER"]
+
+GeometryRepresentationSourceKind: TypeAlias = Literal["OBSERVED", "VERIFIED", "INFERRED", "ASSOCIATIVE", "GENERATED", "USER_CONFIRMED"]
+
+GeometryRepresentationVerificationState: TypeAlias = Literal["UNVERIFIED", "VERIFIED", "REJECTED"]
+
+@dataclass(slots=True)
+class GeometryRepresentation:
+    id: UUID
+    world_id: UUID
+    representation_type: GeometryRepresentationRepresentationType
+    artifact_id: UUID
+    source_kind: GeometryRepresentationSourceKind
+    verification_state: GeometryRepresentationVerificationState
+    created_at: datetime
+    entity_id: UUID | None = None
+    zone_id: UUID | None = None
+    quality_profile: str | None = None
+    valid_region: dict[str, Any] | None = None
+    lod_level: int | None = None
+
+HypothesisStatus: TypeAlias = Literal["ACTIVE", "VERIFIED", "REJECTED", "SUPERSEDED"]
+
+@dataclass(slots=True)
+class Hypothesis:
+    id: UUID
+    world_id: UUID
+    hypothesis_type: str
+    status: HypothesisStatus
+    score: float
+    uncertainty: float
+    payload: dict[str, Any]
+    supporting_evidence_ids: list[UUID]
+    contradicting_evidence_ids: list[UUID]
+    created_at: datetime
+    updated_at: datetime
+
+ObservationSourceType: TypeAlias = Literal["IMAGE", "VIDEO_FRAME", "DEPTH", "LIDAR", "GPS", "IMU", "USER_HINT", "MANUAL_MEASUREMENT"]
+
+@dataclass(slots=True)
+class Observation:
+    id: UUID
+    world_id: UUID
+    source_type: ObservationSourceType
+    quality: dict[str, Any]
+    immutable: bool
+    created_at: datetime
+    artifact_id: UUID | None = None
+    timestamp: datetime | None = None
+    camera_intrinsics: dict[str, Any] | None = None
+    camera_pose_candidate: dict[str, Any] | None = None
+
+@dataclass(slots=True)
+class Portal:
+    id: UUID
+    world_id: UUID
+    from_zone_id: UUID
+    transform: dict[str, Any]
+    passable: bool
+    confidence: float
+    created_at: datetime
+    updated_at: datetime
+    to_zone_id: UUID | None = None
+    anchor_id: UUID | None = None
+
+ValidationResultStatus: TypeAlias = Literal["PASSED", "FAILED", "NEEDS_REVIEW"]
+
+@dataclass(slots=True)
+class ValidationResult:
+    id: UUID
+    candidate_id: UUID
+    status: ValidationResultStatus
+    issues: list[dict[str, Any]]
+    metrics: dict[str, Any]
+    validator: str
+    created_at: datetime
+
+WorldRevisionActorType: TypeAlias = Literal["USER", "SYSTEM", "AGENT"]
+
+@dataclass(slots=True)
+class WorldRevision:
+    id: UUID
+    world_id: UUID
+    actor_type: WorldRevisionActorType
+    changeset: dict[str, Any]
+    created_at: datetime
+    parent_revision_id: UUID | None = None
+    command_id: UUID | None = None
+
+WorldCoordinateSystem: TypeAlias = Literal["RIGHT_HANDED_Y_UP"]
+
+WorldUnit: TypeAlias = Literal["METER"]
+
+@dataclass(slots=True)
+class World:
+    id: UUID
+    name: str
+    schema_version: int
+    coordinate_system: WorldCoordinateSystem
+    unit: WorldUnit
+    created_at: datetime
+    updated_at: datetime
+    active_revision_id: UUID | None = None
+
+ZoneZoneType: TypeAlias = Literal["ROOM", "CORRIDOR", "FLOOR", "BUILDING", "OUTDOOR", "GARDEN", "STREET", "UNKNOWN"]
+
+@dataclass(slots=True)
+class Zone:
+    id: UUID
+    world_id: UUID
+    zone_type: ZoneZoneType
+    local_transform: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+    display_name: str | None = None
+    confidence: float | None = None
