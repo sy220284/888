@@ -4,24 +4,113 @@
   "title": "CanonicalCapabilityRequest",
   "type": "object",
   "additionalProperties": false,
-  "required": ["request_id", "capability", "input_artifact_ids", "parameters", "creativity_profile", "verification_required"],
+  "required": [
+    "request_id",
+    "capability",
+    "input_artifact_ids",
+    "parameters",
+    "evidence_policy",
+    "constraints",
+    "output_schema",
+    "quality_profile",
+    "creativity_profile",
+    "verification_required"
+  ],
   "properties": {
-    "request_id": { "type": "string", "format": "uuid" },
-    "capability": { "type": "string", "minLength": 1 },
+    "request_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "capability": {
+      "type": "string",
+      "enum": [
+        "IMAGE_EDIT",
+        "OBJECT_3D",
+        "WORLD_COMPLETION",
+        "DEPTH",
+        "SEGMENTATION",
+        "IMAGE_EMBEDDING",
+        "FEATURE_MATCHING",
+        "TEXTURE",
+        "AUDIO",
+        "ASSOCIATIVE_REASONING",
+        "SCENE_HYPOTHESIS",
+        "VERIFICATION_QUESTION",
+        "CHARACTER",
+        "MOTION",
+        "RELIGHTING"
+      ]
+    },
     "input_artifact_ids": {
       "type": "array",
-      "items": { "type": "string", "format": "uuid" },
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
       "uniqueItems": true
     },
-    "world_context_ref": { "type": ["string", "null"] },
-    "parameters": { "type": "object" },
-    "quality_profile": { "type": ["string", "null"] },
+    "world_context_ref": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "parameters": {
+      "type": "object"
+    },
+    "evidence_policy": {
+      "type": "object"
+    },
+    "constraints": {
+      "type": "object"
+    },
+    "output_schema": {
+      "type": "object"
+    },
+    "quality_profile": {
+      "type": "string",
+      "enum": [
+        "FAST",
+        "BALANCED",
+        "HIGH",
+        "MAX"
+      ]
+    },
     "creativity_profile": {
       "type": "string",
-      "enum": ["STRICT", "BALANCED", "EXPLORATORY", "DIVERGENT"]
+      "enum": [
+        "STRICT",
+        "BALANCED",
+        "EXPLORATORY",
+        "DIVERGENT"
+      ]
     },
-    "cost_budget": { "type": ["number", "null"], "minimum": 0 },
-    "latency_budget_ms": { "type": ["integer", "null"], "minimum": 0 },
-    "verification_required": { "type": "boolean" }
+    "cost_budget": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "latency_budget_ms": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "verification_required": {
+      "type": "boolean"
+    },
+    "deterministic_seed": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "provider_hints": {
+      "type": "object"
+    }
   }
 }
