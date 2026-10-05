@@ -1,7 +1,4 @@
-use std::time::Duration;
-
 use anyhow::{bail, Context, Result};
-use chrono::{DateTime, Utc};
 use reqwest::{Client, Url};
 
 const FAL_QUEUE_BASE_URL: &str = "https://queue.fal.run";
@@ -11,9 +8,6 @@ use serde_json::Value;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FalSubmission {
     pub request_id: String,
-    pub status_url: Option<String>,
-    pub response_url: Option<String>,
-    pub submitted_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -89,15 +83,6 @@ impl FalQueueClient {
 
         Ok(FalSubmission {
             request_id: request_id.to_owned(),
-            status_url: body
-                .get("status_url")
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-            response_url: body
-                .get("response_url")
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-            submitted_at: Utc::now(),
         })
     }
 
@@ -171,35 +156,6 @@ impl FalQueueClient {
         Ok(body)
     }
 
-    pub async fn wait_for_completion(
-        &self,
-        endpoint: &str,
-        submission: &FalSubmission,
-        poll_interval: Duration,
-        timeout: Duration,
-    ) -> Result<FalStatusSnapshot> {
-        let started = tokio::time::Instant::now();
-        loop {
-            let snapshot = self.status(endpoint, submission, true).await?;
-            if snapshot.is_completed() {
-                if let Some(message) = snapshot.error_message() {
-                    bail!("FAL request completed with error: {message}");
-                }
-                return Ok(snapshot);
-            }
-            if snapshot.is_failed() {
-                let suffix = snapshot
-                    .error_message()
-                    .map(|message| format!(": {message}"))
-                    .unwrap_or_default();
-                bail!("FAL request {}{suffix}", snapshot.status);
-            }
-            if started.elapsed() >= timeout {
-                bail!("FAL request timed out after {}s", timeout.as_secs());
-            }
-            tokio::time::sleep(poll_interval).await;
-        }
-    }
 }
 
 fn validate_endpoint(endpoint: &str) -> Result<()> {
