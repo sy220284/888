@@ -44,7 +44,9 @@ function Player({ urls, muted }: { urls: string[]; muted: boolean }) {
 
   useEffect(() => {
     camera.add(listener)
-    return () => listener.removeFromParent()
+    return () => {
+      listener.removeFromParent()
+    }
   }, [camera, listener])
 
   useEffect(() => {

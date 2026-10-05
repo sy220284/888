@@ -6,5 +6,11 @@
     "build:desktop": "pnpm --filter @888/desktop build",
     "typecheck": "pnpm --filter @888/desktop typecheck",
     "test": "pnpm --filter @888/desktop test"
+  },
+  "packageManager": "pnpm@10.34.6",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
