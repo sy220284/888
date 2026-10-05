@@ -43,6 +43,7 @@
 - `docs/adr/README.md`：已接受的关键架构决策与变更规则
 - `docs/16-可行性分析与技术风险.md`：整体可行性、核心研发难点、单人 + AI 难度与风险边界
 - `docs/17-联想推理与先验系统设计.md`：联想先验、Proposal、Hypothesis、联想求证与反幻觉边界
+- `docs/18-AI运行时兼容与行为标准.md`：跨 AI Capability、行为适配、Prompt Compiler、工具协议、输出归一化、置信度校准与创意控制
 
 文档编号 `11` 当前有意保留，不创建对应文档；除非用户明确要求，不得因编号空缺自行补建。
 
@@ -79,6 +80,10 @@ AI 不得在存在未解决文档冲突时继续扩展实现。
 10. 生成成功不等于结果正确。
 11. 能局部修复就不全量重做。
 12. 联想无法覆盖强真实 Evidence；新真实证据与联想冲突时，以真实证据为准。
+13. 不同 AI 的厂商私有行为必须止步于 Adapter；业务层只使用 Canonical Capability Contract。
+14. 模型输出必须经过 Output Normalizer 与 Validator，不能直接进入 Candidate / Proposal / World State。
+15. 模型 raw confidence 不具备跨模型可比性；自动决策使用 calibrated confidence。
+16. 创意模式只能扩大候选空间，不能降低 Observed / Verified / Revision 的事实门槛。
 
 ## 5. 固定技术栈
 
@@ -249,6 +254,17 @@ Core 与 Worker 只传结构化小数据和 Artifact 引用。
 传：Job ID、Schema 数据、Artifact ID / Hash、进度、结构化结果、结构化错误。
 
 不传：大图片二进制、Mesh 大文件、Splat 大文件、视频大文件。大文件统一进入 Artifact Store。
+
+## 10.1 AI 模型运行时规则
+
+AI Provider / 模型接入还必须遵守：
+
+- 不在业务层直接拼厂商 Prompt。
+- 不把 OpenAI / Anthropic / Gemini / Qwen 等私有返回结构扩散到 Core Domain。
+- 不因为模型没有原生 Tool Calling 就建立第二套业务工具协议；统一转换为 ToolIntent。
+- 新模型默认 EXPERIMENTAL，通过 Conformance Suite 后才能进入自动 Router。
+- 严谨任务使用 Factual Channel；联想 / 创意任务使用 Exploratory Channel。
+- 多模型意见一致不能替代 Evidence / Constraint Verification。
 
 ## 11. AI 标准工作流程
 
