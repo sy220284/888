@@ -2,7 +2,7 @@
 name = "world888-vision-worker"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = ["world888-worker-sdk"]
+dependencies = ["world888-worker-sdk", "Pillow>=11,<12"]
 
 [project.scripts]
 world888-vision-worker = "workers.vision.main:main"
