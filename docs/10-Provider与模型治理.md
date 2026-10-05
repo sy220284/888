@@ -263,3 +263,66 @@ Router 不把新任务发送到 UNAVAILABLE。
 - token / monetary cost
 
 Router 不允许把联想输出绕过 Hypothesis / Validation 链直接提交 Revision。
+
+## 18. AI Compatibility Layer 与模型认证
+
+Provider Router 不只判断模型“能不能调用”，还必须判断它是否适合当前任务。
+
+### 18.1 Model Behavior Profile
+
+每个 AI 模型必须维护机器可读 Profile：
+
+- structured_output_reliability
+- tool_calling_reliability
+- vision_strength
+- spatial_reasoning_strength
+- associative_reasoning_strength
+- creative_diversity
+- instruction_following
+- hallucination_risk
+- calibration_error
+- latency
+- cost
+- known_quirks
+
+Profile 来源必须是 Benchmark / Conformance，不凭人工印象填写。
+
+### 18.2 模型状态
+
+- CERTIFIED：通过当前 Conformance，允许进入自动 Router。
+- EXPERIMENTAL：可以手工选择 / 测试，不进入关键自动路径。
+- DEGRADED：部分 Capability 暂停。
+- BLOCKED：不允许执行。
+
+### 18.3 Prompt Compiler
+
+Provider Adapter 只能把 Canonical Task 转换为模型最适合的 Prompt / Structured Output / Tool 定义。
+
+业务规则不能散落到多个模型 Prompt 中形成多套版本。
+
+### 18.4 Output Normalizer
+
+所有厂商输出必须转换成统一 888 Schema。
+
+自然语言说明只作为附加字段，不能作为 World State 真相。
+
+### 18.5 严谨 / 创意路由
+
+Router 根据任务选择 Creativity Profile：
+
+- STRICT：事实与关键验证。
+- BALANCED：默认联想。
+- EXPLORATORY：高不确定区域的候选探索。
+- DIVERGENT：后期创意世界方案，只允许人工 / Validator 后进入下一步。
+
+创意更高时增加 Validation Budget，而不降低正式世界准入门槛。
+
+### 18.6 多模型协同
+
+允许：
+
+- Parallel Proposal
+- Critic
+- Specialist Routing
+
+“多个模型意见一致”不能替代真实 Evidence 或 Constraint Verification。
