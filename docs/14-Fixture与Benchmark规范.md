@@ -79,6 +79,23 @@
 - 低清
 - 降级策略
 
+### S10 联想与零重叠求证
+
+验证：
+
+- Associative Proposal Recall / Precision
+- Weak Association
+- 多假设
+- 联想 → 求证
+- Next Best View
+- False High-confidence Association
+
+### S11 反联想干扰
+
+构造外观很像但实际不同的房间 / 家具 / 门窗，验证系统不会因为相似度高就错误合并。
+
+---
+
 ## 3. Fixture 目录结构
 
 ```text
@@ -194,6 +211,10 @@ testdata/
 ### 世界推理
 
 - Hypothesis ranking
+- Proposal Recall / Precision
+- Useful Hypothesis Rate
+- False High-confidence Association
+- Evidence Conversion Rate
 - Conflict resolution
 - Confidence calibration
 
