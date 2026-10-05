@@ -11,6 +11,7 @@
     "optional_dependency_ids",
     "resources",
     "max_attempts",
+    "idempotent",
     "created_at",
     "updated_at"
   ],
@@ -59,6 +60,9 @@
     "max_attempts": {
       "type": "integer",
       "minimum": 1
+    },
+    "idempotent": {
+      "type": "boolean"
     },
     "retry_policy": {
       "type": "object"
