@@ -6,9 +6,8 @@ use uuid::Uuid;
 
 use crate::{
     metadata::sanitize_json,
-    model::{AIProviderRun, AIAIProviderRunStatus},
+    model::{AIProviderRun, AIProviderRunStatus},
 };
-
 
 impl AIProviderRunStatus {
     pub fn as_str(self) -> &'static str {
@@ -270,7 +269,7 @@ mod tests {
 
     use crate::db;
 
-    use super::{ProviderRunRepository, AIProviderRunStatus};
+    use super::{AIProviderRunStatus, ProviderRunRepository};
 
     #[tokio::test]
     async fn persists_provider_run_without_embedded_base64() {
