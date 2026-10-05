@@ -406,6 +406,25 @@ class Hypothesis:
     created_at: datetime
     updated_at: datetime
 
+ObservationAnalysisStatus: TypeAlias = Literal['COMPLETED', 'PARTIAL', 'FAILED']
+
+@dataclass(slots=True)
+class ObservationAnalysis:
+    id: UUID
+    observation_id: UUID
+    source_artifact_id: UUID
+    status: ObservationAnalysisStatus
+    exif: dict[str, Any]
+    quality: dict[str, Any]
+    analyzer_version: str
+    analyzed_at: datetime
+    preview_artifact_id: UUID | None = None
+    width: int | None = None
+    height: int | None = None
+    orientation: int | None = None
+    captured_at: datetime | None = None
+    error: str | None = None
+
 ObservationSourceType: TypeAlias = Literal['IMAGE', 'VIDEO_FRAME', 'DEPTH', 'LIDAR', 'GPS', 'IMU', 'USER_HINT', 'MANUAL_MEASUREMENT']
 
 @dataclass(slots=True)
