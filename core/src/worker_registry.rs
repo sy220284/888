@@ -4,9 +4,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
-    model::{
-        WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration,
-    },
+    model::{WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration},
     serde_db::{enum_from_string, enum_to_string, to_json},
 };
 
@@ -121,16 +119,12 @@ impl WorkerRegistry {
     }
 
     pub async fn health(&self, worker_id: Uuid) -> Result<Option<WorkerHeartbeatHealth>> {
-        let value: Option<String> = sqlx::query_scalar(
-            "SELECT health FROM worker_registrations WHERE worker_id = ?",
-        )
-        .bind(worker_id.to_string())
-        .fetch_optional(&self.pool)
-        .await?;
-        value
-            .as_deref()
-            .map(enum_from_string)
-            .transpose()
+        let value: Option<String> =
+            sqlx::query_scalar("SELECT health FROM worker_registrations WHERE worker_id = ?")
+                .bind(worker_id.to_string())
+                .fetch_optional(&self.pool)
+                .await?;
+        value.as_deref().map(enum_from_string).transpose()
     }
 }
 
