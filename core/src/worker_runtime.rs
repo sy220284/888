@@ -667,13 +667,26 @@ impl WorkerRuntimeInner {
             .get("camera_intrinsics")
             .filter(|value| !value.is_null())
             .cloned();
-        let mut quality = output
+        let observation = self
+            .observations
+            .get(observation_id)
+            .await?
+            .context("analysis observation does not exist")?;
+        if observation.artifact_id != Some(artifact_id) {
+            bail!("analysis observation artifact does not match job input");
+        }
+
+        let worker_quality = output
             .get("quality")
-            .cloned()
-            .context("analysis result is missing quality")?;
+            .and_then(Value::as_object)
+            .context("analysis result quality must be an object")?;
+        let mut quality = observation.quality;
         let quality_object = quality
             .as_object_mut()
-            .context("analysis quality must be an object")?;
+            .context("stored observation quality must be an object")?;
+        for (key, value) in worker_quality {
+            quality_object.insert(key.clone(), value.clone());
+        }
         quality_object.insert(
             "analysis_state".to_owned(),
             Value::String("COMPLETED".to_owned()),
