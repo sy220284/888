@@ -80,7 +80,8 @@ def rust_base(spec: dict[str, Any], root: str, prop: str) -> str:
             return "DateTime<Utc>"
         return "String"
     if kind == "integer":
-        return "u64" if spec.get("minimum") == 0 else "i64"
+        minimum = spec.get("minimum")
+        return "u64" if isinstance(minimum, (int, float)) and minimum >= 0 else "i64"
     if kind == "number":
         return "f64"
     if kind == "boolean":
