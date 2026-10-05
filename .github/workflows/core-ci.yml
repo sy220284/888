@@ -54,7 +54,7 @@ jobs:
         with:
           python-version: "3.13"
       - name: 安装 Vision Worker Python 依赖
-        run: python -m pip install "Pillow>=11,<12"
+        run: python -m pip install "Pillow==11.3.0"
       - name: 检查架构边界
         run: python tools/check_architecture.py
       - name: 校验 Schema
