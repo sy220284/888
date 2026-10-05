@@ -23,7 +23,7 @@ impl JobEngine {
         &self,
         world_id: Option<Uuid>,
         task_type: &str,
-        max_attempts: i64,
+        max_attempts: u64,
         idempotent: bool,
     ) -> Result<Job> {
         let task_type = task_type.trim();
@@ -65,7 +65,7 @@ impl JobEngine {
         .bind(&job.task_type)
         .bind(enum_to_string(&job.state)?)
         .bind(job.attempt as i64)
-        .bind(job.max_attempts)
+        .bind(i64::try_from(job.max_attempts).context("max_attempts too large")?)
         .bind(job.idempotent)
         .bind(job.created_at.to_rfc3339())
         .bind(job.updated_at.to_rfc3339())
@@ -110,7 +110,7 @@ impl JobEngine {
         } else {
             current.attempt
         };
-        if target == JobState::Running && next_attempt > current.max_attempts as u64 {
+        if target == JobState::Running && next_attempt > current.max_attempts {
             bail!("job exceeded max_attempts");
         }
 
@@ -210,7 +210,7 @@ impl JobEngine {
             let job: Job = row.try_into()?;
             let target = if job.checkpoint_artifact_id.is_some() {
                 JobState::Recoverable
-            } else if job.idempotent && job.attempt < job.max_attempts as u64 {
+            } else if job.idempotent && job.attempt < job.max_attempts {
                 JobState::Ready
             } else {
                 JobState::Failed
@@ -302,7 +302,7 @@ impl TryFrom<JobRow> for Job {
             task_type: row.task_type,
             state: enum_from_string(&row.state)?,
             attempt: u64::try_from(row.attempt).context("negative job attempt")?,
-            max_attempts: row.max_attempts,
+            max_attempts: u64::try_from(row.max_attempts).context("negative max_attempts")?,
             idempotent: row.idempotent,
             checkpoint_artifact_id: row
                 .checkpoint_artifact_id
