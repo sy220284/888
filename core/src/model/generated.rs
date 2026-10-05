@@ -348,6 +348,18 @@ pub enum ProviderCapabilityHealth {
     AuthError,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ProviderCapabilityQualityProfilesItem {
+    #[serde(rename = "FAST")]
+    Fast,
+    #[serde(rename = "BALANCED")]
+    Balanced,
+    #[serde(rename = "HIGH")]
+    High,
+    #[serde(rename = "MAX")]
+    Max,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProviderCapability {
     pub provider_id: String,
