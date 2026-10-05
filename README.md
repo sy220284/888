@@ -164,6 +164,7 @@
 16. [可行性分析与技术风险](docs/16-可行性分析与技术风险.md)
 17. [联想推理与先验系统设计](docs/17-联想推理与先验系统设计.md)
 18. [AI 运行时兼容与行为标准](docs/18-AI运行时兼容与行为标准.md)
+19. [Image Blaster 移植复用清单](docs/19-Image-Blaster移植复用清单.md)
 
 > 文档编号 `11` 当前有意保留，不创建对应文档；除非后续收到明确要求，不得因编号空缺自行补建。
 
@@ -218,3 +219,18 @@
 8. 重型 GPU / 3D 测试可以进入阶段性或 Nightly 流程，基础边界和数据一致性测试必须进入每个 PR。
 
 后续开发规范详见根目录 [AGENTS.md](AGENTS.md)。
+
+
+## 已启动代码迁移
+
+已从原 Image Blaster 迁入第一批可复用能力，并按 888 边界改造：
+
+- Provider 无关 World Viewer
+- Gaussian Splat
+- GLB / Rapier Collider
+- Fly Navigation 与跨设备相机手势
+- Environment Map
+- Audio Manager
+- pnpm Desktop 前端骨架
+
+完整范围见 [Image Blaster 移植复用清单](docs/19-Image-Blaster移植复用清单.md)。

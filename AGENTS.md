@@ -44,6 +44,7 @@
 - `docs/16-可行性分析与技术风险.md`：整体可行性、核心研发难点、单人 + AI 难度与风险边界
 - `docs/17-联想推理与先验系统设计.md`：联想先验、Proposal、Hypothesis、联想求证与反幻觉边界
 - `docs/18-AI运行时兼容与行为标准.md`：跨 AI Capability、行为适配、Prompt Compiler、工具协议、输出归一化、置信度校准与创意控制
+- `docs/19-Image-Blaster移植复用清单.md`：原 Image Blaster 的已迁、待迁、仅参考与明确弃用边界
 
 文档编号 `11` 当前有意保留，不创建对应文档；除非用户明确要求，不得因编号空缺自行补建。
 
@@ -265,6 +266,17 @@ AI Provider / 模型接入还必须遵守：
 - 新模型默认 EXPERIMENTAL，通过 Conformance Suite 后才能进入自动 Router。
 - 严谨任务使用 Factual Channel；联想 / 创意任务使用 Exploratory Channel。
 - 多模型意见一致不能替代 Evidence / Constraint Verification。
+
+## 10.2 上游 Image Blaster 代码迁移规则
+
+迁移 `neilsonnn/image-blaster` 代码时：
+
+- 必须先查 `docs/19-Image-Blaster移植复用清单.md`。
+- 可复用能力必须改造成 888 当前边界，禁止恢复旧 `.claude` Runtime。
+- 不允许把 `scene.json / project.json` 恢复成正式状态源。
+- 不允许把 Provider 私有 World 类型传播到 UI / Core。
+- 不引入 bun；前端继续使用 pnpm。
+- 实质改造自上游的代码必须保留 MIT 声明，详见 `THIRD_PARTY_NOTICES.md`。
 
 ## 11. AI 标准工作流程
 

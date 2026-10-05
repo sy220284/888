@@ -1,0 +1,10 @@
+{
+  "name": "888",
+  "private": true,
+  "scripts": {
+    "dev:desktop": "pnpm --filter @888/desktop dev",
+    "build:desktop": "pnpm --filter @888/desktop build",
+    "typecheck": "pnpm --filter @888/desktop typecheck",
+    "test": "pnpm --filter @888/desktop test"
+  }
+}
