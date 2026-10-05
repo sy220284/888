@@ -6,7 +6,8 @@ use serde_json::Value;
 use uuid::Uuid;
 
 use crate::{
-    artifact_store::{ArtifactRecord, ArtifactStore},
+    artifact_store::ArtifactStore,
+    model::Artifact,
     provider::{collect_remote_files, fal::FalQueueClient},
     provider_run_repository::ProviderRunRepository,
 };
@@ -18,7 +19,7 @@ use super::{
 
 #[derive(Debug, Clone)]
 pub enum ImageSource {
-    Artifact(ArtifactRecord),
+    Artifact(Artifact),
     RemoteUrl(String),
 }
 
@@ -26,7 +27,7 @@ pub enum ImageSource {
 pub struct ImageTo3dRunResult {
     pub run_id: Uuid,
     pub request_id: String,
-    pub artifacts: Vec<ArtifactRecord>,
+    pub artifacts: Vec<Artifact>,
     pub raw_result: Value,
 }
 
