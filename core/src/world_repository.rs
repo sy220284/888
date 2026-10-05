@@ -9,7 +9,7 @@ use crate::{
     serde_db::{enum_from_string, enum_to_string, from_json, to_json},
 };
 
-const WORLD_SCHEMA_VERSION: i64 = 1;
+const WORLD_SCHEMA_VERSION: u64 = 1;
 
 #[derive(Clone)]
 pub struct WorldRepository {
@@ -49,7 +49,7 @@ impl WorldRepository {
         )
         .bind(world.id.to_string())
         .bind(&world.name)
-        .bind(world.schema_version)
+        .bind(i64::try_from(world.schema_version).context("world schema_version too large")?)
         .bind(enum_to_string(&world.coordinate_system)?)
         .bind(enum_to_string(&world.unit)?)
         .bind(world.created_at.to_rfc3339())
@@ -223,7 +223,7 @@ impl TryFrom<WorldRow> for World {
         Ok(Self {
             id: Uuid::parse_str(&row.id)?,
             name: row.name,
-            schema_version: row.schema_version,
+            schema_version: u64::try_from(row.schema_version).context("negative world schema_version")?,
             active_revision_id: row
                 .active_revision_id
                 .as_deref()
