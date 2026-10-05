@@ -582,6 +582,35 @@ pub struct WorkerHeartbeat {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum WorkerMessageMessageType {
+    #[serde(rename = "REGISTER")]
+    Register,
+    #[serde(rename = "HEARTBEAT")]
+    Heartbeat,
+    #[serde(rename = "JOB_DISPATCH")]
+    JobDispatch,
+    #[serde(rename = "PROGRESS")]
+    Progress,
+    #[serde(rename = "JOB_RESULT")]
+    JobResult,
+    #[serde(rename = "PAUSE")]
+    Pause,
+    #[serde(rename = "CANCEL")]
+    Cancel,
+    #[serde(rename = "SHUTDOWN")]
+    Shutdown,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct WorkerMessage {
+    pub message_id: Uuid,
+    pub message_type: WorkerMessageMessageType,
+    pub protocol_version: u64,
+    pub job_id: Option<Uuid>,
+    pub payload: Value,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum WorkerRegistrationWorkerType {
     #[serde(rename = "VISION")]
     Vision,
