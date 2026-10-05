@@ -113,20 +113,29 @@ class CalibrationProfile:
     parameters: dict[str, Any]
     metrics: dict[str, Any]
 
+CanonicalCapabilityRequestCapability: TypeAlias = Literal['IMAGE_EDIT', 'OBJECT_3D', 'WORLD_COMPLETION', 'DEPTH', 'SEGMENTATION', 'IMAGE_EMBEDDING', 'FEATURE_MATCHING', 'TEXTURE', 'AUDIO', 'ASSOCIATIVE_REASONING', 'SCENE_HYPOTHESIS', 'VERIFICATION_QUESTION', 'CHARACTER', 'MOTION', 'RELIGHTING']
+
+CanonicalCapabilityRequestQualityProfile: TypeAlias = Literal['FAST', 'BALANCED', 'HIGH', 'MAX']
+
 CanonicalCapabilityRequestCreativityProfile: TypeAlias = Literal['STRICT', 'BALANCED', 'EXPLORATORY', 'DIVERGENT']
 
 @dataclass(slots=True)
 class CanonicalCapabilityRequest:
     request_id: UUID
-    capability: str
+    capability: CanonicalCapabilityRequestCapability
     input_artifact_ids: list[UUID]
     parameters: dict[str, Any]
+    evidence_policy: dict[str, Any]
+    constraints: dict[str, Any]
+    output_schema: dict[str, Any]
+    quality_profile: CanonicalCapabilityRequestQualityProfile
     creativity_profile: CanonicalCapabilityRequestCreativityProfile
     verification_required: bool
     world_context_ref: str | None = None
-    quality_profile: str | None = None
     cost_budget: float | None = None
     latency_budget_ms: int | None = None
+    deterministic_seed: int | None = None
+    provider_hints: dict[str, Any] | None = None
 
 CreativityProfileLevel: TypeAlias = Literal['STRICT', 'BALANCED', 'EXPLORATORY', 'DIVERGENT']
 
@@ -186,6 +195,7 @@ class Job:
     state: JobState
     attempt: int
     max_attempts: int
+    idempotent: bool
     created_at: datetime
     updated_at: datetime
     world_id: UUID | None = None
@@ -202,6 +212,7 @@ class Task:
     optional_dependency_ids: list[UUID]
     resources: dict[str, Any]
     max_attempts: int
+    idempotent: bool
     created_at: datetime
     updated_at: datetime
     world_id: UUID | None = None
