@@ -65,39 +65,39 @@ impl ProviderRouter {
 
     pub fn select(&self, request: &CanonicalCapabilityRequest) -> Result<ProviderCapability> {
         let requested_quality = request.quality_profile.as_deref();
-        let mut candidates: Vec<&ProviderCapability> = self
-            .providers
-            .iter()
-            .filter(|provider| {
-                enum_to_string(&provider.capability)
-                    .is_ok_and(|capability| capability == request.capability)
-            })
-            .filter(|provider| {
-                matches!(
-                    provider.health,
-                    ProviderCapabilityHealth::Healthy | ProviderCapabilityHealth::Degraded
-                )
-            })
-            .filter(|provider| {
-                requested_quality.is_none_or(|quality| {
-                    provider.quality_profiles.iter().any(|profile| {
-                        enum_to_string(profile).is_ok_and(|value| value == quality)
+        let mut candidates: Vec<&ProviderCapability> =
+            self.providers
+                .iter()
+                .filter(|provider| {
+                    enum_to_string(&provider.capability)
+                        .is_ok_and(|capability| capability == request.capability)
+                })
+                .filter(|provider| {
+                    matches!(
+                        provider.health,
+                        ProviderCapabilityHealth::Healthy | ProviderCapabilityHealth::Degraded
+                    )
+                })
+                .filter(|provider| {
+                    requested_quality.is_none_or(|quality| {
+                        provider.quality_profiles.iter().any(|profile| {
+                            enum_to_string(profile).is_ok_and(|value| value == quality)
+                        })
                     })
                 })
-            })
-            .filter(|provider| {
-                request.cost_budget.is_none_or(|budget| {
-                    provider.estimated_cost.is_none_or(|cost| cost <= budget)
+                .filter(|provider| {
+                    request.cost_budget.is_none_or(|budget| {
+                        provider.estimated_cost.is_none_or(|cost| cost <= budget)
+                    })
                 })
-            })
-            .filter(|provider| {
-                request.latency_budget_ms.is_none_or(|budget| {
-                    provider
-                        .average_latency_ms
-                        .is_none_or(|latency| latency <= budget)
+                .filter(|provider| {
+                    request.latency_budget_ms.is_none_or(|budget| {
+                        provider
+                            .average_latency_ms
+                            .is_none_or(|latency| latency <= budget)
+                    })
                 })
-            })
-            .collect();
+                .collect();
 
         candidates.sort_by(|left, right| compare_provider(left, right));
         candidates
