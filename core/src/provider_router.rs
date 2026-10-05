@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use serde_json::json;
 
 use crate::{
