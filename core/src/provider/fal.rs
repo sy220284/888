@@ -3,6 +3,8 @@ use std::time::Duration;
 use anyhow::{bail, Context, Result};
 use chrono::{DateTime, Utc};
 use reqwest::{Client, Url};
+
+const FAL_QUEUE_BASE_URL: &str = "https://queue.fal.run";
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -45,7 +47,6 @@ impl FalStatusSnapshot {
 pub struct FalQueueClient {
     http: Client,
     api_key: String,
-    base_url: String,
 }
 
 impl FalQueueClient {
@@ -57,18 +58,12 @@ impl FalQueueClient {
         Ok(Self {
             http: Client::new(),
             api_key,
-            base_url: "https://queue.fal.run".to_owned(),
         })
-    }
-
-    pub fn with_base_url(mut self, base_url: impl Into<String>) -> Self {
-        self.base_url = base_url.into().trim_end_matches('/').to_owned();
-        self
     }
 
     pub async fn submit(&self, endpoint: &str, input: &Value) -> Result<FalSubmission> {
         validate_endpoint(endpoint)?;
-        let url = format!("{}/{}", self.base_url, endpoint.trim_start_matches('/'));
+        let url = format!("{FAL_QUEUE_BASE_URL}/{}", endpoint.trim_start_matches('/'));
         let response = self
             .http
             .post(url)
@@ -115,12 +110,11 @@ impl FalQueueClient {
         validate_endpoint(endpoint)?;
         let default = format!(
             "{}/{}/requests/{}/status",
-            self.base_url,
+            FAL_QUEUE_BASE_URL,
             endpoint.trim_start_matches('/'),
             submission.request_id
         );
-        let mut url = Url::parse(submission.status_url.as_deref().unwrap_or(&default))
-            .context("invalid FAL status URL")?;
+        let mut url = Url::parse(&default).context("invalid FAL status URL")?;
         if include_logs {
             url.query_pairs_mut().append_pair("logs", "1");
         }
@@ -155,14 +149,13 @@ impl FalQueueClient {
         validate_endpoint(endpoint)?;
         let default = format!(
             "{}/{}/requests/{}",
-            self.base_url,
+            FAL_QUEUE_BASE_URL,
             endpoint.trim_start_matches('/'),
             submission.request_id
         );
-        let url = submission.response_url.as_deref().unwrap_or(&default);
         let response = self
             .http
-            .get(url)
+            .get(default)
             .header(
                 reqwest::header::AUTHORIZATION,
                 format!("Key {}", self.api_key),
