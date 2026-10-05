@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use serde_json::{json, Value};
-use uuid::Uuid;
 
 use crate::{
     artifact_store::ArtifactStore,
