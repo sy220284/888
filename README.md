@@ -193,7 +193,27 @@
 
 ## 当前阶段
 
-当前仓库首先建立完整设计与实施基线。后续开发严格按文档中的阶段、接口边界、验收门槛推进，避免先堆功能再返工核心架构。
+当前仓库已经完成第一批可运行基础设施：
+
+- Image Blaster 高价值 Runtime 已重写到 Rust Core。
+- `packages/schema` 已覆盖 Command、World、Task / Job、Worker、Provider / AI、Compiler 等核心协议，并统一生成 Rust / TypeScript / Python 类型。
+- SQLite 已建立 World / Revision、Candidate / Validation、Job DAG、Worker Registry 等基础持久化结构。
+- Command 幂等入口、Job 状态机与依赖解析、Canonical Capability Router、Worker JSONL 协议边界已进入 Core。
+- 架构守卫已经进入 CI，自动阻止 UI / Worker / Provider 越权依赖和旧 Runtime 回退。
+
+当前主线按 `docs/05-详细落地执行路线.md` 继续推进：
+
+```text
+Observation Import
+→ Canonical World Query / Mutation
+→ Vision Worker 实际执行链
+→ 连续多图几何重建
+→ Zone / Anchor / Portal
+→ 跳跃照片与室内外统一世界
+→ 验证 / 修复闭环
+```
+
+Provider 与 Viewer 继续增强时必须服务于这条主线，不提前用外围功能替代核心世界求解阶段。
 
 ## AI 驱动开发基线
 
