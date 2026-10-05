@@ -256,6 +256,11 @@ CREATE TABLE IF NOT EXISTS worker_registrations (
     device_json TEXT NOT NULL,
     software_json TEXT NOT NULL,
     health TEXT NOT NULL,
+    current_job_ids_json TEXT NOT NULL DEFAULT '[]',
+    cpu_usage REAL,
+    ram_mb INTEGER,
+    gpu_usage REAL,
+    vram_mb INTEGER,
     last_heartbeat_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
