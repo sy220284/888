@@ -39,11 +39,10 @@ impl CandidateService {
             bail!("candidate artifact_ids must be unique");
         }
         for artifact_id in &artifact_ids {
-            let exists: Option<i64> =
-                sqlx::query_scalar("SELECT 1 FROM artifacts WHERE id = ?")
-                    .bind(artifact_id.to_string())
-                    .fetch_optional(&self.pool)
-                    .await?;
+            let exists: Option<i64> = sqlx::query_scalar("SELECT 1 FROM artifacts WHERE id = ?")
+                .bind(artifact_id.to_string())
+                .fetch_optional(&self.pool)
+                .await?;
             if exists.is_none() {
                 bail!("candidate references missing artifact {artifact_id}");
             }
