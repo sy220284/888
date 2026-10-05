@@ -1,24 +1,16 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
-use crate::metadata::sanitize_json;
+use crate::{
+    metadata::sanitize_json,
+    model::{AIProviderRun, AIAIProviderRunStatus},
+};
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ProviderRunStatus {
-    Created,
-    Submitted,
-    Running,
-    Completed,
-    Failed,
-    Cancelled,
-}
 
-impl ProviderRunStatus {
+impl AIProviderRunStatus {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Created => "CREATED",
@@ -29,25 +21,6 @@ impl ProviderRunStatus {
             Self::Cancelled => "CANCELLED",
         }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ProviderRunRecord {
-    pub id: Uuid,
-    pub capability: String,
-    pub provider: String,
-    pub endpoint: String,
-    pub status: ProviderRunStatus,
-    pub request_id: Option<String>,
-    pub input: Value,
-    pub status_payload: Option<Value>,
-    pub result: Option<Value>,
-    pub output_artifact_ids: Vec<Uuid>,
-    pub error: Option<String>,
-    pub submitted_at: Option<DateTime<Utc>>,
-    pub completed_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Clone)]
@@ -66,14 +39,14 @@ impl ProviderRunRepository {
         provider: &str,
         endpoint: &str,
         input: &Value,
-    ) -> Result<ProviderRunRecord> {
+    ) -> Result<AIProviderRun> {
         let now = Utc::now();
-        let record = ProviderRunRecord {
+        let record = AIProviderRun {
             id: Uuid::new_v4(),
             capability: capability.to_owned(),
             provider: provider.to_owned(),
             endpoint: endpoint.to_owned(),
-            status: ProviderRunStatus::Created,
+            status: AIProviderRunStatus::Created,
             request_id: None,
             input: sanitize_json(input),
             status_payload: None,
@@ -116,7 +89,7 @@ impl ProviderRunRepository {
             WHERE id = ?
             "#,
         )
-        .bind(ProviderRunStatus::Submitted.as_str())
+        .bind(AIProviderRunStatus::Submitted.as_str())
         .bind(request_id)
         .bind(&now)
         .bind(&now)
@@ -135,7 +108,7 @@ impl ProviderRunRepository {
             WHERE id = ?
             "#,
         )
-        .bind(ProviderRunStatus::Running.as_str())
+        .bind(AIProviderRunStatus::Running.as_str())
         .bind(serde_json::to_string(&sanitize_json(status_payload))?)
         .bind(&now)
         .bind(id.to_string())
@@ -160,7 +133,7 @@ impl ProviderRunRepository {
             WHERE id = ?
             "#,
         )
-        .bind(ProviderRunStatus::Completed.as_str())
+        .bind(AIProviderRunStatus::Completed.as_str())
         .bind(serde_json::to_string(&sanitize_json(result))?)
         .bind(serde_json::to_string(&artifact_ids)?)
         .bind(&now)
@@ -180,7 +153,7 @@ impl ProviderRunRepository {
             WHERE id = ?
             "#,
         )
-        .bind(ProviderRunStatus::Failed.as_str())
+        .bind(AIProviderRunStatus::Failed.as_str())
         .bind(error)
         .bind(&now)
         .bind(&now)
@@ -190,7 +163,7 @@ impl ProviderRunRepository {
         Ok(())
     }
 
-    pub async fn get(&self, id: Uuid) -> Result<Option<ProviderRunRecord>> {
+    pub async fn get(&self, id: Uuid) -> Result<Option<AIProviderRun>> {
         let row = sqlx::query_as::<_, ProviderRunRow>(
             r#"
             SELECT id, capability, provider, endpoint, status, request_id, input_json,
@@ -226,17 +199,17 @@ struct ProviderRunRow {
     updated_at: String,
 }
 
-impl TryFrom<ProviderRunRow> for ProviderRunRecord {
+impl TryFrom<ProviderRunRow> for AIProviderRun {
     type Error = anyhow::Error;
 
     fn try_from(row: ProviderRunRow) -> Result<Self> {
         let status = match row.status.as_str() {
-            "CREATED" => ProviderRunStatus::Created,
-            "SUBMITTED" => ProviderRunStatus::Submitted,
-            "RUNNING" => ProviderRunStatus::Running,
-            "COMPLETED" => ProviderRunStatus::Completed,
-            "FAILED" => ProviderRunStatus::Failed,
-            "CANCELLED" => ProviderRunStatus::Cancelled,
+            "CREATED" => AIProviderRunStatus::Created,
+            "SUBMITTED" => AIProviderRunStatus::Submitted,
+            "RUNNING" => AIProviderRunStatus::Running,
+            "COMPLETED" => AIProviderRunStatus::Completed,
+            "FAILED" => AIProviderRunStatus::Failed,
+            "CANCELLED" => AIProviderRunStatus::Cancelled,
             other => anyhow::bail!("unknown provider run status: {other}"),
         };
         let output_artifact_ids: Vec<String> = row
@@ -297,7 +270,7 @@ mod tests {
 
     use crate::db;
 
-    use super::{ProviderRunRepository, ProviderRunStatus};
+    use super::{ProviderRunRepository, AIProviderRunStatus};
 
     #[tokio::test]
     async fn persists_provider_run_without_embedded_base64() {
@@ -326,7 +299,7 @@ mod tests {
         .unwrap();
 
         let loaded = repo.get(run.id).await.unwrap().unwrap();
-        assert_eq!(loaded.status, ProviderRunStatus::Completed);
+        assert_eq!(loaded.status, AIProviderRunStatus::Completed);
         assert_eq!(loaded.input["image"], "[stripped]");
         assert_eq!(loaded.request_id.as_deref(), Some("req-1"));
     }
