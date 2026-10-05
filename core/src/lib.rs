@@ -1,6 +1,7 @@
 pub mod artifact_store;
 pub mod asset_generation;
 pub mod candidate_service;
+pub mod command_service;
 pub mod db;
 pub mod job_engine;
 pub mod metadata;
