@@ -94,6 +94,27 @@
 
 构造外观很像但实际不同的房间 / 家具 / 门窗，验证系统不会因为相似度高就错误合并。
 
+### S12 AI Conformance
+
+同一组任务分别运行不同模型，验证：
+
+- Schema Compliance
+- Tool Calling
+- Evidence Citation
+- Unsupported Claim
+- False Verified Attempt
+- Confidence Calibration
+- Provider Error Normalization
+
+### S13 严谨性 / 创意性平衡
+
+同一高不确定场景分别使用 STRICT、BALANCED、EXPLORATORY：
+
+- STRICT 应更稳定、更少候选。
+- EXPLORATORY 应产生更高候选多样性。
+- 三种模式的 Verified 准入门槛必须相同。
+- EXPLORATORY 的有效新 Proposal 应高于 STRICT。
+
 ---
 
 ## 3. Fixture 目录结构
@@ -207,6 +228,17 @@ testdata/
 - Entity False Merge
 - Portal Precision / Recall
 - Zone Accuracy
+
+### AI 兼容层
+
+- Model Conformance Score
+- Schema Compliance
+- Tool Calling Success
+- Evidence Citation Accuracy
+- Unsupported Claim Rate
+- Calibration Error
+- Proposal Diversity
+- Useful Novel Proposal Rate
 
 ### 世界推理
 
