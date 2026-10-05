@@ -169,6 +169,8 @@ AI 不得在存在未解决文档冲突时继续扩展实现。
 - UI 保存第二套 World State。
 - Provider 响应直接成为正式世界数据。
 
+正式 Schema 必须覆盖联想链中的 `AssociativePrior / AssociativeProposal`，并保持它们与 Evidence / Hypothesis 分层。
+
 跨语言 Schema 变更顺序：
 
     修改 Schema
