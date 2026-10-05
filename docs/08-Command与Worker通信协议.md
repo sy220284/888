@@ -323,3 +323,36 @@ local socket 保留为未来性能优化候选，只有 Benchmark 证明 stdio �
 - expected information gain
 
 联想类 Command 的结果仍由 Core 写入 Prior / Hypothesis 状态，Worker / Provider 不直接提交 Revision。
+
+## 18. AI Capability 执行消息
+
+Core 与 AI Worker / Provider Adapter 之间只传 Canonical Capability Request，不传业务层临时 Prompt。
+
+请求至少包含：
+
+- request_id
+- capability
+- input artifact refs
+- context refs
+- output schema
+- quality profile
+- creativity profile
+- evidence policy
+- cost / latency budget
+
+返回必须是 AIOutputEnvelope。
+
+### ToolIntent
+
+无原生 Tool Calling 的模型可以返回 ToolIntent，但执行前必须经过：
+
+1. Schema Validation。
+2. Tool Allowlist。
+3. 参数 Validation。
+4. World / Evidence 权限边界检查。
+
+AI 生成的 ToolIntent 本身没有执行权限。
+
+### Provider 私有字段
+
+厂商 request id、finish reason、token usage 等私有字段进入 provider_metadata，不得扩散到业务 Schema。
