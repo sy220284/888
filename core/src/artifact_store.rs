@@ -284,10 +284,9 @@ impl ArtifactStore {
         .execute(&self.pool)
         .await?;
 
-        Ok(self
-            .find_by_hash(&record.content_hash)
+        self.find_by_hash(&record.content_hash)
             .await?
-            .expect("artifact row must exist after insert"))
+            .context("artifact row missing after insert")
     }
 }
 
