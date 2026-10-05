@@ -204,6 +204,7 @@ class Job:
     created_at: datetime
     updated_at: datetime
     world_id: UUID | None = None
+    assigned_worker_id: UUID | None = None
     checkpoint_artifact_id: UUID | None = None
     provider_run_id: UUID | None = None
     error_code: str | None = None

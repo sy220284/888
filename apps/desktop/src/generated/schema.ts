@@ -195,6 +195,7 @@ export interface Job {
   attempt: number
   max_attempts: number
   idempotent: boolean
+  assigned_worker_id?: string | null
   checkpoint_artifact_id?: string | null
   provider_run_id?: string | null
   error_code?: string | null

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::{bail, Context, Result};
+use chrono::{DateTime, Duration, Utc};
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
 use uuid::Uuid;
@@ -17,6 +18,8 @@ use crate::{
     serde_db::{enum_from_string, enum_to_string, from_json, to_json},
     world_repository::WorldRepository,
 };
+
+const COMMAND_LEASE_SECONDS: i64 = 30;
 
 #[derive(Clone)]
 pub struct CommandService {
@@ -49,31 +52,11 @@ impl CommandService {
     }
 
     pub async fn execute(&self, command: &Command) -> Result<CommandResponse> {
-        if let Some(existing) = self.load(command.command_id).await? {
-            ensure_same_command(&existing, command)?;
-            return Ok(existing.response.unwrap_or_else(|| CommandResponse {
-                command_id: command.command_id,
-                status: CommandResponseStatus::Accepted,
-                job_ids: Vec::new(),
-                result: None,
-                error: None,
-            }));
-        }
-
-        let inserted = self.insert_command(command).await?;
-        if !inserted {
-            let existing = self
-                .load(command.command_id)
-                .await?
-                .context("command conflict row disappeared")?;
-            ensure_same_command(&existing, command)?;
-            return Ok(existing.response.unwrap_or_else(|| CommandResponse {
-                command_id: command.command_id,
-                status: CommandResponseStatus::Accepted,
-                job_ids: Vec::new(),
-                result: None,
-                error: None,
-            }));
+        let owner = Uuid::new_v4();
+        match self.claim(command, owner).await? {
+            ClaimOutcome::Finished(response) => return Ok(response),
+            ClaimOutcome::Busy => return Ok(accepted(command.command_id)),
+            ClaimOutcome::Claimed => {}
         }
 
         let response = match self.execute_new(command).await {
@@ -87,7 +70,7 @@ impl CommandService {
             },
         };
 
-        self.persist_response(&response).await?;
+        self.persist_response(&response, owner).await?;
         Ok(response)
     }
 
@@ -102,7 +85,10 @@ impl CommandService {
                     bail!("CREATE_WORLD must not include world_id");
                 }
                 let name = required_string(&command.payload, "name")?;
-                let world = self.worlds.create(name).await?;
+                let world = self
+                    .worlds
+                    .create_for_command(name, command.command_id)
+                    .await?;
                 completed(command.command_id, serde_json::to_value(world)?)
             }
             CommandType::OpenWorld => {
@@ -216,13 +202,76 @@ impl CommandService {
         }
     }
 
-    async fn insert_command(&self, command: &Command) -> Result<bool> {
+    async fn claim(&self, command: &Command, owner: Uuid) -> Result<ClaimOutcome> {
+        let now = Utc::now();
+        let lease_expires_at = now + Duration::seconds(COMMAND_LEASE_SECONDS);
+        if self
+            .insert_command(command, owner, lease_expires_at)
+            .await?
+        {
+            return Ok(ClaimOutcome::Claimed);
+        }
+
+        let existing = self
+            .load(command.command_id)
+            .await?
+            .context("command conflict row disappeared")?;
+        ensure_same_command(&existing, command)?;
+        if let Some(response) = existing.response {
+            return Ok(ClaimOutcome::Finished(response));
+        }
+        if existing
+            .lease_expires_at
+            .is_some_and(|expires| expires > now)
+        {
+            return Ok(ClaimOutcome::Busy);
+        }
+
+        let result = sqlx::query(
+            r#"
+            UPDATE commands
+            SET execution_owner = ?, lease_expires_at = ?,
+                execution_attempt = execution_attempt + 1
+            WHERE command_id = ?
+              AND response_json IS NULL
+              AND (lease_expires_at IS NULL OR lease_expires_at <= ?)
+            "#,
+        )
+        .bind(owner.to_string())
+        .bind(lease_expires_at.to_rfc3339())
+        .bind(command.command_id.to_string())
+        .bind(now.to_rfc3339())
+        .execute(&self.pool)
+        .await?;
+
+        if result.rows_affected() == 1 {
+            return Ok(ClaimOutcome::Claimed);
+        }
+
+        let latest = self
+            .load(command.command_id)
+            .await?
+            .context("command disappeared during lease claim")?;
+        ensure_same_command(&latest, command)?;
+        Ok(latest
+            .response
+            .map(ClaimOutcome::Finished)
+            .unwrap_or(ClaimOutcome::Busy))
+    }
+
+    async fn insert_command(
+        &self,
+        command: &Command,
+        owner: Uuid,
+        lease_expires_at: DateTime<Utc>,
+    ) -> Result<bool> {
         let result = sqlx::query(
             r#"
             INSERT INTO commands(
                 command_id, type, world_id, payload_json, schema_version,
-                caller_context_json, requested_at, status, response_json
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)
+                caller_context_json, requested_at, status, response_json,
+                execution_owner, lease_expires_at, execution_attempt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, 1)
             ON CONFLICT(command_id) DO NOTHING
             "#,
         )
@@ -234,27 +283,31 @@ impl CommandService {
         .bind(to_json(&command.caller_context)?)
         .bind(command.requested_at.to_rfc3339())
         .bind(enum_to_string(&CommandResponseStatus::Accepted)?)
+        .bind(owner.to_string())
+        .bind(lease_expires_at.to_rfc3339())
         .execute(&self.pool)
         .await?;
 
         Ok(result.rows_affected() == 1)
     }
 
-    async fn persist_response(&self, response: &CommandResponse) -> Result<()> {
+    async fn persist_response(&self, response: &CommandResponse, owner: Uuid) -> Result<()> {
         let result = sqlx::query(
             r#"
             UPDATE commands
-            SET status = ?, response_json = ?
-            WHERE command_id = ?
+            SET status = ?, response_json = ?,
+                execution_owner = NULL, lease_expires_at = NULL
+            WHERE command_id = ? AND execution_owner = ?
             "#,
         )
         .bind(enum_to_string(&response.status)?)
         .bind(to_json(response)?)
         .bind(response.command_id.to_string())
+        .bind(owner.to_string())
         .execute(&self.pool)
         .await?;
         if result.rows_affected() != 1 {
-            bail!("command disappeared before response persistence");
+            bail!("command execution lease was lost before response persistence");
         }
         Ok(())
     }
@@ -263,7 +316,7 @@ impl CommandService {
         let row = sqlx::query_as::<_, StoredCommandRow>(
             r#"
             SELECT command_id, type, world_id, payload_json, schema_version,
-                   caller_context_json, response_json
+                   caller_context_json, response_json, lease_expires_at
             FROM commands
             WHERE command_id = ?
             "#,
@@ -272,6 +325,16 @@ impl CommandService {
         .fetch_optional(&self.pool)
         .await?;
         row.map(TryInto::try_into).transpose()
+    }
+}
+
+fn accepted(command_id: Uuid) -> CommandResponse {
+    CommandResponse {
+        command_id,
+        status: CommandResponseStatus::Accepted,
+        job_ids: Vec::new(),
+        result: None,
+        error: None,
     }
 }
 
@@ -360,6 +423,12 @@ fn ensure_same_command(stored: &StoredCommand, incoming: &Command) -> Result<()>
     Ok(())
 }
 
+enum ClaimOutcome {
+    Claimed,
+    Busy,
+    Finished(CommandResponse),
+}
+
 struct StoredCommand {
     command_type: CommandType,
     world_id: Option<Uuid>,
@@ -367,6 +436,7 @@ struct StoredCommand {
     schema_version: u64,
     caller_context: Value,
     response: Option<CommandResponse>,
+    lease_expires_at: Option<DateTime<Utc>>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -378,6 +448,7 @@ struct StoredCommandRow {
     schema_version: i64,
     caller_context_json: String,
     response_json: Option<String>,
+    lease_expires_at: Option<String>,
 }
 
 impl TryFrom<StoredCommandRow> for StoredCommand {
@@ -393,13 +464,19 @@ impl TryFrom<StoredCommandRow> for StoredCommand {
                 .context("negative command schema_version")?,
             caller_context: from_json(&row.caller_context_json)?,
             response: row.response_json.as_deref().map(from_json).transpose()?,
+            lease_expires_at: row
+                .lease_expires_at
+                .as_deref()
+                .map(DateTime::parse_from_rfc3339)
+                .transpose()?
+                .map(|value| value.with_timezone(&Utc)),
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
+    use chrono::{Duration, Utc};
     use serde_json::json;
     use uuid::Uuid;
 
@@ -443,24 +520,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(count, 1);
-    }
-
-    #[tokio::test]
-    async fn same_command_id_with_different_payload_is_rejected() {
-        let pool = db::connect_memory().await.unwrap();
-        let service = CommandService::new(pool);
-        let id = Uuid::new_v4();
-
-        service
-            .execute(&create_world_command(id, "World A"))
-            .await
-            .unwrap();
-
-        let error = service
-            .execute(&create_world_command(id, "World B"))
-            .await
-            .unwrap_err();
-        assert!(error.to_string().contains("reused"));
     }
 
     #[tokio::test]
@@ -519,6 +578,66 @@ mod tests {
         assert_eq!(observations, 2);
         assert_eq!(artifacts, 1);
         assert_eq!(jobs, 2);
+    }
+
+    #[tokio::test]
+    async fn expired_command_lease_recovers_without_repeating_world_creation() {
+        let pool = db::connect_memory().await.unwrap();
+        let service = CommandService::new(pool.clone());
+        let command = create_world_command(Uuid::new_v4(), "Crash Recovery");
+
+        let first = service.execute(&command).await.unwrap();
+        let first_world_id = first.result.as_ref().unwrap()["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+
+        sqlx::query(
+            r#"
+            UPDATE commands
+            SET response_json = NULL,
+                status = 'ACCEPTED',
+                execution_owner = 'dead-owner',
+                lease_expires_at = ?
+            WHERE command_id = ?
+            "#,
+        )
+        .bind((Utc::now() - Duration::minutes(1)).to_rfc3339())
+        .bind(command.command_id.to_string())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let replay = service.execute(&command).await.unwrap();
+        assert_eq!(replay.status, CommandResponseStatus::Completed);
+        assert_eq!(
+            replay.result.as_ref().unwrap()["id"].as_str().unwrap(),
+            first_world_id
+        );
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM worlds")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
+    }
+
+    #[tokio::test]
+    async fn same_command_id_with_different_payload_is_rejected() {
+        let pool = db::connect_memory().await.unwrap();
+        let service = CommandService::new(pool);
+        let id = Uuid::new_v4();
+
+        service
+            .execute(&create_world_command(id, "World A"))
+            .await
+            .unwrap();
+
+        let error = service
+            .execute(&create_world_command(id, "World B"))
+            .await
+            .unwrap_err();
+        assert!(error.to_string().contains("reused"));
     }
 
     #[tokio::test]

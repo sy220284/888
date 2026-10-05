@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
+    job_engine::JobEngine,
     model::{JobState, WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration},
     serde_db::{enum_from_string, enum_to_string, to_json},
     worker_protocol::WORKER_PROTOCOL_VERSION,
@@ -69,17 +70,20 @@ impl WorkerRegistry {
             bail!("worker cannot self-report LOST; Core owns lost detection");
         }
         for job_id in &heartbeat.current_job_ids {
-            let state: Option<String> = sqlx::query_scalar("SELECT state FROM jobs WHERE id = ?")
-                .bind(job_id.to_string())
-                .fetch_optional(&self.pool)
-                .await?;
-            let state = state
-                .as_deref()
-                .map(enum_from_string::<JobState>)
-                .transpose()?
-                .context("heartbeat references unknown job")?;
+            let row = sqlx::query_as::<_, HeartbeatJobRow>(
+                "SELECT state, assigned_worker_id FROM jobs WHERE id = ?",
+            )
+            .bind(job_id.to_string())
+            .fetch_optional(&self.pool)
+            .await?
+            .context("heartbeat references unknown job")?;
+
+            let state: JobState = enum_from_string(&row.state)?;
             if !matches!(state, JobState::Running | JobState::Pausing) {
                 bail!("heartbeat references job that is not running");
+            }
+            if row.assigned_worker_id.as_deref() != Some(&heartbeat.worker_id.to_string()) {
+                bail!("heartbeat references job assigned to another worker");
             }
         }
 
@@ -89,6 +93,7 @@ impl WorkerRegistry {
             .map(Uuid::to_string)
             .collect();
 
+        let received_at = Utc::now();
         let result = sqlx::query(
             r#"
             UPDATE worker_registrations
@@ -109,8 +114,8 @@ impl WorkerRegistry {
                 .transpose()
                 .context("vram_mb too large")?,
         )
-        .bind(heartbeat.timestamp.to_rfc3339())
-        .bind(Utc::now().to_rfc3339())
+        .bind(received_at.to_rfc3339())
+        .bind(received_at.to_rfc3339())
         .bind(heartbeat.worker_id.to_string())
         .execute(&self.pool)
         .await?;
@@ -122,20 +127,43 @@ impl WorkerRegistry {
     }
 
     pub async fn mark_lost_before(&self, cutoff: DateTime<Utc>) -> Result<u64> {
-        let result = sqlx::query(
+        let workers: Vec<String> = sqlx::query_scalar(
             r#"
-            UPDATE worker_registrations
-            SET health = ?, updated_at = ?
+            SELECT worker_id
+            FROM worker_registrations
             WHERE last_heartbeat_at < ? AND health != ?
             "#,
         )
-        .bind(enum_to_string(&WorkerHeartbeatHealth::Lost)?)
-        .bind(Utc::now().to_rfc3339())
         .bind(cutoff.to_rfc3339())
         .bind(enum_to_string(&WorkerHeartbeatHealth::Lost)?)
-        .execute(&self.pool)
+        .fetch_all(&self.pool)
         .await?;
-        Ok(result.rows_affected())
+
+        let jobs = JobEngine::new(self.pool.clone());
+        let mut marked = 0_u64;
+        for worker_id in workers {
+            let result = sqlx::query(
+                r#"
+                UPDATE worker_registrations
+                SET health = ?, current_job_ids_json = '[]', updated_at = ?
+                WHERE worker_id = ? AND last_heartbeat_at < ? AND health != ?
+                "#,
+            )
+            .bind(enum_to_string(&WorkerHeartbeatHealth::Lost)?)
+            .bind(Utc::now().to_rfc3339())
+            .bind(&worker_id)
+            .bind(cutoff.to_rfc3339())
+            .bind(enum_to_string(&WorkerHeartbeatHealth::Lost)?)
+            .execute(&self.pool)
+            .await?;
+
+            if result.rows_affected() == 1 {
+                marked += 1;
+                jobs.recover_worker_lost(Uuid::parse_str(&worker_id)?)
+                    .await?;
+            }
+        }
+        Ok(marked)
     }
 
     pub async fn health(&self, worker_id: Uuid) -> Result<Option<WorkerHeartbeatHealth>> {
@@ -146,6 +174,12 @@ impl WorkerRegistry {
                 .await?;
         value.as_deref().map(enum_from_string).transpose()
     }
+}
+
+#[derive(sqlx::FromRow)]
+struct HeartbeatJobRow {
+    state: String,
+    assigned_worker_id: Option<String>,
 }
 
 fn validate_protocol(version: u64) -> Result<()> {
@@ -167,6 +201,7 @@ mod tests {
 
     use crate::{
         db,
+        job_engine::JobEngine,
         model::{
             WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration,
             WorkerRegistrationWorkerType,
@@ -218,6 +253,67 @@ mod tests {
             registry.health(worker_id).await.unwrap(),
             Some(WorkerHeartbeatHealth::Lost)
         );
+    }
+
+    #[tokio::test]
+    async fn lost_worker_recovers_assigned_running_job() {
+        let pool = db::connect_memory().await.unwrap();
+        let registry = WorkerRegistry::new(pool.clone());
+        let jobs = JobEngine::new(pool.clone());
+        let worker_id = Uuid::new_v4();
+
+        registry
+            .register(&WorkerRegistration {
+                worker_id,
+                worker_type: WorkerRegistrationWorkerType::Vision,
+                protocol_version: WORKER_PROTOCOL_VERSION,
+                capabilities: vec!["DEPTH".into()],
+                device: json!({}),
+                software: json!({}),
+            })
+            .await
+            .unwrap();
+
+        let job = jobs.create(None, "DEPTH", 3, true).await.unwrap();
+        jobs.transition(job.id, crate::model::JobState::Ready)
+            .await
+            .unwrap();
+        let running = jobs.start_on_worker(job.id, worker_id).await.unwrap();
+        assert_eq!(running.assigned_worker_id, Some(worker_id));
+
+        registry
+            .heartbeat(&WorkerHeartbeat {
+                worker_id,
+                protocol_version: WORKER_PROTOCOL_VERSION,
+                timestamp: Utc::now() - Duration::hours(3),
+                current_job_ids: vec![job.id],
+                cpu_usage: 0.3,
+                ram_mb: 256,
+                gpu_usage: None,
+                vram_mb: None,
+                health: WorkerHeartbeatHealth::Healthy,
+            })
+            .await
+            .unwrap();
+
+        let marked = registry
+            .mark_lost_before(Utc::now() + Duration::seconds(1))
+            .await
+            .unwrap();
+        assert_eq!(marked, 1);
+
+        let recovered = jobs.get(job.id).await.unwrap().unwrap();
+        assert_eq!(recovered.state, crate::model::JobState::Ready);
+        assert_eq!(recovered.assigned_worker_id, None);
+
+        let events: i64 = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM job_events WHERE job_id = ? AND event_type = 'WORKER_LOST'",
+        )
+        .bind(job.id.to_string())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(events, 1);
     }
 
     #[tokio::test]
