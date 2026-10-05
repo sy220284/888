@@ -126,6 +126,15 @@
 4. [世界模型与数据设计](docs/04-世界模型与数据设计.md)
 5. [详细落地执行路线](docs/05-详细落地执行路线.md)
 6. [质量验证与验收标准](docs/06-质量验证与验收标准.md)
+7. [开发环境与运行手册](docs/07-开发环境与运行手册.md)
+8. [Command 与 Worker 通信协议](docs/08-Command与Worker通信协议.md)
+9. [任务状态机与故障恢复](docs/09-任务状态机与故障恢复.md)
+10. [Provider 与模型治理](docs/10-Provider与模型治理.md)
+11. [性能预算与硬件兼容](docs/12-性能预算与硬件兼容.md)
+12. [构建发布与升级方案](docs/13-构建发布与升级方案.md)
+13. [Fixture 与 Benchmark 规范](docs/14-Fixture与Benchmark规范.md)
+14. [用户交互与页面流程](docs/15-用户交互与页面流程.md)
+15. [ADR 架构决策记录](docs/adr/README.md)
 
 ## 与原 Image Blaster 思路的关系
 
