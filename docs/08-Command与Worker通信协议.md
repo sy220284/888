@@ -47,6 +47,9 @@ Command 必须具备：
 - DELETE_OBSERVATION
 - RECONSTRUCT_ZONE
 - ANALYZE_RELATIONS
+- GENERATE_ASSOCIATIVE_PROPOSALS
+- VERIFY_HYPOTHESIS
+- SUGGEST_NEXT_OBSERVATION
 - GENERATE_COMPLETION
 - VALIDATE_CANDIDATE
 - ACCEPT_CANDIDATE
@@ -285,3 +288,38 @@ local socket 保留为未来性能优化候选，只有 Benchmark 证明 stdio �
 - Worker 崩溃恢复测试
 - Schema Version 不兼容测试
 - 大文件不经 RPC 检查
+
+## 17. 联想类 Command
+
+### GENERATE_ASSOCIATIVE_PROPOSALS
+
+输入：
+
+- world_id
+- target zone / entity / hypothesis
+- source observation ids
+- proposal types
+- top_k
+- budget profile
+
+输出：
+
+- AssociativeProposal[]
+- supporting evidence refs
+- contradicting evidence refs
+- uncertainty
+
+### VERIFY_HYPOTHESIS
+
+根据现有 Evidence、Constraint 与指定 Hypothesis 生成验证任务，不直接修改世界。
+
+### SUGGEST_NEXT_OBSERVATION
+
+把未决 Hypothesis 转换成下一最佳观测建议，输出：
+
+- target uncertainty
+- suggested viewpoint / zone
+- required anchors
+- expected information gain
+
+联想类 Command 的结果仍由 Core 写入 Prior / Hypothesis 状态，Worker / Provider 不直接提交 Revision。
