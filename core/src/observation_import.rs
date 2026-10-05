@@ -195,14 +195,22 @@ fn detect_image_mime(bytes: &[u8]) -> Option<&'static str> {
 mod tests {
     use tempfile::tempdir;
 
-    use crate::{artifact_store::ArtifactStore, db, model::JobState, world_repository::WorldRepository};
+    use crate::{
+        artifact_store::ArtifactStore, db, model::JobState, world_repository::WorldRepository,
+    };
 
     use super::{detect_image_mime, ObservationImportService};
 
     #[test]
     fn detects_common_photo_formats_from_content() {
-        assert_eq!(detect_image_mime(b"\x89PNG\r\n\x1a\nrest"), Some("image/png"));
-        assert_eq!(detect_image_mime(&[0xff, 0xd8, 0xff, 0x00]), Some("image/jpeg"));
+        assert_eq!(
+            detect_image_mime(b"\x89PNG\r\n\x1a\nrest"),
+            Some("image/png")
+        );
+        assert_eq!(
+            detect_image_mime(&[0xff, 0xd8, 0xff, 0x00]),
+            Some("image/jpeg")
+        );
         assert_eq!(
             detect_image_mime(b"RIFF\x00\x00\x00\x00WEBPrest"),
             Some("image/webp")
