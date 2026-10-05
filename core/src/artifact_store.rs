@@ -84,15 +84,15 @@ impl ArtifactStore {
             fs::write(&destination, bytes).await?;
         }
 
-        self.insert_record(
-            hash,
-            mime.into(),
-            bytes.len() as u64,
+        self.insert_record(ArtifactInsert {
+            content_hash: hash,
+            mime: mime.into(),
+            size_bytes: bytes.len() as u64,
             relative_path,
             logical_type,
             source,
             source_url,
-        )
+        })
         .await
     }
 
@@ -169,15 +169,15 @@ impl ArtifactStore {
             Err(error) => return Err(error.into()),
         }
 
-        self.insert_record(
-            hash,
-            mime.into(),
-            size,
+        self.insert_record(ArtifactInsert {
+            content_hash: hash,
+            mime: mime.into(),
+            size_bytes: size,
             relative_path,
             logical_type,
             source,
             source_url,
-        )
+        })
         .await
     }
 
@@ -317,15 +317,15 @@ impl ArtifactStore {
             Err(error) => return Err(error.into()),
         }
 
-        self.insert_record(
-            hash,
+        self.insert_record(ArtifactInsert {
+            content_hash: hash,
             mime,
-            size,
+            size_bytes: size,
             relative_path,
             logical_type,
             source,
-            Some(redact_source_url(url)),
-        )
+            source_url: Some(redact_source_url(url)),
+        })
         .await
     }
 
@@ -413,25 +413,16 @@ impl ArtifactStore {
         row.map(TryInto::try_into).transpose()
     }
 
-    async fn insert_record(
-        &self,
-        content_hash: String,
-        mime: String,
-        size_bytes: u64,
-        relative_path: String,
-        logical_type: ArtifactLogicalType,
-        source: Value,
-        source_url: Option<String>,
-    ) -> Result<Artifact> {
+    async fn insert_record(&self, input: ArtifactInsert) -> Result<Artifact> {
         let record = Artifact {
             id: Uuid::new_v4(),
-            content_hash,
-            mime,
-            size_bytes,
-            relative_path,
-            logical_type,
-            source,
-            source_url,
+            content_hash: input.content_hash,
+            mime: input.mime,
+            size_bytes: input.size_bytes,
+            relative_path: input.relative_path,
+            logical_type: input.logical_type,
+            source: input.source,
+            source_url: input.source_url,
             created_at: Utc::now(),
         };
 
@@ -461,6 +452,16 @@ impl ArtifactStore {
             .await?
             .context("artifact row missing after insert")
     }
+}
+
+struct ArtifactInsert {
+    content_hash: String,
+    mime: String,
+    size_bytes: u64,
+    relative_path: String,
+    logical_type: ArtifactLogicalType,
+    source: Value,
+    source_url: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
