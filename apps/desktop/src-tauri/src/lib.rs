@@ -28,12 +28,12 @@ struct CoreStatus {
 }
 
 #[tauri::command]
-async fn core_status(state: State<'_, CoreState>) -> CoreStatus {
-    CoreStatus {
+async fn core_status(state: State<'_, CoreState>) -> Result<CoreStatus, String> {
+    Ok(CoreStatus {
         status: "ready",
         worker_protocol_version: world888_core::worker_protocol::WORKER_PROTOCOL_VERSION,
         worker_count: state.runtime.worker_count().await,
-    }
+    })
 }
 
 #[tauri::command]
