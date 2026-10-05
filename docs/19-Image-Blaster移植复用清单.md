@@ -133,13 +133,13 @@ UI 组件本身与旧 Store、Radix、图标库耦合较高，不直接迁。
     → AIOutputEnvelope
     → Candidate / Artifact
 
-状态：**待 Provider SDK / Core 接口后重写迁移。**
+状态：**Rust Core 首批重写已完成：FAL submit / poll / result、Provider Run、Artifact 落盘已接入；后续继续扩展统一 Router / Capability。**
 
 ### Hunyuan / Meshy
 
 保留模型参数校验、默认值、Endpoint 与 PBR / 面数 / LowPoly 参数映射。
 
-状态：**待迁。**
+状态：**Hunyuan / Meshy Rust Adapter 已迁，参数默认值与合法性校验已保留。**
 
 ### World Labs
 
@@ -165,8 +165,8 @@ GPT Image Edit、Nano Banana、ElevenLabs SFX 映射到 Capability 后迁。
 
 ## 5. 只吸收思想
 
-- Request Metadata → `AIProviderRun + Artifact Provenance`。
-- Local-first Asset → Artifact Store + BLAKE3 + SQLite Artifact Registry。
+- Request Metadata → `AIProviderRun + Artifact Provenance`：**基础实现已完成，写入 SQLite，并剥离 data URI / base64。**
+- Local-first Asset → Artifact Store + BLAKE3 + SQLite Artifact Registry：**基础实现已完成，Provider 产物下载后进入内容寻址本地存储。**
 
 ## 6. 明确不迁
 
@@ -185,7 +185,7 @@ GPT Image Edit、Nano Banana、ElevenLabs SFX 映射到 Capability 后迁。
 
 - **M1 Viewer 基础：已完成。**
 - **M2 Editor：等待 Entity / Revision Command Schema。**
-- **M3 Provider Adapter：等待 Provider SDK / CanonicalCapabilityRequest。**
+- **M3 Provider Adapter：首批 FAL/Hunyuan/Meshy + Provider Run + Artifact Store 已完成；World Labs / Image Edit / SFX 与 Router 后续继续。**
 - **M4 PostProcessing / Character / Demo Fixture：后置。**
 
 ## 8. 每个迁移模块验收
