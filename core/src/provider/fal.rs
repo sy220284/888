@@ -128,7 +128,10 @@ impl FalQueueClient {
         let response = self
             .http
             .get(url)
-            .header(reqwest::header::AUTHORIZATION, format!("Key {}", self.api_key))
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Key {}", self.api_key),
+            )
             .send()
             .await
             .context("FAL status request failed")?;
@@ -160,7 +163,10 @@ impl FalQueueClient {
         let response = self
             .http
             .get(url)
-            .header(reqwest::header::AUTHORIZATION, format!("Key {}", self.api_key))
+            .header(
+                reqwest::header::AUTHORIZATION,
+                format!("Key {}", self.api_key),
+            )
             .send()
             .await
             .context("FAL result request failed")?;
