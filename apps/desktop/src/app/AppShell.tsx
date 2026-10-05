@@ -1,4 +1,5 @@
 import { LogPanel } from '../features/logs/LogPanel'
+import { ObservationPanel } from '../features/observations/ObservationPanel'
 import { ProjectPanel } from '../features/projects/ProjectPanel'
 import { WorkerStatusPanel } from '../features/workers/WorkerStatusPanel'
 import { WorldWorkspace } from '../features/world/WorldWorkspace'
@@ -14,6 +15,7 @@ export function AppShell() {
       <div className="workspace-layout">
         <aside className="workspace-sidebar">
           <ProjectPanel />
+          <ObservationPanel />
           <WorkerStatusPanel />
         </aside>
         <section className="viewer-stage">

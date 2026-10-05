@@ -126,7 +126,7 @@ impl WorkerRegistry {
         Ok(())
     }
 
-    pub async fn mark_lost_before(&self, cutoff: DateTime<Utc>) -> Result<u64> {
+    pub async fn mark_lost_workers_before(&self, cutoff: DateTime<Utc>) -> Result<Vec<Uuid>> {
         let workers: Vec<String> = sqlx::query_scalar(
             r#"
             SELECT worker_id
@@ -140,7 +140,7 @@ impl WorkerRegistry {
         .await?;
 
         let jobs = JobEngine::new(self.pool.clone());
-        let mut marked = 0_u64;
+        let mut marked = Vec::new();
         for worker_id in workers {
             let result = sqlx::query(
                 r#"
@@ -158,12 +158,16 @@ impl WorkerRegistry {
             .await?;
 
             if result.rows_affected() == 1 {
-                marked += 1;
-                jobs.recover_worker_lost(Uuid::parse_str(&worker_id)?)
-                    .await?;
+                let worker_id = Uuid::parse_str(&worker_id)?;
+                jobs.recover_worker_lost(worker_id).await?;
+                marked.push(worker_id);
             }
         }
         Ok(marked)
+    }
+
+    pub async fn mark_lost_before(&self, cutoff: DateTime<Utc>) -> Result<u64> {
+        Ok(self.mark_lost_workers_before(cutoff).await?.len() as u64)
     }
 
     pub async fn health(&self, worker_id: Uuid) -> Result<Option<WorkerHeartbeatHealth>> {

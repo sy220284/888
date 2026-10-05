@@ -83,21 +83,40 @@ class WorkerApp:
     def run(self, stdin: TextIO = sys.stdin, stdout: TextIO = sys.stdout) -> int:
         self._emit(stdout, make_message("REGISTER", self.registration_payload()))
         self._emit(stdout, make_message("HEARTBEAT", self.heartbeat_payload()))
+        heartbeat_stop = threading.Event()
+        heartbeat_thread = threading.Thread(
+            target=self._heartbeat_loop,
+            args=(stdout, heartbeat_stop),
+            name=f"888-heartbeat-{self.worker_id}",
+            daemon=True,
+        )
+        heartbeat_thread.start()
 
-        for raw_line in stdin:
-            if not raw_line.strip():
-                continue
-            try:
-                message = decode_line(raw_line)
-                if not self._handle_message(message, stdout):
-                    self._request_cancel_all()
-                    self._join_active()
-                    return 0
-            except Exception as exc:
-                self._emit_runtime_error(stdout, exc)
+        try:
+            for raw_line in stdin:
+                if not raw_line.strip():
+                    continue
+                try:
+                    message = decode_line(raw_line)
+                    if not self._handle_message(message, stdout):
+                        self._request_cancel_all()
+                        return 0
+                except Exception as exc:
+                    self._emit_runtime_error(stdout, exc)
+            return 0
+        finally:
+            heartbeat_stop.set()
+            heartbeat_thread.join(timeout=1.0)
+            self._join_active()
 
-        self._join_active()
-        return 0
+    def _heartbeat_loop(self, stdout: TextIO, stop: threading.Event) -> None:
+        raw_interval = os.environ.get("WORLD888_HEARTBEAT_INTERVAL_SECONDS", "5")
+        try:
+            interval = max(1.0, float(raw_interval))
+        except ValueError:
+            interval = 5.0
+        while not stop.wait(interval):
+            self._emit(stdout, make_message("HEARTBEAT", self.heartbeat_payload()))
 
     def _handle_message(self, message: dict[str, Any], stdout: TextIO) -> bool:
         message_type = message["message_type"]

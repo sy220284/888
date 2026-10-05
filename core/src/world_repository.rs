@@ -91,6 +91,21 @@ impl WorldRepository {
         Ok(existing)
     }
 
+    pub async fn list(&self) -> Result<Vec<World>> {
+        let rows = sqlx::query_as::<_, WorldRow>(
+            r#"
+            SELECT id, name, schema_version, active_revision_id,
+                   coordinate_system, unit, created_at, updated_at
+            FROM worlds
+            ORDER BY updated_at DESC, id
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        rows.into_iter().map(TryInto::try_into).collect()
+    }
+
     pub async fn get(&self, id: Uuid) -> Result<Option<World>> {
         let row = sqlx::query_as::<_, WorldRow>(
             r#"

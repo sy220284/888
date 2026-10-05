@@ -78,3 +78,75 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
 }
+
+
+.panel-row {
+  display: flex;
+  gap: 6px;
+}
+
+.panel-input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: #0e0e0e;
+  color: inherit;
+}
+
+.panel-button {
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 5px;
+  padding: 6px 9px;
+  background: #292929;
+  color: inherit;
+  cursor: pointer;
+}
+
+.panel-button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+.panel-button-wide {
+  width: 100%;
+}
+
+.panel-list {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.panel-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+button.panel-item {
+  cursor: pointer;
+}
+
+.panel-item:hover,
+.panel-item.active {
+  border-color: rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+}
+
+.panel-item small {
+  color: #888;
+}
+
+.panel-item-static {
+  cursor: default;
+}

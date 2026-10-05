@@ -16,6 +16,7 @@ use crate::{
     },
     observation_import::ObservationImportService,
     serde_db::{enum_from_string, enum_to_string, from_json, to_json},
+    worker_runtime::{RuntimeControl, RuntimeControlSender},
     world_repository::WorldRepository,
 };
 
@@ -28,6 +29,7 @@ pub struct CommandService {
     jobs: JobEngine,
     candidates: CandidateService,
     observation_import: Option<ObservationImportService>,
+    runtime_control: Option<RuntimeControlSender>,
 }
 
 impl CommandService {
@@ -37,6 +39,7 @@ impl CommandService {
             jobs: JobEngine::new(pool.clone()),
             candidates: CandidateService::new(pool.clone()),
             observation_import: None,
+            runtime_control: None,
             pool,
         }
     }
@@ -47,6 +50,22 @@ impl CommandService {
             jobs: JobEngine::new(pool.clone()),
             candidates: CandidateService::new(pool.clone()),
             observation_import: Some(ObservationImportService::new(artifacts, pool.clone())),
+            runtime_control: None,
+            pool,
+        }
+    }
+
+    pub fn with_runtime(
+        pool: SqlitePool,
+        artifacts: ArtifactStore,
+        runtime_control: RuntimeControlSender,
+    ) -> Self {
+        Self {
+            worlds: WorldRepository::new(pool.clone()),
+            jobs: JobEngine::new(pool.clone()),
+            candidates: CandidateService::new(pool.clone()),
+            observation_import: Some(ObservationImportService::new(artifacts, pool.clone())),
+            runtime_control: Some(runtime_control),
             pool,
         }
     }
@@ -136,6 +155,15 @@ impl CommandService {
             CommandType::PauseJob => {
                 let job_id = required_uuid(&command.payload, "job_id")?;
                 let job = self.jobs.transition(job_id, JobState::Pausing).await?;
+                if job.assigned_worker_id.is_some() {
+                    if let Some(runtime_control) = &self.runtime_control {
+                        runtime_control
+                            .send(RuntimeControl::Pause(job_id))
+                            .map_err(|_| {
+                                anyhow::anyhow!("worker runtime control channel closed")
+                            })?;
+                    }
+                }
                 completed(command.command_id, serde_json::to_value(job)?)
             }
             CommandType::ResumeJob => {
@@ -146,6 +174,15 @@ impl CommandService {
             CommandType::CancelJob => {
                 let job_id = required_uuid(&command.payload, "job_id")?;
                 let job = self.jobs.request_cancel(job_id).await?;
+                if job.assigned_worker_id.is_some() {
+                    if let Some(runtime_control) = &self.runtime_control {
+                        runtime_control
+                            .send(RuntimeControl::Cancel(job_id))
+                            .map_err(|_| {
+                                anyhow::anyhow!("worker runtime control channel closed")
+                            })?;
+                    }
+                }
                 completed(command.command_id, serde_json::to_value(job)?)
             }
             CommandType::AcceptCandidate => {

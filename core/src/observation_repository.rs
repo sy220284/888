@@ -54,6 +54,46 @@ impl ObservationRepository {
         row.map(TryInto::try_into).transpose()
     }
 
+    pub async fn apply_image_analysis(
+        &self,
+        id: Uuid,
+        timestamp: Option<DateTime<Utc>>,
+        camera_intrinsics: Option<Value>,
+        quality: Value,
+    ) -> Result<Observation> {
+        if !quality.is_object() {
+            bail!("observation analysis quality must be an object");
+        }
+        if camera_intrinsics
+            .as_ref()
+            .is_some_and(|value| !value.is_object())
+        {
+            bail!("camera_intrinsics must be an object when present");
+        }
+
+        let result = sqlx::query(
+            r#"
+            UPDATE observations
+            SET timestamp = COALESCE(?, timestamp),
+                camera_intrinsics_json = COALESCE(?, camera_intrinsics_json),
+                quality_json = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(timestamp.map(|value| value.to_rfc3339()))
+        .bind(camera_intrinsics.as_ref().map(to_json).transpose()?)
+        .bind(to_json(&quality)?)
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await?;
+        if result.rows_affected() != 1 {
+            bail!("observation does not exist");
+        }
+        self.get(id)
+            .await?
+            .context("observation disappeared after analysis update")
+    }
+
     pub async fn list_for_world(&self, world_id: Uuid) -> Result<Vec<Observation>> {
         let rows = sqlx::query_as::<_, ObservationRow>(
             r#"
