@@ -222,7 +222,10 @@ fn validate_endpoint(endpoint: &str) -> Result<()> {
 }
 
 fn compact_error(body: &Value) -> String {
-    let value = body.get("detail").or_else(|| body.get("error")).unwrap_or(body);
+    let value = body
+        .get("detail")
+        .or_else(|| body.get("error"))
+        .unwrap_or(body);
     match value {
         Value::String(text) => text.clone(),
         other => other.to_string(),
