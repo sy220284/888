@@ -12,7 +12,7 @@ use crate::{
         ValidationResultStatus, WorldRevision, WorldRevisionActorType,
     },
     serde_db::{enum_from_string, enum_to_string, from_json, to_json},
-    world_repository::commit_revision_in_tx,
+    world_repository::{commit_revision_in_tx, WorldRepository},
 };
 
 #[derive(Clone)]
@@ -173,6 +173,14 @@ impl CandidateService {
         .context("candidate does not exist")?;
 
         let candidate: Candidate = row.try_into()?;
+        if candidate.status == CandidateStatus::Accepted {
+            let command_id = command_id.context("accepted candidate replay requires command_id")?;
+            return WorldRepository::new(self.pool.clone())
+                .get_revision_by_command(command_id)
+                .await?
+                .filter(|revision| revision.world_id == candidate.world_id)
+                .context("accepted candidate revision is missing");
+        }
         if candidate.status != CandidateStatus::Pending {
             bail!("only PENDING candidates can be accepted");
         }
@@ -230,6 +238,17 @@ impl CandidateService {
     }
 
     pub async fn reject(&self, candidate_id: Uuid) -> Result<()> {
+        let candidate = self
+            .get(candidate_id)
+            .await?
+            .context("candidate does not exist")?;
+        if candidate.status == CandidateStatus::Rejected {
+            return Ok(());
+        }
+        if candidate.status != CandidateStatus::Pending {
+            bail!("only PENDING candidates can be rejected");
+        }
+
         let result = sqlx::query("UPDATE candidates SET status = ? WHERE id = ? AND status = ?")
             .bind(enum_to_string(&CandidateStatus::Rejected)?)
             .bind(candidate_id.to_string())
