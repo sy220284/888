@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Literal, TypeAlias
 from uuid import UUID
 
-CommandResponseStatus: TypeAlias = Literal["ACCEPTED", "COMPLETED", "REJECTED"]
+CommandResponseStatus: TypeAlias = Literal['ACCEPTED', 'COMPLETED', 'REJECTED']
 
 @dataclass(slots=True)
 class CommandResponse:
@@ -16,7 +16,7 @@ class CommandResponse:
     result: Any | None = None
     error: Any | None = None
 
-CommandType: TypeAlias = Literal["CREATE_WORLD", "OPEN_WORLD", "IMPORT_OBSERVATIONS", "DELETE_OBSERVATION", "RECONSTRUCT_ZONE", "ANALYZE_RELATIONS", "GENERATE_ASSOCIATIVE_PROPOSALS", "VERIFY_HYPOTHESIS", "SUGGEST_NEXT_OBSERVATION", "GENERATE_COMPLETION", "VALIDATE_CANDIDATE", "ACCEPT_CANDIDATE", "REJECT_CANDIDATE", "EXPORT_WORLD", "PAUSE_JOB", "RESUME_JOB", "CANCEL_JOB", "UPDATE_ENTITY_TRANSFORM", "DELETE_ENTITY", "DUPLICATE_ENTITY"]
+CommandType: TypeAlias = Literal['CREATE_WORLD', 'OPEN_WORLD', 'IMPORT_OBSERVATIONS', 'DELETE_OBSERVATION', 'RECONSTRUCT_ZONE', 'ANALYZE_RELATIONS', 'GENERATE_ASSOCIATIVE_PROPOSALS', 'VERIFY_HYPOTHESIS', 'SUGGEST_NEXT_OBSERVATION', 'GENERATE_COMPLETION', 'VALIDATE_CANDIDATE', 'ACCEPT_CANDIDATE', 'REJECT_CANDIDATE', 'EXPORT_WORLD', 'PAUSE_JOB', 'RESUME_JOB', 'CANCEL_JOB', 'UPDATE_ENTITY_TRANSFORM', 'DELETE_ENTITY', 'DUPLICATE_ENTITY']
 
 @dataclass(slots=True)
 class Command:
@@ -28,9 +28,9 @@ class Command:
     requested_at: datetime
     world_id: UUID | None = None
 
-CompilerTargetTarget: TypeAlias = Literal["GLB", "BLENDER", "UNITY", "GODOT", "UNREAL", "WEB", "XR"]
+CompilerTargetTarget: TypeAlias = Literal['GLB', 'BLENDER', 'UNITY', 'GODOT', 'UNREAL', 'WEB', 'XR']
 
-CompilerTargetQualityProfile: TypeAlias = Literal["FAST", "BALANCED", "HIGH", "MAX"]
+CompilerTargetQualityProfile: TypeAlias = Literal['FAST', 'BALANCED', 'HIGH', 'MAX']
 
 @dataclass(slots=True)
 class CompilerTarget:
@@ -39,7 +39,7 @@ class CompilerTarget:
     quality_profile: CompilerTargetQualityProfile
     options: dict[str, Any]
 
-AIModelProfileStatus: TypeAlias = Literal["CERTIFIED", "EXPERIMENTAL", "DEGRADED", "BLOCKED"]
+AIModelProfileStatus: TypeAlias = Literal['CERTIFIED', 'EXPERIMENTAL', 'DEGRADED', 'BLOCKED']
 
 @dataclass(slots=True)
 class AIModelProfile:
@@ -55,7 +55,7 @@ class AIModelProfile:
     image_limit: int | None = None
     updated_at: datetime | None = None
 
-AIOutputEnvelopeStatus: TypeAlias = Literal["COMPLETED", "FAILED"]
+AIOutputEnvelopeStatus: TypeAlias = Literal['COMPLETED', 'FAILED']
 
 @dataclass(slots=True)
 class AIOutputEnvelope:
@@ -70,7 +70,7 @@ class AIOutputEnvelope:
     calibrated_confidence: float | None = None
     provider_metadata: dict[str, Any] | None = None
 
-AIProviderRunStatus: TypeAlias = Literal["CREATED", "SUBMITTED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED"]
+AIProviderRunStatus: TypeAlias = Literal['CREATED', 'SUBMITTED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED']
 
 @dataclass(slots=True)
 class AIProviderRun:
@@ -100,7 +100,7 @@ class Artifact:
     created_at: datetime
     source_url: str | None = None
 
-CalibrationProfileMethod: TypeAlias = Literal["NONE", "RELIABILITY_CURVE", "ISOTONIC", "TEMPERATURE_SCALING"]
+CalibrationProfileMethod: TypeAlias = Literal['NONE', 'RELIABILITY_CURVE', 'ISOTONIC', 'TEMPERATURE_SCALING']
 
 @dataclass(slots=True)
 class CalibrationProfile:
@@ -113,7 +113,7 @@ class CalibrationProfile:
     parameters: dict[str, Any]
     metrics: dict[str, Any]
 
-CanonicalCapabilityRequestCreativityProfile: TypeAlias = Literal["STRICT", "BALANCED", "EXPLORATORY", "DIVERGENT"]
+CanonicalCapabilityRequestCreativityProfile: TypeAlias = Literal['STRICT', 'BALANCED', 'EXPLORATORY', 'DIVERGENT']
 
 @dataclass(slots=True)
 class CanonicalCapabilityRequest:
@@ -128,7 +128,7 @@ class CanonicalCapabilityRequest:
     cost_budget: float | None = None
     latency_budget_ms: int | None = None
 
-CreativityProfileLevel: TypeAlias = Literal["STRICT", "BALANCED", "EXPLORATORY", "DIVERGENT"]
+CreativityProfileLevel: TypeAlias = Literal['STRICT', 'BALANCED', 'EXPLORATORY', 'DIVERGENT']
 
 @dataclass(slots=True)
 class CreativityProfile:
@@ -146,11 +146,13 @@ class Project:
     created_at: datetime
     updated_at: datetime
 
-ProviderCapabilityCapability: TypeAlias = Literal["IMAGE_EDIT", "OBJECT_3D", "WORLD_COMPLETION", "DEPTH", "SEGMENTATION", "IMAGE_EMBEDDING", "FEATURE_MATCHING", "TEXTURE", "AUDIO", "ASSOCIATIVE_REASONING", "SCENE_HYPOTHESIS", "VERIFICATION_QUESTION", "CHARACTER", "MOTION", "RELIGHTING"]
+ProviderCapabilityCapability: TypeAlias = Literal['IMAGE_EDIT', 'OBJECT_3D', 'WORLD_COMPLETION', 'DEPTH', 'SEGMENTATION', 'IMAGE_EMBEDDING', 'FEATURE_MATCHING', 'TEXTURE', 'AUDIO', 'ASSOCIATIVE_REASONING', 'SCENE_HYPOTHESIS', 'VERIFICATION_QUESTION', 'CHARACTER', 'MOTION', 'RELIGHTING']
 
-ProviderCapabilityLocation: TypeAlias = Literal["LOCAL", "REMOTE"]
+ProviderCapabilityLocation: TypeAlias = Literal['LOCAL', 'REMOTE']
 
-ProviderCapabilityHealth: TypeAlias = Literal["HEALTHY", "DEGRADED", "UNAVAILABLE", "RATE_LIMITED", "AUTH_ERROR"]
+ProviderCapabilityHealth: TypeAlias = Literal['HEALTHY', 'DEGRADED', 'UNAVAILABLE', 'RATE_LIMITED', 'AUTH_ERROR']
+
+ProviderCapabilityQualityProfilesItem: TypeAlias = Literal['FAST', 'BALANCED', 'HIGH', 'MAX']
 
 @dataclass(slots=True)
 class ProviderCapability:
@@ -167,7 +169,7 @@ class ProviderCapability:
     average_latency_ms: int | None = None
     metadata: dict[str, Any] | None = None
 
-ToolIntentTool: TypeAlias = Literal["INSPECT_WORLD", "QUERY_EVIDENCE", "SEARCH_OBSERVATIONS", "INSPECT_HYPOTHESES", "PROPOSE_RELATION", "REQUEST_VALIDATION", "SUGGEST_NEXT_OBSERVATION"]
+ToolIntentTool: TypeAlias = Literal['INSPECT_WORLD', 'QUERY_EVIDENCE', 'SEARCH_OBSERVATIONS', 'INSPECT_HYPOTHESES', 'PROPOSE_RELATION', 'REQUEST_VALIDATION', 'SUGGEST_NEXT_OBSERVATION']
 
 @dataclass(slots=True)
 class ToolIntent:
@@ -175,7 +177,7 @@ class ToolIntent:
     arguments: dict[str, Any]
     reason: str | None = None
 
-JobState: TypeAlias = Literal["CREATED", "PENDING", "READY", "RUNNING", "PAUSING", "PAUSED", "RECOVERABLE", "FAILED", "CANCELLED", "COMPLETED", "BLOCKED", "WAITING_RESOURCE", "WAITING_PROVIDER", "WAITING_USER"]
+JobState: TypeAlias = Literal['CREATED', 'PENDING', 'READY', 'RUNNING', 'PAUSING', 'PAUSED', 'RECOVERABLE', 'FAILED', 'CANCELLED', 'COMPLETED', 'BLOCKED', 'WAITING_RESOURCE', 'WAITING_PROVIDER', 'WAITING_USER']
 
 @dataclass(slots=True)
 class Job:
@@ -217,7 +219,7 @@ class JobDispatch:
     artifact_ids: list[UUID]
     checkpoint_artifact_id: UUID | None = None
 
-JobResultState: TypeAlias = Literal["COMPLETED", "FAILED", "PAUSED"]
+JobResultState: TypeAlias = Literal['COMPLETED', 'FAILED', 'PAUSED']
 
 @dataclass(slots=True)
 class JobResult:
@@ -236,7 +238,7 @@ class ProgressEvent:
     message_code: str
     metrics: dict[str, Any]
 
-WorkerHeartbeatHealth: TypeAlias = Literal["HEALTHY", "DEGRADED", "LOST"]
+WorkerHeartbeatHealth: TypeAlias = Literal['HEALTHY', 'DEGRADED', 'LOST']
 
 @dataclass(slots=True)
 class WorkerHeartbeat:
@@ -250,7 +252,7 @@ class WorkerHeartbeat:
     gpu_usage: float | None = None
     vram_mb: int | None = None
 
-WorkerRegistrationWorkerType: TypeAlias = Literal["VISION", "TOOL", "AI_LOCAL"]
+WorkerRegistrationWorkerType: TypeAlias = Literal['VISION', 'TOOL', 'AI_LOCAL']
 
 @dataclass(slots=True)
 class WorkerRegistration:
@@ -261,7 +263,7 @@ class WorkerRegistration:
     device: dict[str, Any]
     software: dict[str, Any]
 
-AnchorAnchorType: TypeAlias = Literal["DOOR", "WINDOW", "STAIR", "CORNER", "FIXED_OBJECT", "FACADE_FEATURE", "GPS_POINT", "MANUAL"]
+AnchorAnchorType: TypeAlias = Literal['DOOR', 'WINDOW', 'STAIR', 'CORNER', 'FIXED_OBJECT', 'FACADE_FEATURE', 'GPS_POINT', 'MANUAL']
 
 @dataclass(slots=True)
 class Anchor:
@@ -274,9 +276,9 @@ class Anchor:
     zone_id: UUID | None = None
     confidence: float | None = None
 
-AssociativeProposalPriorType: TypeAlias = Literal["SPATIAL_TOPOLOGY_PRIOR", "ROOM_TYPE_PRIOR", "OBJECT_COOCCURRENCE_PRIOR", "SAME_ENTITY_PRIOR", "SAME_ANCHOR_PRIOR", "SAME_ZONE_PRIOR", "PORTAL_PRIOR", "MISSING_REGION_PRIOR", "MATERIAL_STYLE_PRIOR", "NEXT_OBSERVATION_PRIOR"]
+AssociativeProposalPriorType: TypeAlias = Literal['SPATIAL_TOPOLOGY_PRIOR', 'ROOM_TYPE_PRIOR', 'OBJECT_COOCCURRENCE_PRIOR', 'SAME_ENTITY_PRIOR', 'SAME_ANCHOR_PRIOR', 'SAME_ZONE_PRIOR', 'PORTAL_PRIOR', 'MISSING_REGION_PRIOR', 'MATERIAL_STYLE_PRIOR', 'NEXT_OBSERVATION_PRIOR']
 
-AssociativeProposalState: TypeAlias = Literal["ACTIVE", "PROMOTED_TO_HYPOTHESIS", "REJECTED", "EXPIRED", "SUPERSEDED"]
+AssociativeProposalState: TypeAlias = Literal['ACTIVE', 'PROMOTED_TO_HYPOTHESIS', 'REJECTED', 'EXPIRED', 'SUPERSEDED']
 
 @dataclass(slots=True)
 class AssociativeProposal:
@@ -295,9 +297,9 @@ class AssociativeProposal:
     created_at: datetime
     created_by_job_id: UUID | None = None
 
-CandidateCandidateType: TypeAlias = Literal["GEOMETRY", "MATERIAL", "WORLD_COMPLETION", "ENTITY", "RELATION", "AUDIO", "TEXTURE"]
+CandidateCandidateType: TypeAlias = Literal['GEOMETRY', 'MATERIAL', 'WORLD_COMPLETION', 'ENTITY', 'RELATION', 'AUDIO', 'TEXTURE']
 
-CandidateStatus: TypeAlias = Literal["PENDING", "ACCEPTED", "REJECTED", "SUPERSEDED"]
+CandidateStatus: TypeAlias = Literal['PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED']
 
 @dataclass(slots=True)
 class Candidate:
@@ -311,7 +313,7 @@ class Candidate:
     source_job_id: UUID | None = None
     provider_run_id: UUID | None = None
 
-EntityLifecycle: TypeAlias = Literal["ACTIVE", "HIDDEN", "DELETED"]
+EntityLifecycle: TypeAlias = Literal['ACTIVE', 'HIDDEN', 'DELETED']
 
 @dataclass(slots=True)
 class Entity:
@@ -341,11 +343,11 @@ class Evidence:
     confidence: float | None = None
     invalidated_at: datetime | None = None
 
-GeometryRepresentationRepresentationType: TypeAlias = Literal["MESH", "SPLAT", "NERF", "POINT_CLOUD", "PRIMITIVE", "BILLBOARD", "COLLIDER"]
+GeometryRepresentationRepresentationType: TypeAlias = Literal['MESH', 'SPLAT', 'NERF', 'POINT_CLOUD', 'PRIMITIVE', 'BILLBOARD', 'COLLIDER']
 
-GeometryRepresentationSourceKind: TypeAlias = Literal["OBSERVED", "VERIFIED", "INFERRED", "ASSOCIATIVE", "GENERATED", "USER_CONFIRMED"]
+GeometryRepresentationSourceKind: TypeAlias = Literal['OBSERVED', 'VERIFIED', 'INFERRED', 'ASSOCIATIVE', 'GENERATED', 'USER_CONFIRMED']
 
-GeometryRepresentationVerificationState: TypeAlias = Literal["UNVERIFIED", "VERIFIED", "REJECTED"]
+GeometryRepresentationVerificationState: TypeAlias = Literal['UNVERIFIED', 'VERIFIED', 'REJECTED']
 
 @dataclass(slots=True)
 class GeometryRepresentation:
@@ -362,7 +364,7 @@ class GeometryRepresentation:
     valid_region: dict[str, Any] | None = None
     lod_level: int | None = None
 
-HypothesisStatus: TypeAlias = Literal["ACTIVE", "VERIFIED", "REJECTED", "SUPERSEDED"]
+HypothesisStatus: TypeAlias = Literal['ACTIVE', 'VERIFIED', 'REJECTED', 'SUPERSEDED']
 
 @dataclass(slots=True)
 class Hypothesis:
@@ -378,7 +380,7 @@ class Hypothesis:
     created_at: datetime
     updated_at: datetime
 
-ObservationSourceType: TypeAlias = Literal["IMAGE", "VIDEO_FRAME", "DEPTH", "LIDAR", "GPS", "IMU", "USER_HINT", "MANUAL_MEASUREMENT"]
+ObservationSourceType: TypeAlias = Literal['IMAGE', 'VIDEO_FRAME', 'DEPTH', 'LIDAR', 'GPS', 'IMU', 'USER_HINT', 'MANUAL_MEASUREMENT']
 
 @dataclass(slots=True)
 class Observation:
@@ -406,7 +408,7 @@ class Portal:
     to_zone_id: UUID | None = None
     anchor_id: UUID | None = None
 
-ValidationResultStatus: TypeAlias = Literal["PASSED", "FAILED", "NEEDS_REVIEW"]
+ValidationResultStatus: TypeAlias = Literal['PASSED', 'FAILED', 'NEEDS_REVIEW']
 
 @dataclass(slots=True)
 class ValidationResult:
@@ -418,7 +420,7 @@ class ValidationResult:
     validator: str
     created_at: datetime
 
-WorldRevisionActorType: TypeAlias = Literal["USER", "SYSTEM", "AGENT"]
+WorldRevisionActorType: TypeAlias = Literal['USER', 'SYSTEM', 'AGENT']
 
 @dataclass(slots=True)
 class WorldRevision:
@@ -430,9 +432,9 @@ class WorldRevision:
     parent_revision_id: UUID | None = None
     command_id: UUID | None = None
 
-WorldCoordinateSystem: TypeAlias = Literal["RIGHT_HANDED_Y_UP"]
+WorldCoordinateSystem: TypeAlias = Literal['RIGHT_HANDED_Y_UP']
 
-WorldUnit: TypeAlias = Literal["METER"]
+WorldUnit: TypeAlias = Literal['METER']
 
 @dataclass(slots=True)
 class World:
@@ -445,7 +447,7 @@ class World:
     updated_at: datetime
     active_revision_id: UUID | None = None
 
-ZoneZoneType: TypeAlias = Literal["ROOM", "CORRIDOR", "FLOOR", "BUILDING", "OUTDOOR", "GARDEN", "STREET", "UNKNOWN"]
+ZoneZoneType: TypeAlias = Literal['ROOM', 'CORRIDOR', 'FLOOR', 'BUILDING', 'OUTDOOR', 'GARDEN', 'STREET', 'UNKNOWN']
 
 @dataclass(slots=True)
 class Zone:
