@@ -74,7 +74,7 @@ pub struct Command {
     pub r#type: CommandType,
     pub world_id: Option<Uuid>,
     pub payload: Value,
-    pub schema_version: i64,
+    pub schema_version: u64,
     pub caller_context: Value,
     pub requested_at: DateTime<Utc>,
 }
@@ -328,8 +328,8 @@ pub enum CreativityProfileLevel {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreativityProfile {
     pub level: CreativityProfileLevel,
-    pub top_k: i64,
-    pub beam_width: i64,
+    pub top_k: u64,
+    pub beam_width: u64,
     pub validation_budget: u64,
     pub sampling: Option<Value>,
 }
@@ -491,7 +491,7 @@ pub struct Job {
     pub task_type: String,
     pub state: JobState,
     pub attempt: u64,
-    pub max_attempts: i64,
+    pub max_attempts: u64,
     pub idempotent: bool,
     pub checkpoint_artifact_id: Option<Uuid>,
     pub provider_run_id: Option<Uuid>,
@@ -510,7 +510,7 @@ pub struct Task {
     pub optional_dependency_ids: Vec<Uuid>,
     pub resources: Value,
     pub timeout_ms: Option<u64>,
-    pub max_attempts: i64,
+    pub max_attempts: u64,
     pub idempotent: bool,
     pub retry_policy: Option<Value>,
     pub cache_key: Option<String>,
@@ -521,7 +521,7 @@ pub struct Task {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct JobDispatch {
     pub job_id: Uuid,
-    pub protocol_version: i64,
+    pub protocol_version: u64,
     pub r#type: String,
     pub input_refs: Vec<String>,
     pub parameters: Value,
@@ -542,7 +542,7 @@ pub enum JobResultState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct JobResult {
     pub job_id: Uuid,
-    pub protocol_version: i64,
+    pub protocol_version: u64,
     pub state: JobResultState,
     pub outputs: Vec<Value>,
     pub error: Option<Value>,
@@ -551,7 +551,7 @@ pub struct JobResult {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ProgressEvent {
     pub job_id: Uuid,
-    pub protocol_version: i64,
+    pub protocol_version: u64,
     pub stage: String,
     pub progress: f64,
     pub message_code: String,
@@ -571,7 +571,7 @@ pub enum WorkerHeartbeatHealth {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WorkerHeartbeat {
     pub worker_id: Uuid,
-    pub protocol_version: i64,
+    pub protocol_version: u64,
     pub timestamp: DateTime<Utc>,
     pub current_job_ids: Vec<Uuid>,
     pub cpu_usage: f64,
@@ -595,7 +595,7 @@ pub enum WorkerRegistrationWorkerType {
 pub struct WorkerRegistration {
     pub worker_id: Uuid,
     pub worker_type: WorkerRegistrationWorkerType,
-    pub protocol_version: i64,
+    pub protocol_version: u64,
     pub capabilities: Vec<String>,
     pub device: Value,
     pub software: Value,
@@ -965,7 +965,7 @@ pub enum WorldUnit {
 pub struct World {
     pub id: Uuid,
     pub name: String,
-    pub schema_version: i64,
+    pub schema_version: u64,
     pub active_revision_id: Option<Uuid>,
     pub coordinate_system: WorldCoordinateSystem,
     pub unit: WorldUnit,
