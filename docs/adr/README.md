@@ -21,3 +21,4 @@ AI 开发者不得在普通功能任务中无理由推翻“已接受”的 ADR�
 - [0006 SQLx 作为 Core 数据库访问层](0006-SQLx作为Core数据库访问层.md)
 - [0007 Worker 使用 stdio + JSONL 通信](0007-Worker采用stdio加JSONL通信.md)
 - [0008 JSON Schema 作为跨语言协议源](0008-JSONSchema作为跨语言协议源.md)
+- [0009 证据锚定的联想式世界推理](0009-证据锚定的联想式世界推理.md)
