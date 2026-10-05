@@ -414,6 +414,7 @@ class Observation:
     id: UUID
     world_id: UUID
     source_type: ObservationSourceType
+    payload: dict[str, Any]
     quality: dict[str, Any]
     immutable: bool
     created_at: datetime
