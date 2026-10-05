@@ -5,9 +5,7 @@ use sqlx::{Sqlite, SqlitePool, Transaction};
 use uuid::Uuid;
 
 use crate::{
-    model::{
-        World, WorldCoordinateSystem, WorldRevision, WorldRevisionActorType, WorldUnit,
-    },
+    model::{World, WorldCoordinateSystem, WorldRevision, WorldRevisionActorType, WorldUnit},
     serde_db::{enum_from_string, enum_to_string, from_json, to_json},
 };
 
@@ -125,13 +123,12 @@ pub(crate) async fn commit_revision_in_tx(
     actor_type: WorldRevisionActorType,
     changeset: Value,
 ) -> Result<WorldRevision> {
-    let head = sqlx::query_as::<_, WorldHeadRow>(
-        "SELECT active_revision_id FROM worlds WHERE id = ?",
-    )
-    .bind(world_id.to_string())
-    .fetch_optional(&mut **tx)
-    .await?
-    .context("world does not exist")?;
+    let head =
+        sqlx::query_as::<_, WorldHeadRow>("SELECT active_revision_id FROM worlds WHERE id = ?")
+            .bind(world_id.to_string())
+            .fetch_optional(&mut **tx)
+            .await?
+            .context("world does not exist")?;
 
     let active_revision_id = head
         .active_revision_id
@@ -263,11 +260,7 @@ impl TryFrom<RevisionRow> for WorldRevision {
                 .as_deref()
                 .map(Uuid::parse_str)
                 .transpose()?,
-            command_id: row
-                .command_id
-                .as_deref()
-                .map(Uuid::parse_str)
-                .transpose()?,
+            command_id: row.command_id.as_deref().map(Uuid::parse_str).transpose()?,
             actor_type: enum_from_string(&row.actor_type)?,
             changeset: from_json(&row.changeset_json)?,
             created_at: parse_datetime(&row.created_at, "revision created_at")?,
