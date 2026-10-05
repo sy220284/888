@@ -27,13 +27,18 @@ export interface NormalizedWorldViewModel {
 
 export function normalizeWorldViewModel(world: WorldViewModel): NormalizedWorldViewModel {
   const requestedScale = world.metricScaleFactor ?? 1
+  const groundPlaneOffset =
+    typeof world.groundPlaneOffset === 'number' && Number.isFinite(world.groundPlaneOffset)
+      ? world.groundPlaneOffset
+      : 0
+
   return {
     splatUrl: world.splatUrl,
     colliderUrl: world.colliderUrl,
     panoUrl: world.panoUrl,
     audioUrls: world.audioUrls ?? [],
     metricScaleFactor: Number.isFinite(requestedScale) && requestedScale > 0 ? requestedScale : 1,
-    groundPlaneOffset: Number.isFinite(world.groundPlaneOffset) ? world.groundPlaneOffset! : 0,
+    groundPlaneOffset,
     flipY: world.flipY ?? false,
   }
 }

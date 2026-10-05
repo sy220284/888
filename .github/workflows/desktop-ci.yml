@@ -1,0 +1,32 @@
+name: Desktop 前端校验
+
+on:
+  push:
+    paths:
+      - "apps/desktop/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/desktop-ci.yml"
+  pull_request:
+    paths:
+      - "apps/desktop/**"
+      - "package.json"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/desktop-ci.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --no-frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build:desktop

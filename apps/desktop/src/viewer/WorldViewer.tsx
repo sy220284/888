@@ -55,7 +55,10 @@ export function WorldViewer({ world: input, quality = 'high', muted = false }: P
 
         <Physics gravity={[0, -9.81, 0]}>
           <FlyController />
-          <GroundPlane visible={!world.colliderUrl && !world.splatUrl} />
+          <GroundPlane
+            enabled={!world.colliderUrl}
+            visible={!world.colliderUrl && !world.splatUrl}
+          />
           {world.colliderUrl && (
             <OptionalAssetBoundary label={world.colliderUrl} resetKey={world.colliderUrl}>
               <WorldCollider
