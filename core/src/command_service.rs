@@ -1,15 +1,19 @@
+use std::path::PathBuf;
+
 use anyhow::{bail, Context, Result};
 use serde_json::{json, Value};
 use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
+    artifact_store::ArtifactStore,
     candidate_service::CandidateService,
     job_engine::JobEngine,
     model::{
         Command, CommandResponse, CommandResponseStatus, CommandType, JobState,
         WorldRevisionActorType,
     },
+    observation_import::ObservationImportService,
     serde_db::{enum_from_string, enum_to_string, from_json, to_json},
     world_repository::WorldRepository,
 };
@@ -20,6 +24,7 @@ pub struct CommandService {
     worlds: WorldRepository,
     jobs: JobEngine,
     candidates: CandidateService,
+    observation_import: Option<ObservationImportService>,
 }
 
 impl CommandService {
@@ -28,6 +33,17 @@ impl CommandService {
             worlds: WorldRepository::new(pool.clone()),
             jobs: JobEngine::new(pool.clone()),
             candidates: CandidateService::new(pool.clone()),
+            observation_import: None,
+            pool,
+        }
+    }
+
+    pub fn with_artifact_store(pool: SqlitePool, artifacts: ArtifactStore) -> Self {
+        Self {
+            worlds: WorldRepository::new(pool.clone()),
+            jobs: JobEngine::new(pool.clone()),
+            candidates: CandidateService::new(pool.clone()),
+            observation_import: Some(ObservationImportService::new(artifacts, pool.clone())),
             pool,
         }
     }
@@ -97,6 +113,39 @@ impl CommandService {
                     .await?
                     .context("world does not exist")?;
                 completed(command.command_id, serde_json::to_value(world)?)
+            }
+            CommandType::ImportObservations => {
+                let world_id = command
+                    .world_id
+                    .context("IMPORT_OBSERVATIONS requires world_id")?;
+                let importer = self
+                    .observation_import
+                    .as_ref()
+                    .context("artifact store is not configured for observation import")?;
+                let paths = required_string_array(&command.payload, "paths")?
+                    .into_iter()
+                    .map(PathBuf::from)
+                    .collect::<Vec<_>>();
+                let imported = importer.import_images(world_id, &paths).await?;
+                let job_ids = imported
+                    .analysis_jobs
+                    .iter()
+                    .map(|job| job.id)
+                    .collect::<Vec<_>>();
+                Ok(CommandResponse {
+                    command_id: command.command_id,
+                    status: CommandResponseStatus::Completed,
+                    job_ids,
+                    result: Some(json!({
+                        "observation_ids": imported
+                            .observations
+                            .iter()
+                            .map(|observation| observation.id)
+                            .collect::<Vec<_>>(),
+                        "artifact_ids": imported.unique_artifact_ids,
+                    })),
+                    error: None,
+                })
             }
             CommandType::PauseJob => {
                 let job_id = required_uuid(&command.payload, "job_id")?;
@@ -245,6 +294,29 @@ fn required_string<'a>(payload: &'a Value, key: &str) -> Result<&'a str> {
         .with_context(|| format!("payload.{key} must be a non-empty string"))
 }
 
+fn required_string_array(payload: &Value, key: &str) -> Result<Vec<String>> {
+    let values = payload
+        .get(key)
+        .and_then(Value::as_array)
+        .with_context(|| format!("payload.{key} must be an array"))?;
+    if values.is_empty() {
+        bail!("payload.{key} must not be empty");
+    }
+
+    values
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            value
+                .as_str()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned)
+                .with_context(|| format!("payload.{key}[{index}] must be a non-empty string"))
+        })
+        .collect()
+}
+
 fn required_uuid(payload: &Value, key: &str) -> Result<Uuid> {
     let value = payload
         .get(key)
@@ -331,9 +403,13 @@ mod tests {
     use serde_json::json;
     use uuid::Uuid;
 
+    use tempfile::tempdir;
+
     use crate::{
+        artifact_store::ArtifactStore,
         db,
         model::{Command, CommandResponseStatus, CommandType},
+        world_repository::WorldRepository,
     };
 
     use super::CommandService;
@@ -385,6 +461,64 @@ mod tests {
             .await
             .unwrap_err();
         assert!(error.to_string().contains("reused"));
+    }
+
+    #[tokio::test]
+    async fn import_observations_is_idempotent_across_command_replay() {
+        let pool = db::connect_memory().await.unwrap();
+        let artifact_root = tempdir().unwrap();
+        let sources = tempdir().unwrap();
+        let store = ArtifactStore::new(artifact_root.path(), pool.clone())
+            .await
+            .unwrap();
+        let world = WorldRepository::new(pool.clone())
+            .create("Import Command")
+            .await
+            .unwrap();
+
+        let bytes = b"\x89PNG\r\n\x1a\ncommand-fixture";
+        let first = sources.path().join("first.png");
+        let second = sources.path().join("second.png");
+        tokio::fs::write(&first, bytes).await.unwrap();
+        tokio::fs::write(&second, bytes).await.unwrap();
+
+        let service = CommandService::with_artifact_store(pool.clone(), store);
+        let command = Command {
+            command_id: Uuid::new_v4(),
+            r#type: CommandType::ImportObservations,
+            world_id: Some(world.id),
+            payload: json!({
+                "paths": [
+                    first.to_string_lossy(),
+                    second.to_string_lossy()
+                ]
+            }),
+            schema_version: 1,
+            caller_context: json!({"actor_type": "USER"}),
+            requested_at: Utc::now(),
+        };
+
+        let first_response = service.execute(&command).await.unwrap();
+        let replayed = service.execute(&command).await.unwrap();
+        assert_eq!(first_response, replayed);
+        assert_eq!(first_response.status, CommandResponseStatus::Completed);
+        assert_eq!(first_response.job_ids.len(), 2);
+
+        let observations: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM observations")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let artifacts: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM artifacts")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        let jobs: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM jobs")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(observations, 2);
+        assert_eq!(artifacts, 1);
+        assert_eq!(jobs, 2);
     }
 
     #[tokio::test]
