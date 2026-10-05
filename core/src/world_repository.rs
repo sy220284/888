@@ -223,7 +223,8 @@ impl TryFrom<WorldRow> for World {
         Ok(Self {
             id: Uuid::parse_str(&row.id)?,
             name: row.name,
-            schema_version: u64::try_from(row.schema_version).context("negative world schema_version")?,
+            schema_version: u64::try_from(row.schema_version)
+                .context("negative world schema_version")?,
             active_revision_id: row
                 .active_revision_id
                 .as_deref()
