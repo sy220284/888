@@ -18,3 +18,6 @@ AI 开发者不得在普通功能任务中无理由推翻“已接受”的 ADR�
 - [0003 GTSAM 第一阶段保留在 Python Worker](0003-GTSAM保留在PythonWorker.md)
 - [0004 Monorepo 而非微服务拆分](0004-Monorepo而非微服务.md)
 - [0005 Schema 单一真相源](0005-Schema单一真相源.md)
+- [0006 SQLx 作为 Core 数据库访问层](0006-SQLx作为Core数据库访问层.md)
+- [0007 Worker 使用 stdio + JSONL 通信](0007-Worker采用stdio加JSONL通信.md)
+- [0008 JSON Schema 作为跨语言协议源](0008-JSONSchema作为跨语言协议源.md)
