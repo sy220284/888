@@ -1,31 +1,41 @@
-name: Core Rust 与 Schema 校验
+name: Core Rust、Schema 与 Worker 校验
 
 on:
   push:
     paths:
       - "Cargo.toml"
       - "rust-toolchain.toml"
+      - "Justfile"
+      - "pyproject.toml"
       - "core/**"
+      - "compiler/**"
       - "packages/schema/**"
-      - "tools/validate_schemas.py"
-      - "tools/generate_schema_types.py"
-      - "tools/check_architecture.py"
+      - "packages/provider-sdk/**"
+      - "packages/plugin-sdk/**"
+      - "tools/**"
       - "workers/**"
+      - "tests/python/**"
       - "testdata/**"
       - "apps/desktop/src/**"
+      - "apps/desktop/src-tauri/**"
       - ".github/workflows/core-ci.yml"
   pull_request:
     paths:
       - "Cargo.toml"
       - "rust-toolchain.toml"
+      - "Justfile"
+      - "pyproject.toml"
       - "core/**"
+      - "compiler/**"
       - "packages/schema/**"
-      - "tools/validate_schemas.py"
-      - "tools/generate_schema_types.py"
-      - "tools/check_architecture.py"
+      - "packages/provider-sdk/**"
+      - "packages/plugin-sdk/**"
+      - "tools/**"
       - "workers/**"
+      - "tests/python/**"
       - "testdata/**"
       - "apps/desktop/src/**"
+      - "apps/desktop/src-tauri/**"
       - ".github/workflows/core-ci.yml"
 
 jobs:
@@ -49,8 +59,23 @@ jobs:
         run: python tools/validate_schemas.py
       - name: 校验三语言生成物
         run: python tools/generate_schema_types.py --check
-      - name: 校验 Python 生成类型
-        run: python -m compileall -q workers/sdk
+      - name: 校验 Python 代码与测试
+        run: |
+          python -m compileall -q workers tools tests/python
+          python -m unittest discover -s tests/python
+      - name: Worker 进程入口冒烟
+        run: |
+          python -m workers.vision.main </dev/null > /tmp/vision-worker.jsonl
+          python -m workers.tools.main </dev/null > /tmp/tool-worker.jsonl
+          test "$(wc -l < /tmp/vision-worker.jsonl)" -ge 2
+          test "$(wc -l < /tmp/tool-worker.jsonl)" -ge 2
+      - name: 校验 Fixture
+        run: python tools/benchmark.py --verify-only
+      - name: 校验 Tauri 壳配置
+        run: |
+          python -m json.tool apps/desktop/src-tauri/tauri.conf.json >/dev/null
+          python -m json.tool apps/desktop/src-tauri/capabilities/default.json >/dev/null
+          cargo metadata --manifest-path apps/desktop/src-tauri/Cargo.toml --no-deps --format-version 1 >/dev/null
       - name: 检查格式
         run: cargo fmt --all -- --check
       - name: Clippy
