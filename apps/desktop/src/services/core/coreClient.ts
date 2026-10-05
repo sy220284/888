@@ -1,4 +1,10 @@
-import { getCoreStatus, type CoreStatus } from '../../coreBridge'
+import type { Command } from '../../generated/schema'
+import {
+  executeCommand,
+  getCommandResponse,
+  getCoreStatus,
+  type CoreStatus,
+} from '../../coreBridge'
 
 export async function readCoreStatus(): Promise<CoreStatus | null> {
   try {
@@ -6,4 +12,12 @@ export async function readCoreStatus(): Promise<CoreStatus | null> {
   } catch {
     return null
   }
+}
+
+export const coreClient = {
+  executeCommand,
+  getCommandResponse,
+  async submit(command: Command) {
+    return executeCommand(command)
+  },
 }
