@@ -455,7 +455,11 @@ impl WorkerRuntimeInner {
     async fn claim_idle_worker(&self, task_type: &str) -> Option<(Uuid, WorkerHandle)> {
         let workers = self.workers.read().await;
         for (worker_id, handle) in workers.iter() {
-            if !handle.capabilities.iter().any(|capability| capability == task_type) {
+            if !handle
+                .capabilities
+                .iter()
+                .any(|capability| capability == task_type)
+            {
                 continue;
             }
             if handle
@@ -563,11 +567,7 @@ impl WorkerRuntimeInner {
         }
 
         self.jobs
-            .record_event(
-                result.job_id,
-                "JOB_RESULT",
-                serde_json::to_value(&result)?,
-            )
+            .record_event(result.job_id, "JOB_RESULT", serde_json::to_value(&result)?)
             .await?;
 
         match result.state {
@@ -585,7 +585,9 @@ impl WorkerRuntimeInner {
                         return Ok(());
                     }
                 }
-                self.jobs.transition(current.id, JobState::Completed).await?;
+                self.jobs
+                    .transition(current.id, JobState::Completed)
+                    .await?;
             }
             JobResultState::Paused => {
                 if current.state != JobState::Pausing {
@@ -601,7 +603,9 @@ impl WorkerRuntimeInner {
                     .and_then(Value::as_str)
                     .unwrap_or("WORKER_ERROR");
                 if matches!(code, "CANCELLED" | "JOB_CANCELLED") {
-                    self.jobs.transition(current.id, JobState::Cancelled).await?;
+                    self.jobs
+                        .transition(current.id, JobState::Cancelled)
+                        .await?;
                 } else {
                     self.jobs
                         .fail(current.id, code, result.error.clone())
