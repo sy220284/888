@@ -26,6 +26,21 @@ def enum_name(root: str, prop: str) -> str:
     return root + pascal(prop)
 
 
+RUST_KEYWORDS = {
+    "as", "break", "const", "continue", "crate", "else", "enum", "extern",
+    "false", "fn", "for", "if", "impl", "in", "let", "loop", "match",
+    "mod", "move", "mut", "pub", "ref", "return", "self", "Self", "static",
+    "struct", "super", "trait", "true", "type", "unsafe", "use", "where",
+    "while", "async", "await", "dyn", "abstract", "become", "box", "do",
+    "final", "macro", "override", "priv", "typeof", "unsized", "virtual",
+    "yield", "try",
+}
+
+
+def rust_field_name(prop: str) -> str:
+    return f"r#{prop}" if prop in RUST_KEYWORDS else prop
+
+
 def type_parts(spec: dict[str, Any]) -> tuple[str | None, bool]:
     value = spec.get("type")
     nullable = False
@@ -159,7 +174,7 @@ def render_rust(schemas: list[dict[str, Any]]) -> str:
             _, nullable = type_parts(spec)
             optional = prop not in required or nullable
             field_type = f"Option<{base}>" if optional else base
-            lines.append(f"    pub {prop}: {field_type},")
+            lines.append(f"    pub {rust_field_name(prop)}: {field_type},")
         lines.extend(["}", ""])
     return "\n".join(lines).rstrip() + "\n"
 
