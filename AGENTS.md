@@ -146,15 +146,21 @@ AI 不得在存在未解决文档冲突时继续扩展实现。
     888/
     ├─ apps/
     │  └─ desktop/
+    │     ├─ src/
+    │     └─ src-tauri/
     ├─ core/
+    ├─ compiler/
     ├─ workers/
+    │  ├─ sdk/
     │  ├─ vision/
     │  └─ tools/
     ├─ packages/
     │  ├─ schema/
-    │  └─ provider-sdk/
-    ├─ docs/
+    │  ├─ provider-sdk/
+    │  └─ plugin-sdk/
+    ├─ tests/
     ├─ testdata/
+    ├─ docs/
     ├─ tools/
     └─ AGENTS.md
 
