@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use uuid::Uuid;
 
 use crate::{
-    model::{WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration},
+    model::{JobState, WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration},
     serde_db::{enum_from_string, enum_to_string, to_json},
 };
 
@@ -66,6 +66,25 @@ impl WorkerRegistry {
 
     pub async fn heartbeat(&self, heartbeat: &WorkerHeartbeat) -> Result<()> {
         validate_protocol(heartbeat.protocol_version)?;
+        if heartbeat.health == WorkerHeartbeatHealth::Lost {
+            bail!("worker cannot self-report LOST; Core owns lost detection");
+        }
+        for job_id in &heartbeat.current_job_ids {
+            let state: Option<String> =
+                sqlx::query_scalar("SELECT state FROM jobs WHERE id = ?")
+                    .bind(job_id.to_string())
+                    .fetch_optional(&self.pool)
+                    .await?;
+            let state = state
+                .as_deref()
+                .map(enum_from_string::<JobState>)
+                .transpose()?
+                .context("heartbeat references unknown job")?;
+            if !matches!(state, JobState::Running | JobState::Pausing) {
+                bail!("heartbeat references job that is not running");
+            }
+        }
+
         let current_jobs: Vec<String> = heartbeat
             .current_job_ids
             .iter()
@@ -199,6 +218,42 @@ mod tests {
             registry.health(worker_id).await.unwrap(),
             Some(WorkerHeartbeatHealth::Lost)
         );
+    }
+
+    #[tokio::test]
+    async fn rejects_worker_owned_lost_state_and_unknown_jobs() {
+        let pool = db::connect_memory().await.unwrap();
+        let registry = WorkerRegistry::new(pool);
+        let worker_id = Uuid::new_v4();
+        let registration = WorkerRegistration {
+            worker_id,
+            worker_type: WorkerRegistrationWorkerType::Vision,
+            protocol_version: WORKER_PROTOCOL_VERSION,
+            capabilities: vec![],
+            device: json!({}),
+            software: json!({}),
+        };
+        registry.register(&registration).await.unwrap();
+
+        let lost = WorkerHeartbeat {
+            worker_id,
+            protocol_version: WORKER_PROTOCOL_VERSION,
+            timestamp: Utc::now(),
+            current_job_ids: vec![],
+            cpu_usage: 0.0,
+            ram_mb: 0,
+            gpu_usage: None,
+            vram_mb: None,
+            health: WorkerHeartbeatHealth::Lost,
+        };
+        assert!(registry.heartbeat(&lost).await.is_err());
+
+        let unknown_job = WorkerHeartbeat {
+            health: WorkerHeartbeatHealth::Healthy,
+            current_job_ids: vec![Uuid::new_v4()],
+            ..lost
+        };
+        assert!(registry.heartbeat(&unknown_job).await.is_err());
     }
 
     #[tokio::test]
