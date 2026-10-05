@@ -193,6 +193,8 @@ fn detect_image_mime(bytes: &[u8]) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use tempfile::tempdir;
 
     use crate::{
@@ -226,20 +228,18 @@ mod tests {
     async fn imports_duplicate_files_as_two_observations_one_artifact_and_ready_jobs() {
         let pool = db::connect_memory().await.unwrap();
         let root = tempdir().unwrap();
-        let sources = tempdir().unwrap();
         let store = ArtifactStore::new(root.path(), pool.clone()).await.unwrap();
         let world = WorldRepository::new(pool.clone())
             .create("Observation Import")
             .await
             .unwrap();
 
-        let bytes = b"\x89PNG\r\n\x1a\nfixture-content";
-        let first = sources.path().join("first.png");
-        let second = sources.path().join("second.png");
-        tokio::fs::write(&first, bytes).await.unwrap();
-        tokio::fs::write(&second, bytes).await.unwrap();
+        let fixture = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../testdata/regression/observation-import-dedup/observations");
+        let first = fixture.join("first.png");
+        let second = fixture.join("second.png");
 
-        let service = ObservationImportService::new(store, pool.clone());
+        let service = ObservationImportService::new(store.clone(), pool.clone());
         let result = service
             .import_images(world.id, &[first, second])
             .await
@@ -248,6 +248,15 @@ mod tests {
         assert_eq!(result.observations.len(), 2);
         assert_eq!(result.unique_artifact_ids.len(), 1);
         assert_eq!(result.analysis_jobs.len(), 2);
+        let artifact = store
+            .get(result.unique_artifact_ids[0])
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            artifact.logical_type,
+            crate::model::ArtifactLogicalType::OriginalImage
+        );
         assert!(result
             .analysis_jobs
             .iter()
