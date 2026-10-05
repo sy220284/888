@@ -11,5 +11,6 @@ pub mod provider;
 pub mod provider_router;
 pub mod provider_run_repository;
 pub mod serde_db;
+pub mod worker_protocol;
 pub mod worker_registry;
 pub mod world_repository;
