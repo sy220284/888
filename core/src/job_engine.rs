@@ -731,10 +731,7 @@ mod tests {
         jobs.transition(job.id, JobState::Ready).await.unwrap();
         jobs.transition(job.id, JobState::Running).await.unwrap();
         jobs.transition(job.id, JobState::Pausing).await.unwrap();
-        let completed = jobs
-            .transition(job.id, JobState::Completed)
-            .await
-            .unwrap();
+        let completed = jobs.transition(job.id, JobState::Completed).await.unwrap();
 
         assert_eq!(completed.state, JobState::Completed);
     }
