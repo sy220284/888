@@ -5,7 +5,8 @@ use serde_json::json;
 
 use crate::{
     model::{
-        CanonicalCapabilityRequest, ProviderCapability, ProviderCapabilityCapability,
+        CanonicalCapabilityRequest, CanonicalCapabilityRequestCapability,
+        CanonicalCapabilityRequestQualityProfile, ProviderCapability, ProviderCapabilityCapability,
         ProviderCapabilityHealth, ProviderCapabilityLocation,
         ProviderCapabilityQualityProfilesItem,
     },
@@ -64,13 +65,14 @@ impl ProviderRouter {
     }
 
     pub fn select(&self, request: &CanonicalCapabilityRequest) -> Result<ProviderCapability> {
-        let requested_quality = request.quality_profile.as_deref();
+        let requested_capability = enum_to_string(&request.capability)?;
+        let requested_quality = enum_to_string(&request.quality_profile)?;
         let mut candidates: Vec<&ProviderCapability> =
             self.providers
                 .iter()
                 .filter(|provider| {
                     enum_to_string(&provider.capability)
-                        .is_ok_and(|capability| capability == request.capability)
+                        .is_ok_and(|capability| capability == requested_capability)
                 })
                 .filter(|provider| {
                     matches!(
@@ -79,22 +81,20 @@ impl ProviderRouter {
                     )
                 })
                 .filter(|provider| {
-                    requested_quality.is_none_or(|quality| {
-                        provider.quality_profiles.iter().any(|profile| {
-                            enum_to_string(profile).is_ok_and(|value| value == quality)
-                        })
+                    provider.quality_profiles.iter().any(|profile| {
+                        enum_to_string(profile).is_ok_and(|value| value == requested_quality)
                     })
                 })
                 .filter(|provider| {
                     request.cost_budget.is_none_or(|budget| {
-                        provider.estimated_cost.is_none_or(|cost| cost <= budget)
+                        provider.estimated_cost.is_some_and(|cost| cost <= budget)
                     })
                 })
                 .filter(|provider| {
                     request.latency_budget_ms.is_none_or(|budget| {
                         provider
                             .average_latency_ms
-                            .is_none_or(|latency| latency <= budget)
+                            .is_some_and(|latency| latency <= budget)
                     })
                 })
                 .collect();
@@ -243,24 +243,30 @@ mod tests {
     use uuid::Uuid;
 
     use crate::model::{
-        CanonicalCapabilityRequest, CanonicalCapabilityRequestCreativityProfile,
+        CanonicalCapabilityRequest, CanonicalCapabilityRequestCapability,
+        CanonicalCapabilityRequestCreativityProfile, CanonicalCapabilityRequestQualityProfile,
         ProviderCapabilityHealth,
     };
 
     use super::ProviderRouter;
 
-    fn request(capability: &str) -> CanonicalCapabilityRequest {
+    fn request(capability: CanonicalCapabilityRequestCapability) -> CanonicalCapabilityRequest {
         CanonicalCapabilityRequest {
             request_id: Uuid::new_v4(),
-            capability: capability.to_owned(),
+            capability,
             input_artifact_ids: vec![],
             world_context_ref: None,
             parameters: json!({}),
-            quality_profile: Some("BALANCED".to_owned()),
+            evidence_policy: json!({}),
+            constraints: json!({}),
+            output_schema: json!({}),
+            quality_profile: CanonicalCapabilityRequestQualityProfile::Balanced,
             creativity_profile: CanonicalCapabilityRequestCreativityProfile::Strict,
             cost_budget: None,
             latency_budget_ms: None,
             verification_required: true,
+            deterministic_seed: None,
+            provider_hints: None,
         }
     }
 
@@ -275,13 +281,32 @@ mod tests {
             )
             .unwrap();
 
-        let selected = router.select(&request("OBJECT_3D")).unwrap();
+        let selected = router
+            .select(&request(CanonicalCapabilityRequestCapability::Object3d))
+            .unwrap();
         assert_eq!(selected.provider_id, "hunyuan");
+    }
+
+    #[test]
+    fn budgeted_request_rejects_provider_without_estimate() {
+        let mut router = ProviderRouter::with_builtins();
+        router
+            .set_health(
+                "hunyuan",
+                crate::model::ProviderCapabilityCapability::Object3d,
+                ProviderCapabilityHealth::Healthy,
+            )
+            .unwrap();
+        let mut request = request(CanonicalCapabilityRequestCapability::Object3d);
+        request.cost_budget = Some(1.0);
+        assert!(router.select(&request).is_err());
     }
 
     #[test]
     fn refuses_unregistered_or_unhealthy_capability() {
         let router = ProviderRouter::new();
-        assert!(router.select(&request("OBJECT_3D")).is_err());
+        assert!(router
+            .select(&request(CanonicalCapabilityRequestCapability::Object3d))
+            .is_err());
     }
 }
