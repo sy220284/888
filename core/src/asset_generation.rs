@@ -83,7 +83,7 @@ impl AssetGenerationService {
             .await?;
         let reference_image = self
             .first_image_artifact(&image_edit_run.artifact_ids)
-            .await
+            .await?
             .context("image edit completed without an image artifact")?;
 
         if options.reference_only {
