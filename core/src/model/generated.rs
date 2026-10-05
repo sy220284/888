@@ -928,6 +928,34 @@ pub struct Hypothesis {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ObservationAnalysisStatus {
+    #[serde(rename = "COMPLETED")]
+    Completed,
+    #[serde(rename = "PARTIAL")]
+    Partial,
+    #[serde(rename = "FAILED")]
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ObservationAnalysis {
+    pub id: Uuid,
+    pub observation_id: Uuid,
+    pub source_artifact_id: Uuid,
+    pub status: ObservationAnalysisStatus,
+    pub preview_artifact_id: Option<Uuid>,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
+    pub orientation: Option<i64>,
+    pub captured_at: Option<DateTime<Utc>>,
+    pub exif: Value,
+    pub quality: Value,
+    pub analyzer_version: String,
+    pub error: Option<String>,
+    pub analyzed_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ObservationSourceType {
     #[serde(rename = "IMAGE")]
     Image,
