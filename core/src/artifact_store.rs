@@ -112,11 +112,7 @@ impl ArtifactStore {
         Ok(format!("data:{};base64,{}", artifact.mime, encoded))
     }
 
-    async fn download_http(
-        &self,
-        url: &str,
-        content_type_hint: Option<&str>,
-    ) -> Result<Artifact> {
+    async fn download_http(&self, url: &str, content_type_hint: Option<&str>) -> Result<Artifact> {
         let response = self
             .http
             .get(url)
@@ -311,7 +307,6 @@ fn redact_source_url(value: &str) -> String {
         })
         .unwrap_or_else(|_| value.to_owned())
 }
-
 
 #[cfg(test)]
 mod tests {
