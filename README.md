@@ -70,6 +70,8 @@
 6. **生成结果必须验收**：API 返回成功不等于世界正确。
 7. **Agent 与底层模型都可替换**：Claude、Codex 只作为控制 / 开发入口；World Labs、Hunyuan、Meshy 等作为可插拔能力 Provider，任何一个都不成为系统核心。
 8. **同一世界，多种输出**：同一份世界真相可以编译为不同平台和质量等级。
+9. **统一 AI 外部行为，保留模型内部差异**：不同 AI 可以有不同推理风格和创意能力，但必须遵守同一 Capability、Schema、工具边界、置信度语义与验收标准。
+10. **创意扩大候选空间，不降低事实门槛**：探索模式可以产生更多新方案，但进入正式世界的 Evidence / Validation 门槛保持不变。
 
 ## 最终用户体验
 
@@ -137,6 +139,7 @@
 - **NeRF / Gaussian Splat**：gsplat 作为生产核心候选，Nerfstudio 用于实验 / 基线与可替换实现
 - **网格处理**：Open3D / trimesh / Blender Headless
 - **模型与服务接入**：Provider Router
+- **AI 运行时兼容**：Canonical Capability Contract + Behavior Profile + Prompt Compiler + Output Normalizer + Confidence Calibration + Conformance Suite
 - **工作流**：显式 Task Graph + Job Engine
 - **质量闭环**：多指标 Evaluator + Repair Planner
 - **导出**：glTF / GLB / USD / USDZ / FBX 等编译器
@@ -160,6 +163,7 @@
 15. [ADR 架构决策记录](docs/adr/README.md)
 16. [可行性分析与技术风险](docs/16-可行性分析与技术风险.md)
 17. [联想推理与先验系统设计](docs/17-联想推理与先验系统设计.md)
+18. [AI 运行时兼容与行为标准](docs/18-AI运行时兼容与行为标准.md)
 
 > 文档编号 `11` 当前有意保留，不创建对应文档；除非后续收到明确要求，不得因编号空缺自行补建。
 
