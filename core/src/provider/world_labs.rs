@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use anyhow::{bail, Context, Result};
 use base64::Engine as _;
@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 use crate::{
     artifact_store::ArtifactStore,
     model::{AIOutputEnvelope, AIOutputEnvelopeStatus, Artifact},
-    provider::collect_remote_files,
+    provider::{collect_remote_files, RemoteFileRef},
     provider_run_repository::ProviderRunRepository,
 };
 
@@ -67,7 +67,7 @@ impl WorldLabsRunner {
         if options.display_name.trim().is_empty() {
             bail!("display_name must not be empty");
         }
-        if image.is_none() && options.prompt.as_deref().is_none_or(str::is_empty) {
+        if image.is_none() && normalized_prompt(options.prompt.as_deref()).is_none() {
             bail!("world generation requires an image or text prompt");
         }
 
@@ -102,8 +102,8 @@ impl WorldLabsRunner {
                 .and_then(Value::as_bool)
                 .unwrap_or(false)
             {
-                if operation.get("error").is_some() {
-                    bail!("World Labs operation failed: {}", operation["error"]);
+                if let Some(error) = operation_error(&operation) {
+                    bail!("World Labs operation failed: {error}");
                 }
                 if started.elapsed() >= self.timeout {
                     bail!(
@@ -129,7 +129,7 @@ impl WorldLabsRunner {
                 }
             }
 
-            if let Some(error) = operation.get("error") {
+            if let Some(error) = operation_error(&operation) {
                 bail!("World Labs generation failed: {error}");
             }
             let world = operation
@@ -137,7 +137,7 @@ impl WorldLabsRunner {
                 .cloned()
                 .context("World Labs completed without response")?;
 
-            let remote_files = collect_remote_files(&world);
+            let remote_files = collect_world_assets(&world);
             if remote_files.is_empty() {
                 bail!("WORLD_GENERATION returned no downloadable world artifacts");
             }
@@ -194,34 +194,47 @@ impl WorldLabsRunner {
         image: Option<&Artifact>,
         options: &WorldGenerationOptions,
     ) -> Result<Value> {
+        let prompt = normalized_prompt(options.prompt.as_deref());
+
         let world_prompt = match image {
             Some(image) => {
                 let path = self.artifact_store.absolute_path(image).await?;
                 let bytes = tokio::fs::read(path).await?;
                 let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
-                json!({
+                let mut value = json!({
                     "type": "image",
                     "image_prompt": {
                         "source": "data_base64",
                         "data_base64": encoded,
                         "extension": extension_for_mime(&image.mime),
                         "mime_type": image.mime,
-                    },
-                    "text_prompt": options.prompt,
-                })
+                    }
+                });
+                if let Some(prompt) = prompt {
+                    value["text_prompt"] = Value::String(prompt.to_owned());
+                }
+                value
             }
             None => json!({
                 "type": "text",
-                "text_prompt": options.prompt,
+                "text_prompt": prompt.expect("text prompt was validated"),
             }),
         };
 
         Ok(json!({
-            "display_name": options.display_name,
+            "display_name": options.display_name.trim(),
             "model": WORLD_LABS_MODEL,
             "world_prompt": world_prompt,
         }))
     }
+}
+
+fn normalized_prompt(prompt: Option<&str>) -> Option<&str> {
+    prompt.map(str::trim).filter(|prompt| !prompt.is_empty())
+}
+
+fn operation_error(operation: &Value) -> Option<&Value> {
+    operation.get("error").filter(|error| !error.is_null())
 }
 
 fn operation_id(operation: &Value) -> Result<String> {
@@ -232,6 +245,75 @@ fn operation_id(operation: &Value) -> Result<String> {
         .and_then(Value::as_str)
         .context("World Labs operation did not include operation id")?;
     Ok(value.rsplit('/').next().unwrap_or(value).to_owned())
+}
+
+fn collect_world_assets(world: &Value) -> Vec<RemoteFileRef> {
+    let mut files = Vec::new();
+    let mut seen = HashSet::new();
+
+    let assets = world.get("assets").unwrap_or(&Value::Null);
+    push_world_asset(
+        &mut files,
+        &mut seen,
+        "collider",
+        assets.pointer("/mesh/collider_mesh_url").and_then(Value::as_str),
+        Some("model/gltf-binary"),
+    );
+    push_world_asset(
+        &mut files,
+        &mut seen,
+        "pano",
+        assets.pointer("/imagery/pano_url").and_then(Value::as_str),
+        None,
+    );
+    push_world_asset(
+        &mut files,
+        &mut seen,
+        "thumbnail",
+        assets.get("thumbnail_url").and_then(Value::as_str),
+        None,
+    );
+
+    if let Some(spz_urls) = assets.pointer("/splats/spz_urls").and_then(Value::as_object) {
+        for (key, value) in spz_urls {
+            push_world_asset(
+                &mut files,
+                &mut seen,
+                &format!("splat-{key}"),
+                value.as_str(),
+                Some("application/octet-stream"),
+            );
+        }
+    }
+
+    for remote in collect_remote_files(world) {
+        if seen.insert(remote.url.clone()) {
+            files.push(remote);
+        }
+    }
+
+    files
+}
+
+fn push_world_asset(
+    files: &mut Vec<RemoteFileRef>,
+    seen: &mut HashSet<String>,
+    label: &str,
+    url: Option<&str>,
+    content_type: Option<&str>,
+) {
+    let Some(url) = url.filter(|url| url.starts_with("https://")) else {
+        return;
+    };
+    if !seen.insert(url.to_owned()) {
+        return;
+    }
+    files.push(RemoteFileRef {
+        label: label.to_owned(),
+        url: url.to_owned(),
+        file_name: None,
+        content_type: content_type.map(str::to_owned),
+    });
 }
 
 fn extension_for_mime(mime: &str) -> &'static str {
@@ -247,7 +329,9 @@ fn extension_for_mime(mime: &str) -> &'static str {
 mod tests {
     use serde_json::json;
 
-    use super::{extension_for_mime, operation_id};
+    use super::{
+        collect_world_assets, extension_for_mime, operation_error, operation_id,
+    };
 
     #[test]
     fn extracts_operation_id_from_all_supported_shapes() {
@@ -259,6 +343,35 @@ mod tests {
             operation_id(&json!({"name": "operations/xyz"})).unwrap(),
             "xyz"
         );
+    }
+
+    #[test]
+    fn null_operation_error_is_not_failure() {
+        assert!(operation_error(&json!({"error": null})).is_none());
+        assert!(operation_error(&json!({"error": {"message": "boom"}})).is_some());
+    }
+
+    #[test]
+    fn collects_world_labs_bare_asset_urls() {
+        let world = json!({
+            "assets": {
+                "mesh": {"collider_mesh_url": "https://cdn/world.glb"},
+                "imagery": {"pano_url": "https://cdn/pano.jpg"},
+                "thumbnail_url": "https://cdn/thumb.webp",
+                "splats": {
+                    "spz_urls": {
+                        "full": "https://cdn/full.spz",
+                        "mobile": "https://cdn/mobile.spz"
+                    }
+                }
+            }
+        });
+
+        let files = collect_world_assets(&world);
+        assert_eq!(files.len(), 5);
+        assert!(files.iter().any(|file| file.label == "collider"));
+        assert!(files.iter().any(|file| file.label == "splat-full"));
+        assert!(files.iter().any(|file| file.url == "https://cdn/mobile.spz"));
     }
 
     #[test]
