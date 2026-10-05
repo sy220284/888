@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_ROOT = ROOT / "packages" / "schema" / "provider"
+SCHEMA_ROOT = ROOT / "packages" / "schema"
 
 OUTPUTS = {
     ROOT / "core" / "src" / "model" / "generated.rs": "rust",
@@ -109,10 +109,10 @@ def python_base(spec: dict[str, Any], root: str, prop: str) -> str:
 
 def load_schemas() -> list[dict[str, Any]]:
     schemas: list[dict[str, Any]] = []
-    for path in sorted(SCHEMA_ROOT.glob("*.schema.json")):
+    for path in sorted(SCHEMA_ROOT.rglob("*.schema.json")):
         schemas.append(json.loads(path.read_text(encoding="utf-8")))
     if not schemas:
-        raise SystemExit("没有找到 Provider Schema")
+        raise SystemExit("没有找到 Schema")
     return schemas
 
 
