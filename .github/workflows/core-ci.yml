@@ -8,6 +8,9 @@ on:
       - "core/**"
       - "packages/schema/**"
       - "tools/validate_schemas.py"
+      - "tools/generate_schema_types.py"
+      - "workers/sdk/**"
+      - "apps/desktop/src/generated/**"
       - ".github/workflows/core-ci.yml"
   pull_request:
     paths:
@@ -16,6 +19,9 @@ on:
       - "core/**"
       - "packages/schema/**"
       - "tools/validate_schemas.py"
+      - "tools/generate_schema_types.py"
+      - "workers/sdk/**"
+      - "apps/desktop/src/generated/**"
       - ".github/workflows/core-ci.yml"
 
 jobs:
@@ -35,6 +41,10 @@ jobs:
           python-version: "3.13"
       - name: 校验 Schema
         run: python tools/validate_schemas.py
+      - name: 校验三语言生成物
+        run: python tools/generate_schema_types.py --check
+      - name: 校验 Python 生成类型
+        run: python -m compileall -q workers/sdk
       - name: 检查格式
         run: cargo fmt --all -- --check
       - name: Clippy
