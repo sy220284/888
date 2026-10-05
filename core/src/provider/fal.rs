@@ -155,7 +155,6 @@ impl FalQueueClient {
         }
         Ok(body)
     }
-
 }
 
 fn validate_endpoint(endpoint: &str) -> Result<()> {
