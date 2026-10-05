@@ -27,6 +27,10 @@
 | WorldViewer 组合 | `apps/desktop/src/viewer/WorldViewer.tsx` | 改成 Provider 无关 Viewer | 已迁 |
 | 原 World 类型入口 | `apps/desktop/src/viewer/worldViewModel.ts` | 替换 World Labs 私有类型 | 已迁 |
 | 前端工程骨架 | `apps/desktop` | bun 改为 pnpm workspace | 已完成 |
+| Pointer Guard | `apps/desktop/src/viewer/pointerGuards.ts` | 保留对象交互后短时抑制 Pointer Lock | 已迁 |
+| Object Hover Guides | `apps/desktop/src/viewer/ObjectHoverGuides.tsx` | 保留包围框与 XYZ 方向辅助 | 已迁 |
+| Origin Helper | `apps/desktop/src/viewer/OriginHelper.tsx` | 去 Debug Store，改显式 visible | 已迁 |
+| Asset Materials | `apps/desktop/src/viewer/useAssetMaterials.ts` | 保留 Wireframe / Shaded 调试材质 | 已迁 |
 
 ## 3. 第二批：高价值，等新状态边界后迁
 
@@ -59,9 +63,61 @@
 
 ### PostProcessing
 
-复用后处理参数与视觉质量能力；不能影响真实性验证默认渲染。
+复用：
+
+- Bloom
+- Chromatic Aberration
+- Motion Blur
+- Tone Mapping
+- React 19 下绕过 wrapEffect 循环引用的实现经验
+
+要求：
+
+- 去掉旧 Debug Store。
+- 改为 Viewer Quality / Display Profile 显式配置。
+- 真实性验证视图默认关闭会改变感知结果的视觉特效。
 
 状态：**后置迁移。**
+
+### Mobile Touch Controls
+
+上游 `TouchControls.tsx` 可复用移动端左侧虚拟摇杆反馈和触摸状态管理。
+
+需要改：
+
+- 去掉旧 Debug Store。
+- 去掉 Tailwind 强绑定。
+- 与 888 Navigation Controller 统一输入协议。
+
+状态：**待导航控制层稳定后迁。**
+
+### Camera Focus / Dolly
+
+上游：
+
+- `cameraFocus.ts`
+- `useCameraDollyGestures.ts`
+
+可复用：
+
+- 对象点击后相机自动朝向目标。
+- 编辑器右键 / 双指 Dolly。
+
+其中全局 mutable ref 形式不保留，改为 Viewer Controller 状态。
+
+状态：**待 Editor / Selection Controller 后迁。**
+
+### Viewer Mode Hotkeys
+
+上游 `BottomLeftControls.tsx` 中的快捷键思路值得保留：
+
+- World / Object 显示模式切换。
+- Wireframe / Shaded / Lit。
+- Quality Mode。
+
+UI 组件本身与旧 Store、Radix、图标库耦合较高，不直接迁。
+
+状态：**交互规则复用，UI 后续重做。**
 
 ## 4. Provider 逻辑：复用逻辑，不原样搬 Node CLI
 
@@ -96,6 +152,16 @@
 ### Image Edit / SFX
 
 GPT Image Edit、Nano Banana、ElevenLabs SFX 映射到 Capability 后迁。
+
+### World Loader
+
+上游 `worldLoader.ts` 中“只允许本地世界资产 URL、拒绝直接使用 Provider CDN URL”的边界值得保留。
+
+旧 `virtual:worlds` 和 World Labs 私有类型不迁。
+
+目标由 888 Artifact Resolver / Local Artifact Store 承担。
+
+状态：**只吸收安全边界与测试思路。**
 
 ## 5. 只吸收思想
 
