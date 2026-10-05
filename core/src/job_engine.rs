@@ -479,8 +479,12 @@ mod tests {
         let required = jobs.create(None, "REQUIRED", 1, true).await.unwrap();
         let optional = jobs.create(None, "OPTIONAL", 1, true).await.unwrap();
 
-        jobs.add_dependency(root.id, required.id, false).await.unwrap();
-        jobs.add_dependency(root.id, optional.id, true).await.unwrap();
+        jobs.add_dependency(root.id, required.id, false)
+            .await
+            .unwrap();
+        jobs.add_dependency(root.id, optional.id, true)
+            .await
+            .unwrap();
         assert!(jobs
             .add_dependency(required.id, root.id, false)
             .await
@@ -490,12 +494,20 @@ mod tests {
         assert_eq!(pending.state, JobState::Pending);
 
         jobs.transition(required.id, JobState::Ready).await.unwrap();
-        jobs.transition(required.id, JobState::Running).await.unwrap();
-        jobs.transition(required.id, JobState::Completed).await.unwrap();
+        jobs.transition(required.id, JobState::Running)
+            .await
+            .unwrap();
+        jobs.transition(required.id, JobState::Completed)
+            .await
+            .unwrap();
 
         jobs.transition(optional.id, JobState::Ready).await.unwrap();
-        jobs.transition(optional.id, JobState::Running).await.unwrap();
-        jobs.fail(optional.id, "OPTIONAL_FAILED", None).await.unwrap();
+        jobs.transition(optional.id, JobState::Running)
+            .await
+            .unwrap();
+        jobs.fail(optional.id, "OPTIONAL_FAILED", None)
+            .await
+            .unwrap();
 
         let ready = jobs.resolve_dependencies(root.id).await.unwrap();
         assert_eq!(ready.state, JobState::Ready);
@@ -508,10 +520,14 @@ mod tests {
 
         let root = jobs.create(None, "ROOT", 1, true).await.unwrap();
         let required = jobs.create(None, "REQUIRED", 1, true).await.unwrap();
-        jobs.add_dependency(root.id, required.id, false).await.unwrap();
+        jobs.add_dependency(root.id, required.id, false)
+            .await
+            .unwrap();
 
         jobs.transition(required.id, JobState::Ready).await.unwrap();
-        jobs.transition(required.id, JobState::Running).await.unwrap();
+        jobs.transition(required.id, JobState::Running)
+            .await
+            .unwrap();
         jobs.fail(required.id, "FAILED", None).await.unwrap();
 
         let blocked = jobs.resolve_dependencies(root.id).await.unwrap();
