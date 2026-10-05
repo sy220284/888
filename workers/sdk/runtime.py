@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import platform
 import sys
+import threading
 import traceback
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -20,6 +21,14 @@ class JobContext:
     job_id: UUID
     emit_progress: Callable[[float, str, dict[str, Any] | None], None]
     is_cancelled: Callable[[], bool]
+    is_pause_requested: Callable[[], bool]
+
+
+@dataclass(slots=True)
+class _JobExecution:
+    cancel_event: threading.Event
+    pause_event: threading.Event
+    thread: threading.Thread | None = None
 
 
 class WorkerApp:
@@ -35,7 +44,9 @@ class WorkerApp:
         self.capabilities = capabilities
         self.handlers = handlers
         self.worker_id = worker_id or UUID(os.environ.get("WORLD888_WORKER_ID", str(uuid4())))
-        self._cancelled_jobs: set[UUID] = set()
+        self._active_jobs: dict[UUID, _JobExecution] = {}
+        self._state_lock = threading.RLock()
+        self._output_lock = threading.Lock()
 
     def registration_payload(self) -> dict[str, Any]:
         return {
@@ -54,11 +65,14 @@ class WorkerApp:
         }
 
     def heartbeat_payload(self, current_job_ids: list[UUID] | None = None) -> dict[str, Any]:
+        if current_job_ids is None:
+            with self._state_lock:
+                current_job_ids = list(self._active_jobs)
         return {
             "worker_id": str(self.worker_id),
             "protocol_version": PROTOCOL_VERSION,
             "timestamp": datetime.now(UTC).isoformat(),
-            "current_job_ids": [str(value) for value in current_job_ids or []],
+            "current_job_ids": [str(value) for value in current_job_ids],
             "cpu_usage": 0.0,
             "ram_mb": 0,
             "gpu_usage": None,
@@ -76,9 +90,13 @@ class WorkerApp:
             try:
                 message = decode_line(raw_line)
                 if not self._handle_message(message, stdout):
+                    self._request_cancel_all()
+                    self._join_active()
                     return 0
             except Exception as exc:
                 self._emit_runtime_error(stdout, exc)
+
+        self._join_active()
         return 0
 
     def _handle_message(self, message: dict[str, Any], stdout: TextIO) -> bool:
@@ -89,26 +107,19 @@ class WorkerApp:
             self._emit(stdout, make_message("HEARTBEAT", self.heartbeat_payload()))
             return True
 
+        if message_type not in {"JOB_DISPATCH", "PAUSE", "CANCEL"}:
+            raise ValueError(f"unexpected inbound worker message: {message_type}")
+
         job_id = UUID(message["job_id"])
         if message_type == "CANCEL":
-            self._cancelled_jobs.add(job_id)
+            execution = self._execution(job_id)
+            if execution is not None:
+                execution.cancel_event.set()
             return True
         if message_type == "PAUSE":
-            self._emit(
-                stdout,
-                make_message(
-                    "JOB_RESULT",
-                    {
-                        "job_id": str(job_id),
-                        "protocol_version": PROTOCOL_VERSION,
-                        "state": "PAUSED",
-                        "outputs": [],
-                    },
-                    job_id=job_id,
-                ),
-            )
-            return True
-        if message_type != "JOB_DISPATCH":
+            execution = self._execution(job_id)
+            if execution is not None:
+                execution.pause_event.set()
             return True
 
         payload = message["payload"]
@@ -127,6 +138,40 @@ class WorkerApp:
             )
             return True
 
+        execution = _JobExecution(
+            cancel_event=threading.Event(),
+            pause_event=threading.Event(),
+        )
+        with self._state_lock:
+            if job_id in self._active_jobs:
+                self._emit_job_failure(
+                    stdout,
+                    job_id,
+                    "DUPLICATE_JOB",
+                    "job is already running on this worker",
+                )
+                return True
+            self._active_jobs[job_id] = execution
+
+        thread = threading.Thread(
+            target=self._run_job,
+            args=(stdout, job_id, task_type, payload, handler, execution),
+            name=f"888-worker-{job_id}",
+            daemon=False,
+        )
+        execution.thread = thread
+        thread.start()
+        return True
+
+    def _run_job(
+        self,
+        stdout: TextIO,
+        job_id: UUID,
+        task_type: str,
+        payload: dict[str, Any],
+        handler: Handler,
+        execution: _JobExecution,
+    ) -> None:
         def emit_progress(
             progress: float,
             message_code: str,
@@ -152,7 +197,8 @@ class WorkerApp:
             worker_id=self.worker_id,
             job_id=job_id,
             emit_progress=emit_progress,
-            is_cancelled=lambda: job_id in self._cancelled_jobs,
+            is_cancelled=execution.cancel_event.is_set,
+            is_pause_requested=execution.pause_event.is_set,
         )
 
         try:
@@ -160,6 +206,20 @@ class WorkerApp:
             output = handler(context, payload)
             if context.is_cancelled():
                 self._emit_job_failure(stdout, job_id, "CANCELLED", "job was cancelled")
+            elif context.is_pause_requested():
+                self._emit(
+                    stdout,
+                    make_message(
+                        "JOB_RESULT",
+                        {
+                            "job_id": str(job_id),
+                            "protocol_version": PROTOCOL_VERSION,
+                            "state": "PAUSED",
+                            "outputs": [output] if output else [],
+                        },
+                        job_id=job_id,
+                    ),
+                )
             else:
                 emit_progress(1.0, "JOB_COMPLETED")
                 self._emit(
@@ -178,8 +238,31 @@ class WorkerApp:
         except Exception as exc:
             self._emit_job_failure(stdout, job_id, "WORKER_ERROR", str(exc))
         finally:
-            self._cancelled_jobs.discard(job_id)
-        return True
+            with self._state_lock:
+                self._active_jobs.pop(job_id, None)
+
+    def _execution(self, job_id: UUID) -> _JobExecution | None:
+        with self._state_lock:
+            return self._active_jobs.get(job_id)
+
+    def _request_cancel_all(self) -> None:
+        with self._state_lock:
+            executions = list(self._active_jobs.values())
+        for execution in executions:
+            execution.cancel_event.set()
+
+    def _join_active(self) -> None:
+        while True:
+            with self._state_lock:
+                threads = [
+                    execution.thread
+                    for execution in self._active_jobs.values()
+                    if execution.thread is not None
+                ]
+            if not threads:
+                return
+            for thread in threads:
+                thread.join()
 
     def _emit_job_failure(
         self,
@@ -210,13 +293,19 @@ class WorkerApp:
         }
         if os.environ.get("WORLD888_WORKER_DEBUG") == "1":
             error["traceback"] = traceback.format_exc()
-        self._emit(stdout, make_message("HEARTBEAT", {
-            **self.heartbeat_payload(),
-            "health": "DEGRADED",
-            "error": error,
-        }))
+        self._emit(
+            stdout,
+            make_message(
+                "HEARTBEAT",
+                {
+                    **self.heartbeat_payload(),
+                    "health": "DEGRADED",
+                    "error": error,
+                },
+            ),
+        )
 
-    @staticmethod
-    def _emit(stdout: TextIO, message: dict[str, Any]) -> None:
-        stdout.write(encode_line(message))
-        stdout.flush()
+    def _emit(self, stdout: TextIO, message: dict[str, Any]) -> None:
+        with self._output_lock:
+            stdout.write(encode_line(message))
+            stdout.flush()
