@@ -411,6 +411,7 @@ export interface Observation {
   timestamp?: string | null
   camera_intrinsics?: Record<string, unknown>
   camera_pose_candidate?: Record<string, unknown>
+  payload: Record<string, unknown>
   quality: Record<string, unknown>
   immutable: boolean
   created_at: string
