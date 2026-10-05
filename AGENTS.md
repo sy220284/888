@@ -85,7 +85,7 @@
 - Rust
 - tokio
 - serde
-- sqlx / rusqlite
+- sqlx（SQLite 数据访问与 Migration）
 - petgraph
 - tracing
 - uuid
@@ -138,7 +138,7 @@
 
 ## 7. Schema 单一真相源
 
-`packages/schema/` 是跨语言协议唯一真相源。
+`packages/schema/` 是跨语言协议唯一真相源。第一阶段权威格式固定为 **JSON Schema Draft 2020-12**。
 
 必须由它生成：
 - Rust types
