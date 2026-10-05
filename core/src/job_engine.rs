@@ -405,7 +405,7 @@ impl JobEngine {
     pub async fn recover_worker_lost(&self, worker_id: Uuid) -> Result<Vec<Job>> {
         let rows = sqlx::query_as::<_, JobRow>(
             r#"
-            SELECT id, world_id, task_type, state, attempt, max_attempts, idempotent,
+            SELECT id, world_id, task_type, input_json, state, attempt, max_attempts, idempotent,
                    assigned_worker_id, checkpoint_artifact_id, provider_run_id, error_code,
                    error_payload_json, created_at, updated_at
             FROM jobs
@@ -480,7 +480,7 @@ impl JobEngine {
         let running = enum_to_string(&JobState::Running)?;
         let rows = sqlx::query_as::<_, JobRow>(
             r#"
-            SELECT id, world_id, task_type, state, attempt, max_attempts, idempotent,
+            SELECT id, world_id, task_type, input_json, state, attempt, max_attempts, idempotent,
                    assigned_worker_id, checkpoint_artifact_id, provider_run_id, error_code,
                    error_payload_json, created_at, updated_at
             FROM jobs
