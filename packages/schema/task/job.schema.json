@@ -10,6 +10,7 @@
     "state",
     "attempt",
     "max_attempts",
+    "idempotent",
     "created_at",
     "updated_at"
   ],
@@ -55,6 +56,9 @@
     "max_attempts": {
       "type": "integer",
       "minimum": 1
+    },
+    "idempotent": {
+      "type": "boolean"
     },
     "checkpoint_artifact_id": {
       "type": [
