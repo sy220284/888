@@ -220,11 +220,7 @@ fn parse_all_metric(text: &str, marker: &str) -> Vec<f64> {
 
 fn parse_line_metric(line: &str, marker: &str) -> Option<f64> {
     let index = line.find(marker)? + marker.len();
-    line[index..]
-        .split_whitespace()
-        .next()?
-        .parse::<f64>()
-        .ok()
+    line[index..].split_whitespace().next()?.parse::<f64>().ok()
 }
 
 fn score_audio(analysis: &AudioAnalysis) -> u8 {
