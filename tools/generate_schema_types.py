@@ -46,6 +46,14 @@ def enum_variants(values: list[str]) -> list[tuple[str, str]]:
     return variants
 
 
+def enum_specs(prop: str, spec: dict[str, Any]):
+    if "enum" in spec:
+        yield prop, spec
+    kind, _ = type_parts(spec)
+    if kind == "array":
+        yield from enum_specs(prop + "Item", spec.get("items", {}))
+
+
 def rust_base(spec: dict[str, Any], root: str, prop: str) -> str:
     if "enum" in spec:
         return enum_name(root, prop)
@@ -131,17 +139,16 @@ def render_rust(schemas: list[dict[str, Any]]) -> str:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         for prop, spec in props.items():
-            if "enum" not in spec:
-                continue
-            name = enum_name(title, prop)
-            lines.extend([
+            for enum_prop, enum_spec in enum_specs(prop, spec):
+                name = enum_name(title, enum_prop)
+                lines.extend([
                 "#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]",
                 f"pub enum {name} {{",
             ])
-            for variant, raw in enum_variants(spec["enum"]):
-                lines.append(f'    #[serde(rename = "{raw}")]')
-                lines.append(f"    {variant},")
-            lines.extend(["}", ""])
+                for variant, raw in enum_variants(enum_spec["enum"]):
+                    lines.append(f'    #[serde(rename = "{raw}")]')
+                    lines.append(f"    {variant},")
+                lines.extend(["}", ""])
 
         lines.extend([
             "#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]",
@@ -164,10 +171,9 @@ def render_ts(schemas: list[dict[str, Any]]) -> str:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         for prop, spec in props.items():
-            if "enum" not in spec:
-                continue
-            values = " | ".join(json.dumps(value) for value in spec["enum"])
-            lines.extend([f"export type {enum_name(title, prop)} = {values}", ""])
+            for enum_prop, enum_spec in enum_specs(prop, spec):
+                values = " | ".join(json.dumps(value) for value in enum_spec["enum"])
+                lines.extend([f"export type {enum_name(title, enum_prop)} = {values}", ""])
 
         lines.append(f"export interface {title} {{")
         for prop, spec in props.items():
@@ -197,13 +203,12 @@ def render_python(schemas: list[dict[str, Any]]) -> str:
         props = schema.get("properties", {})
         required = set(schema.get("required", []))
         for prop, spec in props.items():
-            if "enum" not in spec:
-                continue
-            values = ", ".join(repr(value) for value in spec["enum"])
-            lines.extend([
-                f"{enum_name(title, prop)}: TypeAlias = Literal[{values}]",
-                "",
-            ])
+            for enum_prop, enum_spec in enum_specs(prop, spec):
+                values = ", ".join(repr(value) for value in enum_spec["enum"])
+                lines.extend([
+                    f"{enum_name(title, enum_prop)}: TypeAlias = Literal[{values}]",
+                    "",
+                ])
 
         lines.extend(["@dataclass(slots=True)", f"class {title}:"])
         ordered = [
