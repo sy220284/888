@@ -92,6 +92,120 @@ impl JobEngine {
         row.map(TryInto::try_into).transpose()
     }
 
+    pub async fn add_dependency(
+        &self,
+        job_id: Uuid,
+        dependency_job_id: Uuid,
+        optional: bool,
+    ) -> Result<()> {
+        if job_id == dependency_job_id {
+            bail!("job cannot depend on itself");
+        }
+
+        let job = self.get(job_id).await?.context("job does not exist")?;
+        let dependency = self
+            .get(dependency_job_id)
+            .await?
+            .context("dependency job does not exist")?;
+
+        if let (Some(job_world), Some(dependency_world)) = (job.world_id, dependency.world_id) {
+            if job_world != dependency_world {
+                bail!("job dependency cannot cross worlds");
+            }
+        }
+
+        let creates_cycle: Option<i64> = sqlx::query_scalar(
+            r#"
+            WITH RECURSIVE reachable(id) AS (
+                SELECT dependency_job_id
+                FROM job_dependencies
+                WHERE job_id = ?
+                UNION
+                SELECT jd.dependency_job_id
+                FROM job_dependencies jd
+                JOIN reachable r ON jd.job_id = r.id
+            )
+            SELECT 1
+            FROM reachable
+            WHERE id = ?
+            LIMIT 1
+            "#,
+        )
+        .bind(dependency_job_id.to_string())
+        .bind(job_id.to_string())
+        .fetch_optional(&self.pool)
+        .await?;
+
+        if creates_cycle.is_some() {
+            bail!("job dependency would create a cycle");
+        }
+
+        sqlx::query(
+            r#"
+            INSERT INTO job_dependencies(job_id, dependency_job_id, optional)
+            VALUES (?, ?, ?)
+            ON CONFLICT(job_id, dependency_job_id)
+            DO UPDATE SET optional = excluded.optional
+            "#,
+        )
+        .bind(job_id.to_string())
+        .bind(dependency_job_id.to_string())
+        .bind(optional)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub async fn resolve_dependencies(&self, id: Uuid) -> Result<Job> {
+        let current = self.get(id).await?.context("job does not exist")?;
+        if !matches!(
+            current.state,
+            JobState::Created | JobState::Pending | JobState::Blocked
+        ) {
+            bail!("job dependencies can only be resolved before execution");
+        }
+
+        let rows = sqlx::query_as::<_, DependencyStateRow>(
+            r#"
+            SELECT jd.optional, dep.state
+            FROM job_dependencies jd
+            JOIN jobs dep ON dep.id = jd.dependency_job_id
+            WHERE jd.job_id = ?
+            "#,
+        )
+        .bind(id.to_string())
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut required_pending = false;
+        let mut required_failed = false;
+        for row in rows {
+            if row.optional {
+                continue;
+            }
+            let state: JobState = enum_from_string(&row.state)?;
+            match state {
+                JobState::Completed => {}
+                JobState::Failed | JobState::Cancelled => required_failed = true,
+                _ => required_pending = true,
+            }
+        }
+
+        let target = if required_failed {
+            JobState::Blocked
+        } else if required_pending {
+            JobState::Pending
+        } else {
+            JobState::Ready
+        };
+
+        if current.state == target {
+            return Ok(current);
+        }
+        self.transition(id, target).await
+    }
+
     pub async fn transition(&self, id: Uuid, target: JobState) -> Result<Job> {
         let current = self.get(id).await?.context("job does not exist")?;
         if current.state == target {
@@ -269,10 +383,17 @@ fn can_transition(from: JobState, to: JobState) -> bool {
             | (Recoverable, Ready)
             | (Recoverable, Failed)
             | (Recoverable, Cancelled)
+            | (Blocked, Pending)
             | (Blocked, Ready)
             | (Blocked, Failed)
             | (Blocked, Cancelled)
     )
+}
+
+#[derive(sqlx::FromRow)]
+struct DependencyStateRow {
+    optional: bool,
+    state: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -347,6 +468,54 @@ mod tests {
         assert_eq!(cancelled.state, JobState::Cancelled);
         let repeated = jobs.request_cancel(job.id).await.unwrap();
         assert_eq!(repeated.state, JobState::Cancelled);
+    }
+
+    #[tokio::test]
+    async fn resolves_required_and_optional_dependencies_without_cycles() {
+        let pool = db::connect_memory().await.unwrap();
+        let jobs = JobEngine::new(pool);
+
+        let root = jobs.create(None, "ROOT", 1, true).await.unwrap();
+        let required = jobs.create(None, "REQUIRED", 1, true).await.unwrap();
+        let optional = jobs.create(None, "OPTIONAL", 1, true).await.unwrap();
+
+        jobs.add_dependency(root.id, required.id, false).await.unwrap();
+        jobs.add_dependency(root.id, optional.id, true).await.unwrap();
+        assert!(jobs
+            .add_dependency(required.id, root.id, false)
+            .await
+            .is_err());
+
+        let pending = jobs.resolve_dependencies(root.id).await.unwrap();
+        assert_eq!(pending.state, JobState::Pending);
+
+        jobs.transition(required.id, JobState::Ready).await.unwrap();
+        jobs.transition(required.id, JobState::Running).await.unwrap();
+        jobs.transition(required.id, JobState::Completed).await.unwrap();
+
+        jobs.transition(optional.id, JobState::Ready).await.unwrap();
+        jobs.transition(optional.id, JobState::Running).await.unwrap();
+        jobs.fail(optional.id, "OPTIONAL_FAILED", None).await.unwrap();
+
+        let ready = jobs.resolve_dependencies(root.id).await.unwrap();
+        assert_eq!(ready.state, JobState::Ready);
+    }
+
+    #[tokio::test]
+    async fn required_dependency_failure_blocks_job() {
+        let pool = db::connect_memory().await.unwrap();
+        let jobs = JobEngine::new(pool);
+
+        let root = jobs.create(None, "ROOT", 1, true).await.unwrap();
+        let required = jobs.create(None, "REQUIRED", 1, true).await.unwrap();
+        jobs.add_dependency(root.id, required.id, false).await.unwrap();
+
+        jobs.transition(required.id, JobState::Ready).await.unwrap();
+        jobs.transition(required.id, JobState::Running).await.unwrap();
+        jobs.fail(required.id, "FAILED", None).await.unwrap();
+
+        let blocked = jobs.resolve_dependencies(root.id).await.unwrap();
+        assert_eq!(blocked.state, JobState::Blocked);
     }
 
     #[tokio::test]
