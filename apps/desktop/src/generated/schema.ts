@@ -257,6 +257,16 @@ export interface WorkerHeartbeat {
   health: WorkerHeartbeatHealth
 }
 
+export type WorkerMessageMessageType = "REGISTER" | "HEARTBEAT" | "JOB_DISPATCH" | "PROGRESS" | "JOB_RESULT" | "PAUSE" | "CANCEL" | "SHUTDOWN"
+
+export interface WorkerMessage {
+  message_id: string
+  message_type: WorkerMessageMessageType
+  protocol_version: number
+  job_id?: string | null
+  payload: Record<string, unknown>
+}
+
 export type WorkerRegistrationWorkerType = "VISION" | "TOOL" | "AI_LOCAL"
 
 export interface WorkerRegistration {
