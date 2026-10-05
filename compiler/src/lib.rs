@@ -36,7 +36,10 @@ pub fn plan(request: &CompileRequest) -> Result<CompilePlan> {
         bail!("unsupported compiler target: {}", request.target);
     }
     if !SUPPORTED_QUALITY.contains(&request.quality_profile.as_str()) {
-        bail!("unsupported compiler quality profile: {}", request.quality_profile);
+        bail!(
+            "unsupported compiler quality profile: {}",
+            request.quality_profile
+        );
     }
 
     let world_id = request
