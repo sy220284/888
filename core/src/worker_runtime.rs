@@ -738,8 +738,6 @@ fn parse_uuid_field(value: &Value, key: &str) -> Result<Uuid> {
 mod tests {
     use std::{path::PathBuf, time::Duration};
 
-    use tempfile::tempdir;
-    use tokio::time;
     use crate::{
         artifact_store::ArtifactStore,
         db,
