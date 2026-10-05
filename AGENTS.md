@@ -21,6 +21,8 @@
 
 不得只根据历史对话、模型记忆或任务标题直接修改代码。
 
+涉及技术栈、架构边界或基础设施决策时，还必须读取相关 ADR。
+
 ## 3. 权威文档
 
 - `README.md`：项目总目标、最终效果、总体技术方向
@@ -30,6 +32,15 @@
 - `docs/04-世界模型与数据设计.md`：Canonical World State、Schema、Evidence、Hypothesis、Revision
 - `docs/05-详细落地执行路线.md`：开发阶段、实施顺序、阶段验收
 - `docs/06-质量验证与验收标准.md`：Fixture、指标、CI、回归和完成标准
+- `docs/07-开发环境与运行手册.md`：开发环境、依赖、标准命令、运行与诊断
+- `docs/08-Command与Worker通信协议.md`：Command、Worker、Progress、Error、IPC 边界
+- `docs/09-任务状态机与故障恢复.md`：Job 状态机、Checkpoint、Retry、Crash Recovery
+- `docs/10-Provider与模型治理.md`：Capability、Provider、模型版本、成本、Fallback、Benchmark
+- `docs/12-性能预算与硬件兼容.md`：设备分级、性能预算、显存、内存、Viewer 指标
+- `docs/13-构建发布与升级方案.md`：打包、Worker 分发、Migration、更新与回滚
+- `docs/14-Fixture与Benchmark规范.md`：测试数据、Ground Truth、Baseline、回归标准
+- `docs/15-用户交互与页面流程.md`：页面职责、用户流程、可信度与补拍交互
+- `docs/adr/README.md`：已接受的关键架构决策与变更规则
 
 若代码与文档不一致，先判断：
 - 文档仍有效：修代码。
