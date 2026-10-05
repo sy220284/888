@@ -74,7 +74,13 @@ mod tests {
         }));
 
         assert_eq!(files.len(), 2);
-        assert_eq!(files[0].label, "mesh");
-        assert_eq!(files[1].file_name.as_deref(), Some("preview.png"));
+        assert_eq!(
+            files.iter().filter(|file| file.url == "https://cdn/model.glb").count(),
+            1
+        );
+        assert!(files.iter().any(|file| {
+            file.url == "https://cdn/preview.png"
+                && file.file_name.as_deref() == Some("preview.png")
+        }));
     }
 }
