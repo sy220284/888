@@ -5,9 +5,10 @@ use serde_json::json;
 
 use crate::{
     model::{
-        CanonicalCapabilityRequest, ProviderCapability, ProviderCapabilityCapability,
-        ProviderCapabilityHealth, ProviderCapabilityLocation,
-        ProviderCapabilityQualityProfilesItem,
+        AIModelProfile, AIModelProfileStatus, CanonicalCapabilityRequest,
+        CanonicalCapabilityRequestCapability, CanonicalCapabilityRequestCreativityProfile,
+        ProviderCapability, ProviderCapabilityCapability, ProviderCapabilityHealth,
+        ProviderCapabilityLocation, ProviderCapabilityQualityProfilesItem,
     },
     provider::{
         hunyuan::{HUNYUAN_3D_ENDPOINT, HUNYUAN_PROVIDER},
@@ -22,6 +23,7 @@ use crate::{
 #[derive(Clone, Default)]
 pub struct ProviderRouter {
     providers: Vec<ProviderCapability>,
+    model_profiles: Vec<AIModelProfile>,
 }
 
 impl ProviderRouter {
@@ -32,6 +34,7 @@ impl ProviderRouter {
     pub fn with_builtins() -> Self {
         Self {
             providers: builtin_provider_capabilities(),
+            model_profiles: Vec::new(),
         }
     }
 
@@ -43,6 +46,18 @@ impl ProviderRouter {
             *existing = provider;
         } else {
             self.providers.push(provider);
+        }
+    }
+
+    pub fn upsert_model_profile(&mut self, profile: AIModelProfile) {
+        if let Some(existing) = self.model_profiles.iter_mut().find(|existing| {
+            existing.provider_id == profile.provider_id
+                && existing.model_id == profile.model_id
+                && existing.version == profile.version
+        }) {
+            *existing = profile;
+        } else {
+            self.model_profiles.push(profile);
         }
     }
 
@@ -66,7 +81,7 @@ impl ProviderRouter {
     pub fn select(&self, request: &CanonicalCapabilityRequest) -> Result<ProviderCapability> {
         let requested_capability = enum_to_string(&request.capability)?;
         let requested_quality = enum_to_string(&request.quality_profile)?;
-        let mut candidates: Vec<&ProviderCapability> = self
+        let mut candidates: Vec<RouteCandidate<'_>> = self
             .providers
             .iter()
             .filter(|provider| {
@@ -96,14 +111,40 @@ impl ProviderRouter {
                         .is_some_and(|latency| latency <= budget)
                 })
             })
+            .filter(|provider| provider_allowed_by_constraints(provider, request))
+            .filter_map(|provider| {
+                let profile = self.profile_for(provider);
+                model_profile_allows(provider, profile, request).then(|| RouteCandidate {
+                    provider,
+                    profile,
+                    preferred: is_preferred_provider(provider, request),
+                    behavior_score: behavior_score(profile, request),
+                })
+            })
             .collect();
 
-        candidates.sort_by(|left, right| compare_provider(left, right));
+        candidates.sort_by(compare_route_candidate);
         candidates
             .first()
-            .cloned()
-            .cloned()
+            .map(|candidate| candidate.provider.clone())
             .context("no provider satisfies the canonical capability request")
+    }
+
+    fn profile_for(&self, provider: &ProviderCapability) -> Option<&AIModelProfile> {
+        let model_id = provider.model_id.as_deref()?;
+        let exact = self.model_profiles.iter().find(|profile| {
+            profile.provider_id == provider.provider_id
+                && profile.model_id == model_id
+                && provider
+                    .model_version
+                    .as_deref()
+                    .is_none_or(|version| profile.version == version)
+        });
+        exact.or_else(|| {
+            self.model_profiles.iter().find(|profile| {
+                profile.provider_id == provider.provider_id && profile.model_id == model_id
+            })
+        })
     }
 
     pub fn providers(&self) -> &[ProviderCapability] {
@@ -111,12 +152,181 @@ impl ProviderRouter {
     }
 }
 
-fn compare_provider(left: &ProviderCapability, right: &ProviderCapability) -> Ordering {
-    health_rank(left.health)
-        .cmp(&health_rank(right.health))
-        .then_with(|| compare_optional_f64(left.estimated_cost, right.estimated_cost))
-        .then_with(|| left.average_latency_ms.cmp(&right.average_latency_ms))
-        .then_with(|| left.provider_id.cmp(&right.provider_id))
+struct RouteCandidate<'a> {
+    provider: &'a ProviderCapability,
+    profile: Option<&'a AIModelProfile>,
+    preferred: bool,
+    behavior_score: f64,
+}
+
+fn compare_route_candidate(left: &RouteCandidate<'_>, right: &RouteCandidate<'_>) -> Ordering {
+    right
+        .preferred
+        .cmp(&left.preferred)
+        .then_with(|| health_rank(left.provider.health).cmp(&health_rank(right.provider.health)))
+        .then_with(|| profile_rank(left.profile).cmp(&profile_rank(right.profile)))
+        .then_with(|| right.behavior_score.total_cmp(&left.behavior_score))
+        .then_with(|| {
+            compare_optional_f64(left.provider.estimated_cost, right.provider.estimated_cost)
+        })
+        .then_with(|| {
+            left.provider
+                .average_latency_ms
+                .cmp(&right.provider.average_latency_ms)
+        })
+        .then_with(|| left.provider.provider_id.cmp(&right.provider.provider_id))
+}
+
+fn profile_rank(profile: Option<&AIModelProfile>) -> u8 {
+    match profile.map(|profile| profile.status) {
+        Some(AIModelProfileStatus::Certified) => 0,
+        Some(AIModelProfileStatus::Degraded) => 1,
+        None => 2,
+        Some(AIModelProfileStatus::Experimental) => 3,
+        Some(AIModelProfileStatus::Blocked) => 4,
+    }
+}
+
+fn model_profile_allows(
+    provider: &ProviderCapability,
+    profile: Option<&AIModelProfile>,
+    request: &CanonicalCapabilityRequest,
+) -> bool {
+    let requested_capability = match enum_to_string(&request.capability) {
+        Ok(value) => value,
+        Err(_) => return false,
+    };
+    let hints = request.provider_hints.as_ref();
+    let allow_experimental = hint_bool(hints, "allow_experimental");
+    let require_certified =
+        hint_bool(hints, "require_certified") || requires_certified_profile(request.capability);
+
+    let Some(profile) = profile else {
+        return !require_certified;
+    };
+    if !profile.supported_capabilities.is_empty()
+        && !profile
+            .supported_capabilities
+            .iter()
+            .any(|value| value == &requested_capability)
+    {
+        return false;
+    }
+
+    match profile.status {
+        AIModelProfileStatus::Blocked => false,
+        AIModelProfileStatus::Experimental => {
+            allow_experimental && is_preferred_provider(provider, request)
+        }
+        AIModelProfileStatus::Certified | AIModelProfileStatus::Degraded => {
+            !require_certified || profile.status == AIModelProfileStatus::Certified
+        }
+    }
+}
+
+fn requires_certified_profile(capability: CanonicalCapabilityRequestCapability) -> bool {
+    matches!(
+        capability,
+        CanonicalCapabilityRequestCapability::AssociativeReasoning
+            | CanonicalCapabilityRequestCapability::SceneHypothesis
+            | CanonicalCapabilityRequestCapability::VerificationQuestion
+    )
+}
+
+fn provider_allowed_by_constraints(
+    provider: &ProviderCapability,
+    request: &CanonicalCapabilityRequest,
+) -> bool {
+    if request
+        .constraints
+        .get("local_only")
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+        && provider.location != ProviderCapabilityLocation::Local
+    {
+        return false;
+    }
+
+    let preferred_location = request
+        .provider_hints
+        .as_ref()
+        .and_then(|value| value.get("required_location"))
+        .and_then(serde_json::Value::as_str);
+    match preferred_location {
+        Some("LOCAL") => provider.location == ProviderCapabilityLocation::Local,
+        Some("REMOTE") => provider.location == ProviderCapabilityLocation::Remote,
+        _ => true,
+    }
+}
+
+fn is_preferred_provider(
+    provider: &ProviderCapability,
+    request: &CanonicalCapabilityRequest,
+) -> bool {
+    request
+        .provider_hints
+        .as_ref()
+        .and_then(|value| value.get("preferred_provider_ids"))
+        .and_then(serde_json::Value::as_array)
+        .is_some_and(|values| {
+            values
+                .iter()
+                .filter_map(serde_json::Value::as_str)
+                .any(|value| value == provider.provider_id)
+        })
+}
+
+fn hint_bool(hints: Option<&serde_json::Value>, key: &str) -> bool {
+    hints
+        .and_then(|value| value.get(key))
+        .and_then(serde_json::Value::as_bool)
+        .unwrap_or(false)
+}
+
+fn behavior_score(profile: Option<&AIModelProfile>, request: &CanonicalCapabilityRequest) -> f64 {
+    let Some(profile) = profile else {
+        return 0.0;
+    };
+
+    let structured = metric(profile, "structured_output_reliability", 0.5);
+    let instruction = metric(profile, "instruction_following", 0.5);
+    let success = metric(profile, "historical_success_rate", 0.5);
+    let hallucination = metric(profile, "hallucination_risk", 0.5);
+    let calibration = metric(profile, "calibration_error", 0.5);
+    let spatial = metric(profile, "spatial_reasoning_strength", 0.5);
+    let associative = metric(profile, "associative_reasoning_strength", 0.5);
+    let diversity = metric(profile, "creative_diversity", 0.5);
+
+    let mut score = success + instruction;
+    score += match request.creativity_profile {
+        CanonicalCapabilityRequestCreativityProfile::Strict => {
+            structured * 2.0 + (1.0 - hallucination) * 2.0 + (1.0 - calibration) * 2.0
+        }
+        CanonicalCapabilityRequestCreativityProfile::Balanced => {
+            structured + (1.0 - hallucination) + spatial + associative
+        }
+        CanonicalCapabilityRequestCreativityProfile::Exploratory => {
+            diversity * 2.0 + associative * 2.0 + spatial + structured * 0.5
+        }
+        CanonicalCapabilityRequestCreativityProfile::Divergent => {
+            diversity * 3.0 + associative * 2.0 + instruction
+        }
+    };
+
+    if request.verification_required {
+        score += structured + (1.0 - hallucination) + (1.0 - calibration);
+    }
+    score
+}
+
+fn metric(profile: &AIModelProfile, key: &str, default: f64) -> f64 {
+    profile
+        .metrics
+        .get(key)
+        .and_then(serde_json::Value::as_f64)
+        .filter(|value| value.is_finite())
+        .map(|value| value.clamp(0.0, 1.0))
+        .unwrap_or(default)
 }
 
 fn health_rank(health: ProviderCapabilityHealth) -> u8 {
@@ -242,9 +452,11 @@ mod tests {
     use uuid::Uuid;
 
     use crate::model::{
-        CanonicalCapabilityRequest, CanonicalCapabilityRequestCapability,
-        CanonicalCapabilityRequestCreativityProfile, CanonicalCapabilityRequestQualityProfile,
-        ProviderCapabilityHealth,
+        AIModelProfile, AIModelProfileStatus, CanonicalCapabilityRequest,
+        CanonicalCapabilityRequestCapability, CanonicalCapabilityRequestCreativityProfile,
+        CanonicalCapabilityRequestQualityProfile, ProviderCapability, ProviderCapabilityCapability,
+        ProviderCapabilityHealth, ProviderCapabilityLocation,
+        ProviderCapabilityQualityProfilesItem,
     };
 
     use super::ProviderRouter;
@@ -284,6 +496,129 @@ mod tests {
             .select(&request(CanonicalCapabilityRequestCapability::Object3d))
             .unwrap();
         assert_eq!(selected.provider_id, "hunyuan");
+    }
+
+    #[test]
+    fn certified_behavior_profile_can_outweigh_provider_name_order() {
+        let mut router = ProviderRouter::with_builtins();
+        for provider in ["hunyuan", "meshy"] {
+            router
+                .set_health(
+                    provider,
+                    ProviderCapabilityCapability::Object3d,
+                    ProviderCapabilityHealth::Healthy,
+                )
+                .unwrap();
+        }
+
+        router.upsert_model_profile(AIModelProfile {
+            provider_id: "hunyuan".into(),
+            model_id: crate::provider::hunyuan::HUNYUAN_3D_ENDPOINT.into(),
+            version: "v3".into(),
+            status: AIModelProfileStatus::Certified,
+            supported_capabilities: vec!["OBJECT_3D".into()],
+            benchmark_version: "b1".into(),
+            metrics: json!({
+                "structured_output_reliability": 0.5,
+                "instruction_following": 0.6,
+                "historical_success_rate": 0.6,
+                "hallucination_risk": 0.4,
+                "calibration_error": 0.3
+            }),
+            known_quirks: None,
+            context_limit: None,
+            image_limit: None,
+            updated_at: None,
+        });
+        router.upsert_model_profile(AIModelProfile {
+            provider_id: "meshy".into(),
+            model_id: crate::provider::meshy::MESHY_3D_ENDPOINT.into(),
+            version: "v6".into(),
+            status: AIModelProfileStatus::Certified,
+            supported_capabilities: vec!["OBJECT_3D".into()],
+            benchmark_version: "b1".into(),
+            metrics: json!({
+                "structured_output_reliability": 0.95,
+                "instruction_following": 0.95,
+                "historical_success_rate": 0.95,
+                "hallucination_risk": 0.05,
+                "calibration_error": 0.05
+            }),
+            known_quirks: None,
+            context_limit: None,
+            image_limit: None,
+            updated_at: None,
+        });
+
+        let selected = router
+            .select(&request(CanonicalCapabilityRequestCapability::Object3d))
+            .unwrap();
+        assert_eq!(selected.provider_id, "meshy");
+    }
+
+    #[test]
+    fn experimental_reasoning_model_requires_explicit_preference() {
+        let mut router = ProviderRouter::new();
+        router.upsert(ProviderCapability {
+            provider_id: "experimental-reasoner".into(),
+            capability: ProviderCapabilityCapability::AssociativeReasoning,
+            location: ProviderCapabilityLocation::Remote,
+            health: ProviderCapabilityHealth::Healthy,
+            model_id: Some("reasoner-x".into()),
+            model_version: Some("1".into()),
+            quality_profiles: vec![ProviderCapabilityQualityProfilesItem::Balanced],
+            input_types: vec!["world".into()],
+            output_types: vec!["proposal".into()],
+            estimated_cost: Some(0.1),
+            average_latency_ms: Some(100),
+            metadata: None,
+        });
+        router.upsert_model_profile(AIModelProfile {
+            provider_id: "experimental-reasoner".into(),
+            model_id: "reasoner-x".into(),
+            version: "1".into(),
+            status: AIModelProfileStatus::Experimental,
+            supported_capabilities: vec!["ASSOCIATIVE_REASONING".into()],
+            benchmark_version: "b1".into(),
+            metrics: json!({"associative_reasoning_strength": 0.9}),
+            known_quirks: None,
+            context_limit: None,
+            image_limit: None,
+            updated_at: None,
+        });
+
+        let mut req = request(CanonicalCapabilityRequestCapability::AssociativeReasoning);
+        req.creativity_profile = CanonicalCapabilityRequestCreativityProfile::Exploratory;
+        assert!(router.select(&req).is_err());
+
+        req.provider_hints = Some(json!({
+            "allow_experimental": true,
+            "preferred_provider_ids": ["experimental-reasoner"]
+        }));
+        let selected = router.select(&req).unwrap();
+        assert_eq!(selected.provider_id, "experimental-reasoner");
+    }
+
+    #[test]
+    fn local_only_constraint_rejects_remote_provider() {
+        let mut router = ProviderRouter::new();
+        router.upsert(ProviderCapability {
+            provider_id: "remote-depth".into(),
+            capability: ProviderCapabilityCapability::Depth,
+            location: ProviderCapabilityLocation::Remote,
+            health: ProviderCapabilityHealth::Healthy,
+            model_id: None,
+            model_version: None,
+            quality_profiles: vec![ProviderCapabilityQualityProfilesItem::Balanced],
+            input_types: vec!["image".into()],
+            output_types: vec!["depth".into()],
+            estimated_cost: Some(0.01),
+            average_latency_ms: Some(50),
+            metadata: None,
+        });
+        let mut req = request(CanonicalCapabilityRequestCapability::Depth);
+        req.constraints = json!({"local_only": true});
+        assert!(router.select(&req).is_err());
     }
 
     #[test]

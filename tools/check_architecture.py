@@ -114,10 +114,12 @@ def main() -> None:
         if path.name in FORBIDDEN_FILES:
             errors.append(f"{relative(path)}: 禁止恢复旧状态文件或第二套包管理器")
 
-    if (ROOT / ".claude").exists():
+    claude_dir = ROOT / ".claude"
+    if claude_dir.exists():
         errors.append(".claude/: 不允许作为 888 Runtime 重新引入")
 
-    for path in source_files(ROOT / "apps/desktop/src", (".ts", ".tsx")):
+    ui_root = ROOT / "apps/desktop/src"
+    for path in source_files(ui_root, (".ts", ".tsx")):
         if "/generated/" in f"/{relative(path)}/":
             continue
         text = path.read_text(encoding="utf-8")
@@ -127,7 +129,8 @@ def main() -> None:
                     f"{relative(path)}: UI 不得直接依赖 SQLite 或 Provider 私有 API ({marker})"
                 )
 
-    for path in source_files(ROOT / "workers", (".py",)):
+    workers_root = ROOT / "workers"
+    for path in source_files(workers_root, (".py",)):
         text = path.read_text(encoding="utf-8")
         for pattern in WORKER_IMPORT_PATTERNS:
             if pattern.search(text):
@@ -135,7 +138,8 @@ def main() -> None:
         if "core/migrations" in text or "world_revisions" in text:
             errors.append(f"{relative(path)}: Worker 不得直接依赖 Core 持久化结构")
 
-    for path in source_files(ROOT / "core/src/provider", (".rs",)):
+    provider_root = ROOT / "core/src/provider"
+    for path in source_files(provider_root, (".rs",)):
         text = path.read_text(encoding="utf-8")
         for marker in PROVIDER_FORBIDDEN:
             if marker in text:
@@ -143,7 +147,8 @@ def main() -> None:
                     f"{relative(path)}: Provider 不得直接触碰 Canonical World State ({marker})"
                 )
 
-    for path in source_files(ROOT / "compiler", (".rs",)):
+    compiler_root = ROOT / "compiler"
+    for path in source_files(compiler_root, (".rs",)):
         text = path.read_text(encoding="utf-8")
         for marker in COMPILER_FORBIDDEN:
             if marker in text:

@@ -20,8 +20,7 @@ CREATE TABLE IF NOT EXISTS commands (
     caller_context_json TEXT NOT NULL,
     requested_at TEXT NOT NULL,
     status TEXT NOT NULL,
-    response_json TEXT,
-    FOREIGN KEY(world_id) REFERENCES worlds(id) ON DELETE CASCADE
+    response_json TEXT
 );
 
 CREATE TABLE IF NOT EXISTS world_revisions (

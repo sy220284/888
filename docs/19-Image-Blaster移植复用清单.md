@@ -47,7 +47,19 @@
     → Core
     → WorldRevision
 
-状态：**待 Entity / Revision Command Schema 后迁。**
+状态：**Entity / Revision Command 前置已完成，进入 Editor 迁移阶段。**
+
+### 888 当前 Editor Command 基础
+
+当前已具备：
+
+- `UPDATE_ENTITY_TRANSFORM`：Entity Transform 与 WorldRevision 同事务提交。
+- `DELETE_ENTITY`：软删除，保留历史 Revision / Geometry / Provenance。
+- `DUPLICATE_ENTITY`：复制 Entity，并复用原 Geometry Artifact 引用生成新的 GeometryRepresentation。
+- Command 执行租约与崩溃重放：同一 `command_id` 不重复执行副作用。
+- Tauri `execute_command / get_world / list_entities / get_entity` Core Bridge。
+
+因此旧 PlacementEditor 不再允许写 `scene.json`；迁移时只保留交互与 Undo/Redo 意图，由 Core Command 负责正式提交。
 
 ### Object Grab / Physics Interaction
 
@@ -192,7 +204,7 @@ GPT Image 2、Nano Banana、ElevenLabs SFX 已重写为 Rust Provider Adapter：
 ## 7. 迁移顺序
 
 - **M1 Viewer 基础：已完成。**
-- **M2 Editor：等待 Entity / Revision Command Schema。**
+- **M2 Editor：Entity / Revision Command 前置已完成；PlacementEditor / Object Grab 正式进入迁移阶段。**
 - **M3 Provider Runtime 重写：已完成。** FAL/Hunyuan/Meshy、World Labs、GPT Image 2、Nano Banana、ElevenLabs SFX、Provider Run、Artifact Store、单资产生成编排均已有 Rust 替代实现；统一 Router 后续按 888 平台计划继续增强。
 - **M4 PostProcessing / Character / Demo Fixture：后置。**
 

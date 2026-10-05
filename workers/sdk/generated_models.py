@@ -90,8 +90,6 @@ class AIProviderRun:
     submitted_at: datetime | None = None
     completed_at: datetime | None = None
 
-ArtifactLogicalType: TypeAlias = Literal['ORIGINAL_IMAGE', 'PREVIEW', 'DEPTH_MAP', 'MASK', 'FEATURE', 'POINT_CLOUD', 'MESH', 'SPLAT', 'NERF', 'TEXTURE', 'AUDIO', 'EXPORT', 'COLLIDER', 'GENERATED_IMAGE', 'CHECKPOINT', 'OTHER']
-
 @dataclass(slots=True)
 class Artifact:
     id: UUID
@@ -99,8 +97,6 @@ class Artifact:
     mime: str
     size_bytes: int
     relative_path: str
-    logical_type: ArtifactLogicalType
-    source: dict[str, Any]
     created_at: datetime
     source_url: str | None = None
 
@@ -196,7 +192,6 @@ JobState: TypeAlias = Literal['CREATED', 'PENDING', 'READY', 'RUNNING', 'PAUSING
 class Job:
     id: UUID
     task_type: str
-    input: dict[str, Any]
     state: JobState
     attempt: int
     max_attempts: int
@@ -204,6 +199,7 @@ class Job:
     created_at: datetime
     updated_at: datetime
     world_id: UUID | None = None
+    assigned_worker_id: UUID | None = None
     checkpoint_artifact_id: UUID | None = None
     provider_run_id: UUID | None = None
     error_code: str | None = None

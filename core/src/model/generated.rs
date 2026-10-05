@@ -201,42 +201,6 @@ pub struct AIProviderRun {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ArtifactLogicalType {
-    #[serde(rename = "ORIGINAL_IMAGE")]
-    OriginalImage,
-    #[serde(rename = "PREVIEW")]
-    Preview,
-    #[serde(rename = "DEPTH_MAP")]
-    DepthMap,
-    #[serde(rename = "MASK")]
-    Mask,
-    #[serde(rename = "FEATURE")]
-    Feature,
-    #[serde(rename = "POINT_CLOUD")]
-    PointCloud,
-    #[serde(rename = "MESH")]
-    Mesh,
-    #[serde(rename = "SPLAT")]
-    Splat,
-    #[serde(rename = "NERF")]
-    Nerf,
-    #[serde(rename = "TEXTURE")]
-    Texture,
-    #[serde(rename = "AUDIO")]
-    Audio,
-    #[serde(rename = "EXPORT")]
-    Export,
-    #[serde(rename = "COLLIDER")]
-    Collider,
-    #[serde(rename = "GENERATED_IMAGE")]
-    GeneratedImage,
-    #[serde(rename = "CHECKPOINT")]
-    Checkpoint,
-    #[serde(rename = "OTHER")]
-    Other,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Artifact {
     pub id: Uuid,
@@ -244,8 +208,6 @@ pub struct Artifact {
     pub mime: String,
     pub size_bytes: u64,
     pub relative_path: String,
-    pub logical_type: ArtifactLogicalType,
-    pub source: Value,
     pub source_url: Option<String>,
     pub created_at: DateTime<Utc>,
 }
@@ -527,11 +489,11 @@ pub struct Job {
     pub id: Uuid,
     pub world_id: Option<Uuid>,
     pub task_type: String,
-    pub input: Value,
     pub state: JobState,
     pub attempt: u64,
     pub max_attempts: u64,
     pub idempotent: bool,
+    pub assigned_worker_id: Option<Uuid>,
     pub checkpoint_artifact_id: Option<Uuid>,
     pub provider_run_id: Option<Uuid>,
     pub error_code: Option<String>,

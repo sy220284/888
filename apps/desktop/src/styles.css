@@ -48,7 +48,9 @@ body {
   background: #151515;
 }
 
-.viewer-stage { min-height: 0; }
+.viewer-stage {
+  min-height: 0;
+}
 
 .panel {
   border-bottom: 1px solid rgba(255,255,255,.08);

@@ -22,9 +22,26 @@ impl WorldRepository {
     }
 
     pub async fn create(&self, name: &str) -> Result<World> {
+        self.create_with_command(name, None).await
+    }
+
+    pub async fn create_for_command(&self, name: &str, command_id: Uuid) -> Result<World> {
+        self.create_with_command(name, Some(command_id)).await
+    }
+
+    async fn create_with_command(&self, name: &str, command_id: Option<Uuid>) -> Result<World> {
         let name = name.trim();
         if name.is_empty() {
             bail!("world name must not be empty");
+        }
+
+        if let Some(command_id) = command_id {
+            if let Some(existing) = self.get_by_command_id(command_id).await? {
+                if existing.name != name {
+                    bail!("command already created a world with a different name");
+                }
+                return Ok(existing);
+            }
         }
 
         let now = Utc::now();
@@ -39,12 +56,13 @@ impl WorldRepository {
             updated_at: now,
         };
 
-        sqlx::query(
+        let result = sqlx::query(
             r#"
             INSERT INTO worlds(
                 id, name, schema_version, active_revision_id,
-                coordinate_system, unit, created_at, updated_at
-            ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?)
+                coordinate_system, unit, created_at, updated_at, created_by_command_id
+            ) VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)
+            ON CONFLICT DO NOTHING
             "#,
         )
         .bind(world.id.to_string())
@@ -54,10 +72,23 @@ impl WorldRepository {
         .bind(enum_to_string(&world.unit)?)
         .bind(world.created_at.to_rfc3339())
         .bind(world.updated_at.to_rfc3339())
+        .bind(command_id.map(|value| value.to_string()))
         .execute(&self.pool)
         .await?;
 
-        Ok(world)
+        if result.rows_affected() == 1 {
+            return Ok(world);
+        }
+
+        let command_id = command_id.context("world insert conflict without command id")?;
+        let existing = self
+            .get_by_command_id(command_id)
+            .await?
+            .context("world command conflict row disappeared")?;
+        if existing.name != name {
+            bail!("command already created a world with a different name");
+        }
+        Ok(existing)
     }
 
     pub async fn get(&self, id: Uuid) -> Result<Option<World>> {
@@ -70,6 +101,38 @@ impl WorldRepository {
             "#,
         )
         .bind(id.to_string())
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(TryInto::try_into).transpose()
+    }
+
+    pub async fn get_by_command_id(&self, command_id: Uuid) -> Result<Option<World>> {
+        let row = sqlx::query_as::<_, WorldRow>(
+            r#"
+            SELECT id, name, schema_version, active_revision_id,
+                   coordinate_system, unit, created_at, updated_at
+            FROM worlds
+            WHERE created_by_command_id = ?
+            "#,
+        )
+        .bind(command_id.to_string())
+        .fetch_optional(&self.pool)
+        .await?;
+
+        row.map(TryInto::try_into).transpose()
+    }
+
+    pub async fn get_revision_by_command(&self, command_id: Uuid) -> Result<Option<WorldRevision>> {
+        let row = sqlx::query_as::<_, RevisionRow>(
+            r#"
+            SELECT id, world_id, parent_revision_id, command_id,
+                   actor_type, changeset_json, created_at
+            FROM world_revisions
+            WHERE command_id = ?
+            "#,
+        )
+        .bind(command_id.to_string())
         .fetch_optional(&self.pool)
         .await?;
 
@@ -282,6 +345,41 @@ mod tests {
     use crate::{db, model::WorldRevisionActorType};
 
     use super::WorldRepository;
+
+    #[tokio::test]
+    async fn create_for_command_is_idempotent() {
+        let pool = db::connect_memory().await.unwrap();
+        let repo = WorldRepository::new(pool);
+        let command_id = uuid::Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO commands(
+                command_id, type, world_id, payload_json, schema_version,
+                caller_context_json, requested_at, status, response_json
+            ) VALUES (?, 'CREATE_WORLD', NULL, '{}', 1, '{"actor_type":"USER"}', ?, 'ACCEPTED', NULL)
+            "#,
+        )
+        .bind(command_id.to_string())
+        .bind(chrono::Utc::now().to_rfc3339())
+        .execute(&repo.pool)
+        .await
+        .unwrap();
+
+        let first = repo
+            .create_for_command("Command World", command_id)
+            .await
+            .unwrap();
+        let second = repo
+            .create_for_command("Command World", command_id)
+            .await
+            .unwrap();
+
+        assert_eq!(first.id, second.id);
+        assert!(repo
+            .create_for_command("Different Name", command_id)
+            .await
+            .is_err());
+    }
 
     #[tokio::test]
     async fn world_revision_is_persistent_and_compare_and_swap_guarded() {

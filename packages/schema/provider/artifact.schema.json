@@ -4,71 +4,14 @@
   "title": "Artifact",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "id",
-    "content_hash",
-    "mime",
-    "size_bytes",
-    "relative_path",
-    "logical_type",
-    "source",
-    "created_at"
-  ],
+  "required": ["id", "content_hash", "mime", "size_bytes", "relative_path", "created_at"],
   "properties": {
-    "id": {
-      "type": "string",
-      "format": "uuid"
-    },
-    "content_hash": {
-      "type": "string",
-      "minLength": 64,
-      "maxLength": 64
-    },
-    "mime": {
-      "type": "string",
-      "minLength": 1
-    },
-    "size_bytes": {
-      "type": "integer",
-      "minimum": 0
-    },
-    "relative_path": {
-      "type": "string",
-      "minLength": 1
-    },
-    "logical_type": {
-      "type": "string",
-      "enum": [
-        "ORIGINAL_IMAGE",
-        "PREVIEW",
-        "DEPTH_MAP",
-        "MASK",
-        "FEATURE",
-        "POINT_CLOUD",
-        "MESH",
-        "SPLAT",
-        "NERF",
-        "TEXTURE",
-        "AUDIO",
-        "EXPORT",
-        "COLLIDER",
-        "GENERATED_IMAGE",
-        "CHECKPOINT",
-        "OTHER"
-      ]
-    },
-    "source": {
-      "type": "object"
-    },
-    "source_url": {
-      "type": [
-        "string",
-        "null"
-      ]
-    },
-    "created_at": {
-      "type": "string",
-      "format": "date-time"
-    }
+    "id": { "type": "string", "format": "uuid" },
+    "content_hash": { "type": "string", "minLength": 64, "maxLength": 64 },
+    "mime": { "type": "string", "minLength": 1 },
+    "size_bytes": { "type": "integer", "minimum": 0 },
+    "relative_path": { "type": "string", "minLength": 1 },
+    "source_url": { "type": ["string", "null"] },
+    "created_at": { "type": "string", "format": "date-time" }
   }
 }

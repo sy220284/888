@@ -46,18 +46,6 @@ Rust Core 负责 888 的正式状态、任务、Provider、Artifact、Worker 协
 - 已支持基础 World / Candidate / Job 控制命令
 - 未实现命令明确返回 REJECTED
 
-### Observation Import
-
-- `observation_import.rs`
-- `observation_repository.rs`
-- 本地图片按内容 Hash 流式进入 Artifact Store
-- 重复内容只保存一份物理 Artifact，但每次输入都保留独立 Observation
-- 原始图片 Artifact 显式记录 `ORIGINAL_IMAGE` 与来源元数据
-- `IMPORT_OBSERVATIONS` 已接入幂等 Command
-- 每条 Observation 自动创建持久化 `ANALYZE_OBSERVATION` Job
-- Job 持久化输入参数，重启后不会丢失任务对象
-- 固定 Fixture 验证 Observation=2 / Artifact=1 / Job=2
-
 ### Task / Job
 
 - `job_engine.rs`
@@ -105,8 +93,8 @@ Rust Core 负责 888 的正式状态、任务、Provider、Artifact、Worker 协
 
 本目录已经具备阶段 0 / 阶段 1 的主要协议与状态骨架，但以下能力仍需要后续阶段实现：
 
+- 完整 Observation Import Pipeline
 - EXIF / Preview / Quality Analysis
-- 视频导入 / 关键帧 Observation
 - Python Vision Worker 实际进程生命周期与任务执行
 - 完整 Scheduler / Retry / Backoff / Resource Queue
 - Camera / Zone / Entity 等 Canonical World Query / Mutation Service

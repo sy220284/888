@@ -221,12 +221,11 @@ tools/                 Schema、架构守卫、Benchmark 等统一工具
 - SQLite 已建立 World / Revision、Candidate / Validation、Job DAG、Worker Registry 等基础持久化结构。
 - Command 幂等入口、Job 状态机与依赖解析、Canonical Capability Router、Worker JSONL 协议边界已进入 Core。
 - 架构守卫已经进入 CI，自动阻止 UI / Worker / Provider 越权依赖和旧 Runtime 回退。
-- 图片 Observation Import 基础闭环已完成：流式内容寻址导入、物理去重、Observation 持久化、幂等 Command、分析 Job 入队与固定回归 Fixture 已落地。
 
 当前主线按 `docs/05-详细落地执行路线.md` 继续推进：
 
 ```text
-EXIF / Preview / Quality Analysis
+Observation Import
 → Canonical World Query / Mutation
 → Vision Worker 实际执行链
 → 连续多图几何重建

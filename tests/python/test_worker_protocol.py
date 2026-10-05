@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import time
 import unittest
 from uuid import uuid4
 
@@ -55,6 +56,88 @@ class WorkerProtocolTests(unittest.TestCase):
         result = [item for item in messages if item["message_type"] == "JOB_RESULT"][-1]
         self.assertEqual(result["payload"]["state"], "COMPLETED")
         self.assertTrue(result["payload"]["outputs"][0]["ok"])
+
+    def test_worker_accepts_cancel_while_job_is_running(self) -> None:
+        job_id = uuid4()
+
+        def handler(context: JobContext, payload: dict[str, object]) -> dict[str, object]:
+            del payload
+            for _ in range(200):
+                if context.is_cancelled():
+                    return {"cancel_seen": True}
+                time.sleep(0.001)
+            return {"cancel_seen": False}
+
+        app = WorkerApp(
+            worker_type="VISION",
+            capabilities=["LONG_JOB"],
+            handlers={"LONG_JOB": handler},
+            worker_id=uuid4(),
+        )
+        dispatch = make_message(
+            "JOB_DISPATCH",
+            {
+                "job_id": str(job_id),
+                "protocol_version": 1,
+                "type": "LONG_JOB",
+                "input_refs": [],
+                "parameters": {},
+                "artifact_ids": [],
+            },
+            job_id=job_id,
+        )
+        cancel = make_message("CANCEL", {}, job_id=job_id)
+        stdout = io.StringIO()
+
+        self.assertEqual(
+            app.run(io.StringIO(encode_line(dispatch) + encode_line(cancel)), stdout),
+            0,
+        )
+        messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+        result = [item for item in messages if item["message_type"] == "JOB_RESULT"][-1]
+        self.assertEqual(result["payload"]["state"], "FAILED")
+        self.assertEqual(result["payload"]["error"]["code"], "CANCELLED")
+
+    def test_worker_accepts_pause_while_job_is_running(self) -> None:
+        job_id = uuid4()
+
+        def handler(context: JobContext, payload: dict[str, object]) -> dict[str, object]:
+            del payload
+            for _ in range(200):
+                if context.is_pause_requested():
+                    return {"checkpoint_artifact_id": str(uuid4())}
+                time.sleep(0.001)
+            return {}
+
+        app = WorkerApp(
+            worker_type="VISION",
+            capabilities=["CHECKPOINT_JOB"],
+            handlers={"CHECKPOINT_JOB": handler},
+            worker_id=uuid4(),
+        )
+        dispatch = make_message(
+            "JOB_DISPATCH",
+            {
+                "job_id": str(job_id),
+                "protocol_version": 1,
+                "type": "CHECKPOINT_JOB",
+                "input_refs": [],
+                "parameters": {},
+                "artifact_ids": [],
+            },
+            job_id=job_id,
+        )
+        pause = make_message("PAUSE", {}, job_id=job_id)
+        stdout = io.StringIO()
+
+        self.assertEqual(
+            app.run(io.StringIO(encode_line(dispatch) + encode_line(pause)), stdout),
+            0,
+        )
+        messages = [json.loads(line) for line in stdout.getvalue().splitlines()]
+        result = [item for item in messages if item["message_type"] == "JOB_RESULT"][-1]
+        self.assertEqual(result["payload"]["state"], "PAUSED")
+        self.assertIn("checkpoint_artifact_id", result["payload"]["outputs"][0])
 
 
 if __name__ == "__main__":

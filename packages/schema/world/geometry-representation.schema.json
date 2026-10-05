@@ -91,5 +91,35 @@
       "type": "string",
       "format": "date-time"
     }
-  }
+  },
+  "oneOf": [
+    {
+      "required": [
+        "entity_id"
+      ],
+      "properties": {
+        "entity_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "zone_id": {
+          "type": "null"
+        }
+      }
+    },
+    {
+      "required": [
+        "zone_id"
+      ],
+      "properties": {
+        "entity_id": {
+          "type": "null"
+        },
+        "zone_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    }
+  ]
 }
