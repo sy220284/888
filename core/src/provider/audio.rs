@@ -166,6 +166,12 @@ async fn measure_volume(path: &Path) -> Result<AudioVolume> {
         .output()
         .await
         .context("failed to measure audio volume")?;
+    if !output.status.success() {
+        bail!(
+            "ffmpeg volumedetect failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
     let stderr = String::from_utf8_lossy(&output.stderr);
     Ok(AudioVolume {
         mean_db: parse_metric(&stderr, "mean_volume:"),
@@ -187,24 +193,43 @@ async fn detect_silence(path: &Path, duration: Option<f64>) -> Result<AudioSilen
         .output()
         .await
         .context("failed to detect audio silence")?;
+    if !output.status.success() {
+        bail!(
+            "ffmpeg silencedetect failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     let starts = parse_all_metric(&stderr, "silence_start:");
     let ends = parse_all_metric(&stderr, "silence_end:");
+    Ok(silence_bounds(&starts, &ends, duration))
+}
+
+fn silence_bounds(starts: &[f64], ends: &[f64], duration: Option<f64>) -> AudioSilence {
     let leading = if starts.first().is_some_and(|value| *value <= 0.05) {
-        ends.first().copied().unwrap_or(0.0)
+        ends.first()
+            .copied()
+            .or(duration)
+            .unwrap_or(0.0)
     } else {
         0.0
     };
-    let trailing = match (duration, starts.last().copied()) {
-        (Some(duration), Some(start)) if duration >= start => duration - start,
+
+    let trailing = match (duration, starts.last().copied(), ends.last().copied()) {
+        (Some(duration), Some(start), Some(end))
+            if start > end || (duration - end).abs() <= 0.05 =>
+        {
+            (duration - start).max(0.0)
+        }
+        (Some(duration), Some(start), None) => (duration - start).max(0.0),
         _ => 0.0,
     };
 
-    Ok(AudioSilence {
+    AudioSilence {
         leading_seconds: round_seconds(leading),
         trailing_seconds: round_seconds(trailing),
-    })
+    }
 }
 
 fn parse_metric(text: &str, marker: &str) -> Option<f64> {
@@ -257,7 +282,9 @@ fn round_seconds(value: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_line_metric, score_audio, AudioAnalysis, AudioSilence, AudioVolume};
+    use super::{
+        parse_line_metric, score_audio, silence_bounds, AudioAnalysis, AudioSilence, AudioVolume,
+    };
 
     #[test]
     fn parses_ffmpeg_metrics() {
@@ -268,6 +295,15 @@ mod tests {
             ),
             Some(-18.4)
         );
+    }
+
+    #[test]
+    fn detects_only_actual_trailing_silence() {
+        let middle_only = silence_bounds(&[0.0, 1.0], &[0.2, 1.2], Some(3.0));
+        assert_eq!(middle_only.trailing_seconds, 0.0);
+
+        let trailing = silence_bounds(&[0.0, 2.7], &[0.2], Some(3.0));
+        assert_eq!(trailing.trailing_seconds, 0.3);
     }
 
     #[test]
