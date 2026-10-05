@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/world/anchor.schema.json",
+  "title": "Anchor",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "world_id",
+    "anchor_type",
+    "local_pose",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "world_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "anchor_type": {
+      "type": "string",
+      "enum": [
+        "DOOR",
+        "WINDOW",
+        "STAIR",
+        "CORNER",
+        "FIXED_OBJECT",
+        "FACADE_FEATURE",
+        "GPS_POINT",
+        "MANUAL"
+      ]
+    },
+    "zone_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "local_pose": {
+      "type": "object"
+    },
+    "confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

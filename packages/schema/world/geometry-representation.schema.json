@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/world/geometry-representation.schema.json",
+  "title": "GeometryRepresentation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "world_id",
+    "representation_type",
+    "artifact_id",
+    "source_kind",
+    "verification_state",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "world_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "entity_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "zone_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "representation_type": {
+      "type": "string",
+      "enum": [
+        "MESH",
+        "SPLAT",
+        "NERF",
+        "POINT_CLOUD",
+        "PRIMITIVE",
+        "BILLBOARD",
+        "COLLIDER"
+      ]
+    },
+    "artifact_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "quality_profile": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "source_kind": {
+      "type": "string",
+      "enum": [
+        "OBSERVED",
+        "VERIFIED",
+        "INFERRED",
+        "ASSOCIATIVE",
+        "GENERATED",
+        "USER_CONFIRMED"
+      ]
+    },
+    "valid_region": {
+      "type": "object"
+    },
+    "lod_level": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "verification_state": {
+      "type": "string",
+      "enum": [
+        "UNVERIFIED",
+        "VERIFIED",
+        "REJECTED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

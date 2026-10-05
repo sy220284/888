@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/worker/job-result.schema.json",
+  "title": "JobResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "job_id",
+    "protocol_version",
+    "state",
+    "outputs"
+  ],
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "protocol_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "COMPLETED",
+        "FAILED",
+        "PAUSED"
+      ]
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "error": {}
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/world/associative-proposal.schema.json",
+  "title": "AssociativeProposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "world_id",
+    "prior_type",
+    "subject_ref",
+    "target_ref",
+    "score",
+    "uncertainty",
+    "supporting_evidence_ids",
+    "contradicting_evidence_ids",
+    "source",
+    "source_version",
+    "state",
+    "created_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "world_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "prior_type": {
+      "type": "string",
+      "enum": [
+        "SPATIAL_TOPOLOGY_PRIOR",
+        "ROOM_TYPE_PRIOR",
+        "OBJECT_COOCCURRENCE_PRIOR",
+        "SAME_ENTITY_PRIOR",
+        "SAME_ANCHOR_PRIOR",
+        "SAME_ZONE_PRIOR",
+        "PORTAL_PRIOR",
+        "MISSING_REGION_PRIOR",
+        "MATERIAL_STYLE_PRIOR",
+        "NEXT_OBSERVATION_PRIOR"
+      ]
+    },
+    "subject_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "uncertainty": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "supporting_evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "uniqueItems": true
+    },
+    "contradicting_evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "uniqueItems": true
+    },
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created_by_job_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "ACTIVE",
+        "PROMOTED_TO_HYPOTHESIS",
+        "REJECTED",
+        "EXPIRED",
+        "SUPERSEDED"
+      ]
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

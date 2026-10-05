@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/ai-model-profile.schema.json",
+  "title": "AIModelProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "provider_id",
+    "model_id",
+    "version",
+    "status",
+    "supported_capabilities",
+    "benchmark_version",
+    "metrics"
+  ],
+  "properties": {
+    "provider_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "CERTIFIED",
+        "EXPERIMENTAL",
+        "DEGRADED",
+        "BLOCKED"
+      ]
+    },
+    "supported_capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "benchmark_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metrics": {
+      "type": "object"
+    },
+    "known_quirks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "context_limit": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "image_limit": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "updated_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    }
+  }
+}

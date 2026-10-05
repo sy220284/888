@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/provider/creativity-profile.schema.json",
+  "title": "CreativityProfile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "level",
+    "top_k",
+    "beam_width",
+    "validation_budget"
+  ],
+  "properties": {
+    "level": {
+      "type": "string",
+      "enum": [
+        "STRICT",
+        "BALANCED",
+        "EXPLORATORY",
+        "DIVERGENT"
+      ]
+    },
+    "top_k": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "beam_width": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "validation_budget": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sampling": {
+      "type": "object"
+    }
+  }
+}

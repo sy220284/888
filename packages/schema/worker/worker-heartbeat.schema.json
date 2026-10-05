@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://888.local/schema/worker/worker-heartbeat.schema.json",
+  "title": "WorkerHeartbeat",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "worker_id",
+    "protocol_version",
+    "timestamp",
+    "current_job_ids",
+    "cpu_usage",
+    "ram_mb",
+    "health"
+  ],
+  "properties": {
+    "worker_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "protocol_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "current_job_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "uniqueItems": true
+    },
+    "cpu_usage": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "ram_mb": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "gpu_usage": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
+    "vram_mb": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "health": {
+      "type": "string",
+      "enum": [
+        "HEALTHY",
+        "DEGRADED",
+        "LOST"
+      ]
+    }
+  }
+}
