@@ -6,9 +6,8 @@ use uuid::Uuid;
 use crate::{
     model::{JobState, WorkerHeartbeat, WorkerHeartbeatHealth, WorkerRegistration},
     serde_db::{enum_from_string, enum_to_string, to_json},
+    worker_protocol::WORKER_PROTOCOL_VERSION,
 };
-
-pub const WORKER_PROTOCOL_VERSION: u64 = 1;
 
 #[derive(Clone)]
 pub struct WorkerRegistry {
@@ -175,7 +174,9 @@ mod tests {
         },
     };
 
-    use super::{WorkerRegistry, WORKER_PROTOCOL_VERSION};
+    use crate::worker_protocol::WORKER_PROTOCOL_VERSION;
+
+    use super::WorkerRegistry;
 
     #[tokio::test]
     async fn registration_heartbeat_and_lost_detection_are_core_owned() {
