@@ -263,6 +263,16 @@ class WorkerHeartbeat:
     gpu_usage: float | None = None
     vram_mb: int | None = None
 
+WorkerMessageMessageType: TypeAlias = Literal['REGISTER', 'HEARTBEAT', 'JOB_DISPATCH', 'PROGRESS', 'JOB_RESULT', 'PAUSE', 'CANCEL', 'SHUTDOWN']
+
+@dataclass(slots=True)
+class WorkerMessage:
+    message_id: UUID
+    message_type: WorkerMessageMessageType
+    protocol_version: int
+    payload: dict[str, Any]
+    job_id: UUID | None = None
+
 WorkerRegistrationWorkerType: TypeAlias = Literal['VISION', 'TOOL', 'AI_LOCAL']
 
 @dataclass(slots=True)
