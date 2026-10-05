@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, path::PathBuf};
 
 use serde::Serialize;
 use tauri::{Manager, State};
@@ -6,24 +6,33 @@ use uuid::Uuid;
 use world888_core::{
     artifact_store::ArtifactStore,
     command_service::CommandService,
-    model::{Command, CommandResponse},
+    model::{Command, CommandResponse, Observation, World},
+    observation_repository::ObservationRepository,
+    worker_runtime::{WorkerRuntime, WorkerSpec},
+    world_repository::WorldRepository,
 };
 
+#[derive(Clone)]
 struct CoreState {
     commands: CommandService,
+    worlds: WorldRepository,
+    observations: ObservationRepository,
+    runtime: WorkerRuntime,
 }
 
 #[derive(Debug, Serialize)]
 struct CoreStatus {
     status: &'static str,
     worker_protocol_version: u64,
+    worker_count: usize,
 }
 
 #[tauri::command]
-fn core_status() -> CoreStatus {
+async fn core_status(state: State<'_, CoreState>) -> CoreStatus {
     CoreStatus {
         status: "ready",
         worker_protocol_version: world888_core::worker_protocol::WORKER_PROTOCOL_VERSION,
+        worker_count: state.runtime.worker_count().await,
     }
 }
 
@@ -53,9 +62,71 @@ async fn get_command_response(
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+async fn list_worlds(state: State<'_, CoreState>) -> Result<Vec<World>, String> {
+    state.worlds.list().await.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+async fn list_observations(
+    state: State<'_, CoreState>,
+    world_id: String,
+) -> Result<Vec<Observation>, String> {
+    let world_id = Uuid::parse_str(&world_id).map_err(|_| "world_id 不是合法 UUID".to_owned())?;
+    state
+        .observations
+        .list_for_world(world_id)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn pick_observation_images() -> Vec<String> {
+    rfd::FileDialog::new()
+        .add_filter(
+            "图片",
+            &["jpg", "jpeg", "png", "webp", "gif", "tif", "tiff", "avif", "heic"],
+        )
+        .pick_files()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect()
+}
+
+fn worker_specs(artifact_root: &PathBuf) -> Vec<WorkerSpec> {
+    let repo_root = std::env::var_os("WORLD888_REPO_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../.."));
+    let python = std::env::var("WORLD888_PYTHON").unwrap_or_else(|_| {
+        if cfg!(windows) {
+            "python".to_owned()
+        } else {
+            "python3".to_owned()
+        }
+    });
+
+    vec![
+        WorkerSpec::python_module(
+            "vision",
+            python.clone(),
+            "workers.vision.main",
+            repo_root.clone(),
+            artifact_root.clone(),
+        ),
+        WorkerSpec::python_module(
+            "tools",
+            python,
+            "workers.tools.main",
+            repo_root,
+            artifact_root.clone(),
+        ),
+    ]
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .setup(|app| {
             let app_data_dir = app.path().app_data_dir()?;
             let database_path = app_data_dir.join("world888.sqlite3");
@@ -82,16 +153,40 @@ pub fn run() {
                 ))
             })?;
 
+            let runtime = tauri::async_runtime::block_on(WorkerRuntime::start(
+                pool.clone(),
+                artifacts.clone(),
+                worker_specs(&artifact_root),
+            ))
+            .map_err(|error| io::Error::other(format!("初始化 Worker Runtime 失败：{error}")))?;
+
             app.manage(CoreState {
-                commands: CommandService::with_artifact_store(pool, artifacts),
+                commands: CommandService::with_runtime(
+                    pool.clone(),
+                    artifacts,
+                    runtime.control_sender(),
+                ),
+                worlds: WorldRepository::new(pool.clone()),
+                observations: ObservationRepository::new(pool),
+                runtime,
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             core_status,
             execute_command,
-            get_command_response
+            get_command_response,
+            list_worlds,
+            list_observations,
+            pick_observation_images,
         ])
-        .run(tauri::generate_context!())
-        .expect("failed to run 888 desktop");
+        .build(tauri::generate_context!())
+        .expect("failed to build 888 desktop");
+
+    app.run(|app_handle, event| {
+        if matches!(event, tauri::RunEvent::Exit) {
+            let runtime = app_handle.state::<CoreState>().runtime.clone();
+            tauri::async_runtime::block_on(runtime.shutdown());
+        }
+    });
 }
