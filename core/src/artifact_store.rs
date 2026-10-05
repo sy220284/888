@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use base64::Engine as _;
@@ -240,6 +240,44 @@ impl ArtifactStore {
             bail!("artifact escaped store root");
         }
         Ok(canonical)
+    }
+
+    pub async fn import_worker_output(
+        &self,
+        token: &str,
+        mime: impl Into<String>,
+        logical_type: ArtifactLogicalType,
+        source: Value,
+    ) -> Result<Artifact> {
+        let token_path = Path::new(token);
+        if token.trim().is_empty()
+            || token_path.is_absolute()
+            || token_path.components().any(|component| {
+                matches!(
+                    component,
+                    Component::ParentDir | Component::RootDir | Component::Prefix(_)
+                )
+            })
+        {
+            bail!("worker output token must be a safe relative path");
+        }
+
+        let canonical_root = fs::canonicalize(&self.root).await?;
+        let source_path = self.root.join(token_path);
+        let canonical_source = fs::canonicalize(&source_path)
+            .await
+            .with_context(|| format!("worker output is missing: {token}"))?;
+        if !canonical_source.starts_with(&canonical_root) {
+            bail!("worker output escaped artifact root");
+        }
+
+        let artifact = self
+            .import_file_with_metadata(&canonical_source, mime, None, logical_type, source)
+            .await?;
+        if token.replace('\\', "/").starts_with(".worker-output/") {
+            let _ = fs::remove_file(&canonical_source).await;
+        }
+        Ok(artifact)
     }
 
     pub async fn to_data_uri(&self, artifact: &Artifact) -> Result<String> {
