@@ -78,11 +78,10 @@ pub(crate) async fn create_images_in_tx(
     world_id: Uuid,
     entries: &[NewImageObservation],
 ) -> Result<Vec<Observation>> {
-    let world_exists: Option<i64> =
-        sqlx::query_scalar("SELECT 1 FROM worlds WHERE id = ? LIMIT 1")
-            .bind(world_id.to_string())
-            .fetch_optional(&mut **tx)
-            .await?;
+    let world_exists: Option<i64> = sqlx::query_scalar("SELECT 1 FROM worlds WHERE id = ? LIMIT 1")
+        .bind(world_id.to_string())
+        .fetch_optional(&mut **tx)
+        .await?;
     if world_exists.is_none() {
         bail!("world does not exist");
     }
@@ -160,7 +159,11 @@ impl TryFrom<ObservationRow> for Observation {
         Ok(Self {
             id: Uuid::parse_str(&row.id)?,
             world_id: Uuid::parse_str(&row.world_id)?,
-            artifact_id: row.artifact_id.as_deref().map(Uuid::parse_str).transpose()?,
+            artifact_id: row
+                .artifact_id
+                .as_deref()
+                .map(Uuid::parse_str)
+                .transpose()?,
             source_type: enum_from_string(&row.source_type)?,
             timestamp: parse_optional_datetime(row.timestamp.as_deref(), "observation timestamp")?,
             camera_intrinsics: row
@@ -198,9 +201,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::{
-        artifact_store::ArtifactStore,
-        db,
-        model::ArtifactLogicalType,
+        artifact_store::ArtifactStore, db, model::ArtifactLogicalType,
         world_repository::WorldRepository,
     };
 
