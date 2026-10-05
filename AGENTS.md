@@ -42,6 +42,7 @@
 - `docs/15-用户交互与页面流程.md`：页面职责、用户流程、可信度与补拍交互
 - `docs/adr/README.md`：已接受的关键架构决策与变更规则
 - `docs/16-可行性分析与技术风险.md`：整体可行性、核心研发难点、单人 + AI 难度与风险边界
+- `docs/17-联想推理与先验系统设计.md`：联想先验、Proposal、Hypothesis、联想求证与反幻觉边界
 
 文档编号 `11` 当前有意保留，不创建对应文档；除非用户明确要求，不得因编号空缺自行补建。
 
@@ -68,14 +69,16 @@ AI 不得在存在未解决文档冲突时继续扩展实现。
 
 1. 重建优先，生成兜底。
 2. 证据优先，不确定性显式存在。
-3. 多假设可以并存，新证据推动收敛。
-4. Canonical World State 是唯一正式世界状态。
-5. Provider 只产生 Candidate，不直接写正式世界。
-6. Candidate 经过 Validation 后才能进入 Revision。
-7. 原始 Observation 不被生成内容覆盖。
-8. 模型、Agent、渲染表示都必须可替换。
-9. 生成成功不等于结果正确。
-10. 能局部修复就不全量重做。
+3. 联想只能提出 Prior / Proposal，不能直接生成 Observed 或 Verified。
+4. 多假设可以并存，新证据推动收敛。
+5. Canonical World State 是唯一正式世界状态。
+6. Provider 只产生 Candidate，不直接写正式世界。
+7. Candidate 经过 Validation 后才能进入 Revision。
+8. 原始 Observation 不被生成内容覆盖。
+9. 模型、Agent、渲染表示都必须可替换。
+10. 生成成功不等于结果正确。
+11. 能局部修复就不全量重做。
+12. 联想无法覆盖强真实 Evidence；新真实证据与联想冲突时，以真实证据为准。
 
 ## 5. 固定技术栈
 
