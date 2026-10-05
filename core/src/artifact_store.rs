@@ -4,21 +4,11 @@ use anyhow::{bail, Context, Result};
 use base64::Engine as _;
 use chrono::{DateTime, Utc};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use tokio::{fs, io::AsyncWriteExt};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ArtifactRecord {
-    pub id: Uuid,
-    pub content_hash: String,
-    pub mime: String,
-    pub size_bytes: u64,
-    pub relative_path: String,
-    pub source_url: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
+use crate::model::Artifact;
 
 #[derive(Clone)]
 pub struct ArtifactStore {
@@ -50,7 +40,7 @@ impl ArtifactStore {
         bytes: &[u8],
         mime: impl Into<String>,
         source_url: Option<String>,
-    ) -> Result<ArtifactRecord> {
+    ) -> Result<Artifact> {
         let hash = blake3::hash(bytes).to_hex().to_string();
         if let Some(existing) = self.find_by_hash(&hash).await? {
             return Ok(existing);
@@ -80,7 +70,7 @@ impl ArtifactStore {
         path: impl AsRef<Path>,
         mime: impl Into<String>,
         source_url: Option<String>,
-    ) -> Result<ArtifactRecord> {
+    ) -> Result<Artifact> {
         let path = path.as_ref();
         let bytes = fs::read(path)
             .await
@@ -92,7 +82,7 @@ impl ArtifactStore {
         &self,
         source: &str,
         content_type_hint: Option<&str>,
-    ) -> Result<ArtifactRecord> {
+    ) -> Result<Artifact> {
         if is_data_uri(source) {
             let (mime, bytes) = decode_data_uri(source)?;
             return self.import_bytes(&bytes, mime, None).await;
@@ -103,7 +93,7 @@ impl ArtifactStore {
         self.download_http(source, content_type_hint).await
     }
 
-    pub async fn absolute_path(&self, artifact: &ArtifactRecord) -> Result<PathBuf> {
+    pub async fn absolute_path(&self, artifact: &Artifact) -> Result<PathBuf> {
         let path = self.root.join(&artifact.relative_path);
         let canonical_root = fs::canonicalize(&self.root).await?;
         let canonical = fs::canonicalize(&path)
@@ -115,7 +105,7 @@ impl ArtifactStore {
         Ok(canonical)
     }
 
-    pub async fn to_data_uri(&self, artifact: &ArtifactRecord) -> Result<String> {
+    pub async fn to_data_uri(&self, artifact: &Artifact) -> Result<String> {
         let path = self.absolute_path(artifact).await?;
         let bytes = fs::read(path).await?;
         let encoded = base64::engine::general_purpose::STANDARD.encode(bytes);
@@ -126,7 +116,7 @@ impl ArtifactStore {
         &self,
         url: &str,
         content_type_hint: Option<&str>,
-    ) -> Result<ArtifactRecord> {
+    ) -> Result<Artifact> {
         let response = self
             .http
             .get(url)
@@ -176,7 +166,10 @@ impl ArtifactStore {
             Ok(()) => {}
             Err(error) if fs::try_exists(&destination).await.unwrap_or(false) => {
                 let _ = fs::remove_file(&temp_path).await;
-                tracing_fallback(&format!("artifact already existed during rename: {error}"));
+                tracing::debug!(
+                    error = %error,
+                    "artifact already existed during concurrent import"
+                );
             }
             Err(error) => return Err(error.into()),
         }
@@ -191,7 +184,7 @@ impl ArtifactStore {
         .await
     }
 
-    async fn find_by_hash(&self, hash: &str) -> Result<Option<ArtifactRecord>> {
+    async fn find_by_hash(&self, hash: &str) -> Result<Option<Artifact>> {
         let row = sqlx::query_as::<_, ArtifactRow>(
             r#"
             SELECT id, content_hash, mime, size_bytes, relative_path, source_url, created_at
@@ -212,8 +205,8 @@ impl ArtifactStore {
         size_bytes: u64,
         relative_path: String,
         source_url: Option<String>,
-    ) -> Result<ArtifactRecord> {
-        let record = ArtifactRecord {
+    ) -> Result<Artifact> {
+        let record = Artifact {
             id: Uuid::new_v4(),
             content_hash,
             mime,
@@ -258,7 +251,7 @@ struct ArtifactRow {
     created_at: String,
 }
 
-impl TryFrom<ArtifactRow> for ArtifactRecord {
+impl TryFrom<ArtifactRow> for Artifact {
     type Error = anyhow::Error;
 
     fn try_from(row: ArtifactRow) -> Result<Self> {
@@ -319,9 +312,6 @@ fn redact_source_url(value: &str) -> String {
         .unwrap_or_else(|_| value.to_owned())
 }
 
-fn tracing_fallback(message: &str) {
-    eprintln!("{message}");
-}
 
 #[cfg(test)]
 mod tests {
