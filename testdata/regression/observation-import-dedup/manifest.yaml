@@ -1,0 +1,11 @@
+fixture_id: regression-observation-import-dedup
+version: 1
+category: observation-import
+source: synthetic
+license: CC0-1.0
+observation_count: 2
+expected_capabilities:
+  - IMPORT_OBSERVATIONS
+ground_truth_available: true
+required_gpu: false
+notes: 两个不同文件名指向完全相同的 1x1 PNG 内容，用于验证 Observation 与物理 Artifact 去重语义。

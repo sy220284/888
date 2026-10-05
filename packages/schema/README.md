@@ -30,7 +30,7 @@
 ### Task / Job
 
 - Task
-- Job
+- Job（持久化 input，保证任务恢复后仍能定位执行对象）
 
 ### Worker
 
@@ -43,7 +43,7 @@
 
 ### Provider / AI Compatibility
 
-- Artifact
+- Artifact（包含 logical_type 与 source provenance）
 - Project
 - CanonicalCapabilityRequest
 - ProviderCapability

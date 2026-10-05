@@ -84,12 +84,16 @@ export interface AIProviderRun {
   updated_at: string
 }
 
+export type ArtifactLogicalType = "ORIGINAL_IMAGE" | "PREVIEW" | "DEPTH_MAP" | "MASK" | "FEATURE" | "POINT_CLOUD" | "MESH" | "SPLAT" | "NERF" | "TEXTURE" | "AUDIO" | "EXPORT" | "COLLIDER" | "GENERATED_IMAGE" | "CHECKPOINT" | "OTHER"
+
 export interface Artifact {
   id: string
   content_hash: string
   mime: string
   size_bytes: number
   relative_path: string
+  logical_type: ArtifactLogicalType
+  source: Record<string, unknown>
   source_url?: string | null
   created_at: string
 }
@@ -186,6 +190,7 @@ export interface Job {
   id: string
   world_id?: string | null
   task_type: string
+  input: Record<string, unknown>
   state: JobState
   attempt: number
   max_attempts: number
