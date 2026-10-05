@@ -255,9 +255,15 @@ Cancel 必须可幂等重复调用。
 
 ## 15. 传输实现
 
-第一阶段优先：
+第一阶段固定：
 
-- 本地 stdio / local socket / 简单结构化 RPC
+- **stdio + JSON Lines（JSONL）**
+- stdin/stdout 只传协议消息
+- stderr 只输出日志与诊断
+- 每行一个完整 JSON 消息
+- 消息必须包含 protocol_version 与 request/job 标识
+
+local socket 保留为未来性能优化候选，只有 Benchmark 证明 stdio 成为瓶颈时才切换。
 
 禁止过早引入：
 
