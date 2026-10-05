@@ -54,6 +54,35 @@ impl ObservationRepository {
         row.map(TryInto::try_into).transpose()
     }
 
+    pub async fn update_derived_analysis(
+        &self,
+        id: Uuid,
+        captured_at: Option<DateTime<Utc>>,
+        quality: &Value,
+    ) -> Result<()> {
+        if !quality.is_object() {
+            bail!("observation quality must be a JSON object");
+        }
+
+        let result = sqlx::query(
+            r#"
+            UPDATE observations
+            SET timestamp = COALESCE(timestamp, ?),
+                quality_json = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(captured_at.map(|value| value.to_rfc3339()))
+        .bind(to_json(quality)?)
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await?;
+        if result.rows_affected() != 1 {
+            bail!("observation does not exist");
+        }
+        Ok(())
+    }
+
     pub async fn list_for_world(&self, world_id: Uuid) -> Result<Vec<Observation>> {
         let rows = sqlx::query_as::<_, ObservationRow>(
             r#"
