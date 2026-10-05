@@ -9,7 +9,7 @@ export function WorkerStatusPanel() {
   })
 
   const label = status.data
-    ? `Core ${status.data.status} · Worker 协议 v${status.data.worker_protocol_version}`
+    ? `Core ${status.data.status} · Worker ${status.data.worker_count} · 协议 v${status.data.worker_protocol_version}`
     : '浏览器预览：Tauri Core 未连接'
 
   return (
