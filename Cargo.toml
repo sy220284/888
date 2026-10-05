@@ -1,5 +1,11 @@
 [workspace]
-members = ["core"]
+members = [
+  "core",
+  "compiler",
+  "packages/provider-sdk",
+  "packages/plugin-sdk",
+]
+exclude = ["apps/desktop/src-tauri"]
 resolver = "2"
 
 [workspace.package]
