@@ -24,6 +24,7 @@ impl JobEngine {
         world_id: Option<Uuid>,
         task_type: &str,
         max_attempts: i64,
+        idempotent: bool,
     ) -> Result<Job> {
         let task_type = task_type.trim();
         if task_type.is_empty() {
@@ -41,6 +42,7 @@ impl JobEngine {
             state: JobState::Created,
             attempt: 0,
             max_attempts,
+            idempotent,
             checkpoint_artifact_id: None,
             provider_run_id: None,
             error_code: None,
@@ -52,10 +54,10 @@ impl JobEngine {
         sqlx::query(
             r#"
             INSERT INTO jobs(
-                id, world_id, task_type, state, attempt, max_attempts,
+                id, world_id, task_type, state, attempt, max_attempts, idempotent,
                 checkpoint_artifact_id, provider_run_id, error_code,
                 error_payload_json, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, NULL, ?, ?)
             "#,
         )
         .bind(job.id.to_string())
@@ -64,6 +66,7 @@ impl JobEngine {
         .bind(enum_to_string(&job.state)?)
         .bind(job.attempt as i64)
         .bind(job.max_attempts)
+        .bind(job.idempotent)
         .bind(job.created_at.to_rfc3339())
         .bind(job.updated_at.to_rfc3339())
         .execute(&self.pool)
@@ -75,7 +78,7 @@ impl JobEngine {
     pub async fn get(&self, id: Uuid) -> Result<Option<Job>> {
         let row = sqlx::query_as::<_, JobRow>(
             r#"
-            SELECT id, world_id, task_type, state, attempt, max_attempts,
+            SELECT id, world_id, task_type, state, attempt, max_attempts, idempotent,
                    checkpoint_artifact_id, provider_run_id, error_code,
                    error_payload_json, created_at, updated_at
             FROM jobs
@@ -191,7 +194,7 @@ impl JobEngine {
         let running = enum_to_string(&JobState::Running)?;
         let rows = sqlx::query_as::<_, JobRow>(
             r#"
-            SELECT id, world_id, task_type, state, attempt, max_attempts,
+            SELECT id, world_id, task_type, state, attempt, max_attempts, idempotent,
                    checkpoint_artifact_id, provider_run_id, error_code,
                    error_payload_json, created_at, updated_at
             FROM jobs
@@ -207,7 +210,7 @@ impl JobEngine {
             let job: Job = row.try_into()?;
             let target = if job.checkpoint_artifact_id.is_some() {
                 JobState::Recoverable
-            } else if job.attempt < job.max_attempts as u64 {
+            } else if job.idempotent && job.attempt < job.max_attempts as u64 {
                 JobState::Ready
             } else {
                 JobState::Failed
@@ -280,6 +283,7 @@ struct JobRow {
     state: String,
     attempt: i64,
     max_attempts: i64,
+    idempotent: bool,
     checkpoint_artifact_id: Option<String>,
     provider_run_id: Option<String>,
     error_code: Option<String>,
@@ -299,6 +303,7 @@ impl TryFrom<JobRow> for Job {
             state: enum_from_string(&row.state)?,
             attempt: u64::try_from(row.attempt).context("negative job attempt")?,
             max_attempts: row.max_attempts,
+            idempotent: row.idempotent,
             checkpoint_artifact_id: row
                 .checkpoint_artifact_id
                 .as_deref()
@@ -331,7 +336,7 @@ mod tests {
     async fn enforces_job_state_machine_and_cancel_idempotency() {
         let pool = db::connect_memory().await.unwrap();
         let jobs = JobEngine::new(pool);
-        let job = jobs.create(None, "TEST", 2).await.unwrap();
+        let job = jobs.create(None, "TEST", 2, true).await.unwrap();
 
         assert!(jobs.transition(job.id, JobState::Running).await.is_err());
         jobs.transition(job.id, JobState::Ready).await.unwrap();
@@ -345,10 +350,23 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn non_idempotent_interrupted_job_fails_without_checkpoint() {
+        let pool = db::connect_memory().await.unwrap();
+        let jobs = JobEngine::new(pool);
+        let job = jobs.create(None, "NON_IDEMPOTENT", 3, false).await.unwrap();
+        jobs.transition(job.id, JobState::Ready).await.unwrap();
+        jobs.transition(job.id, JobState::Running).await.unwrap();
+
+        let recovered = jobs.recover_interrupted().await.unwrap();
+        assert_eq!(recovered.len(), 1);
+        assert_eq!(recovered[0].state, JobState::Failed);
+    }
+
+    #[tokio::test]
     async fn recovers_interrupted_running_jobs_without_pretending_they_are_running() {
         let pool = db::connect_memory().await.unwrap();
         let jobs = JobEngine::new(pool);
-        let job = jobs.create(None, "RECOVER", 3).await.unwrap();
+        let job = jobs.create(None, "RECOVER", 3, true).await.unwrap();
         jobs.transition(job.id, JobState::Ready).await.unwrap();
         jobs.transition(job.id, JobState::Running).await.unwrap();
 
